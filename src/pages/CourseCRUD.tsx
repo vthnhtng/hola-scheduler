@@ -2,10 +2,9 @@ import Header from '../components/Header'
 import SideBar from '../components/SideBar'
 import Grid from '../components/Grid'
 import { ObjectAttribute } from '../types/ObjectAttribute';
-import avatar from '../assets/avatar/avatar.jpg';
 
-function TeacherCRUD() {
-	const teacherAttributes: ObjectAttribute[] = [
+function CourseCRUD() {
+	const courseAttributes: ObjectAttribute[] = [
         { name: 'fullname', label: 'Họ và tên', type: 'string' },
         { name: 'email', label: 'Email', type: 'string' },
         { name: 'phone', label: 'Số điện thoại', type: 'string' },
@@ -15,7 +14,7 @@ function TeacherCRUD() {
         { name: 'sessionsPerClass', label: 'Số lớp', type: 'number' },
     ];
 
-	const teachers = [
+	const course = [
         {
             fullname: 'Nguyễn Trần Trung Thành',
             email: 'trungthanh@vnu.edu.vn',
@@ -24,15 +23,8 @@ function TeacherCRUD() {
             isSpecialist: true,
             classesPerWeek: 6,
             sessionsPerClass: 3,
-            avatar: avatar
         }
     ];
-
-    const teacherRows = [];
-    teacherRows.push(null);
-    for (let i = 0; i < 10; i++) {
-        teacherRows.push(...teachers);
-    }
 
 	return (
 		<>
@@ -40,13 +32,13 @@ function TeacherCRUD() {
 			<main className='d-flex justify-content-between'>
 				<SideBar />
 				<Grid
-					objectName='GIẢNG VIÊN'
-					attributes={teacherAttributes}
-					gridData={teacherRows}
+					objectName='MÔN HỌC'
+					attributes={courseAttributes}
+					gridData={course}
 				/>
 			</main>
 		</>
 	)
 }
 
-export default TeacherCRUD;
+export default CourseCRUD;

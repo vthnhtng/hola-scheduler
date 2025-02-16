@@ -1,34 +1,45 @@
+import { useState } from 'react';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { ObjectAttribute } from '../types/ObjectAttribute';
+import FormModal from './FormModal';
+import DeleteModal from './DeleteModal';
 
 interface GridProps {
     objectName: string;
     attributes: ObjectAttribute[];
-    gridData: Record<string, any>[];
+    gridData: (Record<string, any> | null)[];
 }
 
 function Grid({ objectName, attributes, gridData }: GridProps) {
-    const renderAttribute = (attribute: ObjectAttribute, obj: Record<string, any>) => {
-        const value = obj[attribute.name];
-    
-        switch (attribute.type) {
+    const [selectedRow, setSelectedRow] = useState<number | null>(null);
+
+    const handleClickAction = (index: number) => {
+        setSelectedRow((prev) => (prev === index ? null : index));
+    };
+
+    const renderAttribute = (attribute: ObjectAttribute, record: Record<string, any>) => {
+        const attributeType = attribute.type;   
+        const attributeName = attribute.name;
+        const attributeValue = record[attribute.name];
+
+        switch (attributeType) {
             case 'string':
             case 'number':
-                return <td key={attribute.name}>{value}</td>;
+                return <td key={attributeName}>{attributeValue}</td>;
     
             case 'boolean':
                 return (
-                    <td key={attribute.name}>
-                        <input type="checkbox" checked={Boolean(value)} readOnly />
+                    <td key={attributeName}>
+                        <input type="checkbox" checked={Boolean(attributeValue)} readOnly />
                     </td>
                 );
     
             case 'image':
                 return (
-                    <td key={attribute.name}>
-                        {value ? (
+                    <td key={attributeName}>
+                        {attributeValue ? (
                             <img
-                                src={value}
+                                src={attributeValue}
                                 alt={attribute.label}
                                 className="me-2 rounded-circle"
                                 style={{ width: '40px', height: '40px' }}
@@ -40,7 +51,7 @@ function Grid({ objectName, attributes, gridData }: GridProps) {
                 );
 
             default:
-                return <td key={attribute.name}></td>;
+                return <td key={attributeName}></td>;
         }
     };
 
@@ -53,11 +64,19 @@ function Grid({ objectName, attributes, gridData }: GridProps) {
         >
             <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
                 <h2 className="fw-bold text-uppercase">DANH SÁCH {objectName}</h2>
-                <button className="btn btn-success text-uppercase" style={{marginRight: '10px'}}>THÊM {objectName}</button>
+                <FormModal
+                    title={'THÊM ' + objectName}
+                    button={
+                        <button className="btn btn-success text-uppercase" style={{marginRight: '10px'}}>THÊM {objectName}</button>
+                    }
+                    attributes={attributes}
+                    record={null}
+                />
             </div>
             <table className="table table-hover">
                 <thead className="table-light">
                     <tr>
+                        <th>STT</th>
                         {attributes.map((attribute, index) => (
                             <th key={index}>{attribute.label}</th>
                         ))}
@@ -66,16 +85,39 @@ function Grid({ objectName, attributes, gridData }: GridProps) {
                 </thead>
                 <tbody>
                     {gridData.length > 0 ? (
-                        gridData.map((obj, index) => (
-                            <tr key={index} className="align-middle">
-                                {attributes.map((attribute) => (
-                                    renderAttribute(attribute, obj)
-                                ))}
-                                <td>
-                                    <button className="btn btn-outline-success me-2"><FaEdit /></button>
-                                    <button className="btn btn-outline-danger"><FaTrashAlt /></button>
-                                </td>
-                            </tr>
+                        gridData.map((record, index) => (
+                            record && (
+                                <tr 
+                                    key={index} 
+                                    className={`align-middle ${selectedRow === index ? 'table-primary' : ''}`} 
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <td>{index}</td>
+                                    {attributes.map((attribute) => (
+                                        renderAttribute(attribute, record)
+                                    ))}
+                                    <td className='d-flex' style={{ width: 'auto'}} >
+                                        <div>
+                                            <FormModal
+                                                title={'CHỈNH SỬA ' + objectName}
+                                                button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}><FaEdit /></button>}
+                                                attributes={attributes}
+                                                record={record}
+                                                onClose={() => setSelectedRow(null)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <DeleteModal
+                                                title={objectName}
+                                                button={<button className="btn btn-outline-danger" onClick={() => handleClickAction(index)}><FaTrashAlt /></button>}
+                                                attributes={attributes}
+                                                record={record}
+                                                onClose={() => setSelectedRow(null)}
+                                            />
+                                        </div>
+                                    </td>
+                                </tr>
+                            )
                         ))
                     ) : (
                         <tr>
