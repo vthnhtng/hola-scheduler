@@ -71,6 +71,7 @@ function Grid({ objectName, attributes, gridData }: GridProps) {
                     }
                     attributes={attributes}
                     record={null}
+                    onClose={() => {}}
                 />
             </div>
             <table className="table table-hover">
