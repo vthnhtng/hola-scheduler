@@ -2,6 +2,8 @@
 import Header from '../components/Header'
 import SideBar from '../components/SideBar'
 import Grid from '../components/Grid'
+import Footer from '../components/Footer'
+
 import { ObjectAttribute } from '../types/ObjectAttribute';
 import avatar from '../assets/avatar/avatar.jpg';
 
@@ -46,6 +48,7 @@ function TeacherCRUD() {
 					gridData={teacherRows}
 				/>
 			</main>
+            <Footer/>
 		</>
 	)
 }
