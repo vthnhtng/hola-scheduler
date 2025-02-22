@@ -9,7 +9,6 @@ function Login() {
     <>
       <Header />
       <main className="container-fluid bg-light content">
-        {/* Header Section */}
         <div className="row justify-content-center mt-5">
           <div className="col-md-4">
             <div className="card p-4 card-container shadow-sm">

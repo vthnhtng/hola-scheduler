@@ -1,8 +1,10 @@
 'use client';
+import React, { useState } from "react"; //khoiph - Using state for pagination
 import Header from '../components/Header'
 import SideBar from '../components/SideBar'
 import Grid from '../components/Grid'
 import Footer from '../components/Footer'
+import Pagination from '../components/Pagination'
 
 import { ObjectAttribute } from '../types/ObjectAttribute';
 import avatar from '../assets/avatar/avatar.jpg';
@@ -37,6 +39,10 @@ function TeacherCRUD() {
         teacherRows.push(...teachers);
     }
 
+    //khoiph - Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const totalPages = 3; //
+
 	return (
 		<>
 			<Header />
@@ -48,6 +54,7 @@ function TeacherCRUD() {
 					gridData={teacherRows}
 				/>
 			</main>
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
             <Footer/>
 		</>
 	)

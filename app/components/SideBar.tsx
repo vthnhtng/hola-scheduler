@@ -8,37 +8,37 @@ function SideBar() {
   return (
     <div className="d-flex flex-column bg-light vh-100 p-3 border-end" style={{ width: "250px" }}>
       <ul className="nav flex-column">
-        <li className="nav-item">
+        <li className="nav-item mb-3">
           <a
             href="#"
-            className={`nav-link d-flex align-items-center ${activeItem === "Trang chủ" ? "active text-primary fw-bold" : "text-dark"}`}
+            className={`nav-link d-flex align-items-center py-2 rounded ${activeItem === "Trang chủ" ? "active text-primary fw-bold" : "text-dark"}`}
             onClick={() => setActiveItem("Trang chủ")}
           >
             <FaHome className="me-2" /> Trang chủ
           </a>
         </li>
 
-        <li className="nav-item">
+        <li className="nav-item mb-3">
           <a
             href="#"
-            className={`nav-link d-flex align-items-center ${activeItem === "Tài khoản" ? "active text-primary fw-bold" : "text-dark"}`}
+            className={`nav-link d-flex align-items-center py-2 rounded ${activeItem === "Tài khoản" ? "active text-primary fw-bold" : "text-dark"}`}
             onClick={() => setActiveItem("Tài khoản")}
           >
             <FaUser className="me-2" /> Tài khoản
           </a>
         </li>
 
-        <li className="nav-item">
+        <li className="nav-item mb-3">
           <a
             href="#"
-            className={`nav-link d-flex align-items-center ${activeItem === "Lịch giảng dạy" ? "active text-primary fw-bold" : "text-dark"}`}
+            className={`nav-link d-flex align-items-center py-2 rounded ${activeItem === "Lịch giảng dạy" ? "active text-primary fw-bold" : "text-dark"}`}
             onClick={() => setActiveItem("Lịch giảng dạy")}
           >
             <FaChalkboardTeacher className="me-2" /> Lịch giảng dạy
           </a>
         </li>
 
-        <li className="nav-item">
+        <li className="nav-item mb-3">
           <button
             className="btn text-start nav-link d-flex align-items-center w-100"
             onClick={() => setOpenManage(!openManage)}
@@ -78,30 +78,30 @@ function SideBar() {
           )}
         </li>
 
-        <li className="nav-item">
+        <li className="nav-item mb-3">
           <a
             href="#"
-            className={`nav-link d-flex align-items-center ${activeItem === "Cài đặt" ? "active text-primary fw-bold" : "text-dark"}`}
+            className={`nav-link d-flex align-items-center py-2 rounded ${activeItem === "Cài đặt" ? "active text-primary fw-bold" : "text-dark"}`}
             onClick={() => setActiveItem("Cài đặt")}
           >
             <FaCog className="me-2" /> Cài đặt
           </a>
         </li>
 
-        <li className="nav-item">
+        <li className="nav-item mb-3">
           <a
             href="#"
-            className={`nav-link d-flex align-items-center ${activeItem === "Thống kê" ? "active text-primary fw-bold" : "text-dark"}`}
+            className={`nav-link d-flex align-items-center py-2 rounded ${activeItem === "Thống kê" ? "active text-primary fw-bold" : "text-dark"}`}
             onClick={() => setActiveItem("Thống kê")}
           >
             <FaChartBar className="me-2" /> Thống kê
           </a>
         </li>
 
-        <li className="nav-item">
+        <li className="nav-item mb-3">
           <a
             href="#"
-            className={`nav-link d-flex align-items-center ${activeItem === "Hỗ trợ" ? "active text-primary fw-bold" : "text-dark"}`}
+            className={`nav-link d-flex align-items-center py-2 rounded ${activeItem === "Hỗ trợ" ? "active text-primary fw-bold" : "text-dark"}`}
             onClick={() => setActiveItem("Hỗ trợ")}
           >
             <FaQuestionCircle className="me-2" /> Hỗ trợ

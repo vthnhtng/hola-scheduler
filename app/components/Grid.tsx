@@ -60,7 +60,8 @@ function Grid({ objectName, attributes, gridData }: GridProps) {
         <div
             className="d-flex flex-column"
             style={{
-                width: 'calc(100% - 200px)'
+                width: 'calc(100% - 200px)',
+                marginLeft: "20px" //khoiph - Add left margin to grid
             }}
         >
             <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
