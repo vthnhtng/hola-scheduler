@@ -41,20 +41,20 @@ function TeacherCRUD() {
 
     //khoiph - Pagination
     const [currentPage, setCurrentPage] = useState(1);
-    const totalPages = 3; //
+    const totalPages = 3;
 
 	return (
 		<>
 			<Header />
 			<main className='d-flex justify-content-between'>
-				<SideBar />
+                <SideBar />
 				<Grid
 					objectName='GIẢNG VIÊN'
 					attributes={teacherAttributes}
 					gridData={teacherRows}
 				/>
-			</main>
-            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+            </main>
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage}/>
             <Footer/>
 		</>
 	)

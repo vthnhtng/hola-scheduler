@@ -1,115 +1,60 @@
 import { useState } from "react";
-import { FaHome, FaUser, FaChalkboardTeacher, FaBook, FaMapMarkerAlt, FaCog, FaChartBar, FaQuestionCircle,} from "react-icons/fa";
+import { FaHome, FaUser, FaChalkboardTeacher, FaBook, FaMapMarkerAlt, FaCog, FaChartBar, FaQuestionCircle } from "react-icons/fa";
 
 function SideBar() {
-  const [openManage, setOpenManage] = useState(false);
-  const [activeItem, setActiveItem] = useState("Giảng viên");
+    const [openManage, setOpenManage] = useState(false);
+    const [activeItem, setActiveItem] = useState("Giảng viên");
 
-  return (
-    <div className="d-flex flex-column bg-light vh-100 p-3 border-end" style={{ width: "250px" }}>
-      <ul className="nav flex-column">
-        <li className="nav-item mb-3">
-          <a
-            href="#"
-            className={`nav-link d-flex align-items-center py-2 rounded ${activeItem === "Trang chủ" ? "active text-primary fw-bold" : "text-dark"}`}
-            onClick={() => setActiveItem("Trang chủ")}
-          >
-            <FaHome className="me-2" /> Trang chủ
-          </a>
-        </li>
+    const menuItems = [
+        { name: "Trang chủ", icon: <FaHome /> },
+        { name: "Tài khoản", icon: <FaUser /> },
+        { name: "Lịch giảng dạy", icon: <FaChalkboardTeacher /> },
+        { name: "Cài đặt", icon: <FaCog /> },
+        { name: "Thống kê", icon: <FaChartBar /> },
+        { name: "Hỗ trợ", icon: <FaQuestionCircle /> }
+    ];
 
-        <li className="nav-item mb-3">
-          <a
-            href="#"
-            className={`nav-link d-flex align-items-center py-2 rounded ${activeItem === "Tài khoản" ? "active text-primary fw-bold" : "text-dark"}`}
-            onClick={() => setActiveItem("Tài khoản")}
-          >
-            <FaUser className="me-2" /> Tài khoản
-          </a>
-        </li>
+    return (
+        <div className="d-flex flex-column min-vh-100 bg-light p-3 border-end  z-3" style={{ width: "250px"}}>
+            <ul className="nav flex-column">
+                {menuItems.map((item) => (
+                    <li key={item.name} className="nav-item mb-3">
+                        <a
+                            href="#"
+                            className={`nav-link d-flex align-items-center py-2 rounded ${activeItem === item.name ? "active text-primary fw-bold" : "text-dark"}`}
+                            onClick={() => setActiveItem(item.name)}
+                        >
+                            {item.icon} <span className="ms-2">{item.name}</span>
+                        </a>
+                    </li>
+                ))}
 
-        <li className="nav-item mb-3">
-          <a
-            href="#"
-            className={`nav-link d-flex align-items-center py-2 rounded ${activeItem === "Lịch giảng dạy" ? "active text-primary fw-bold" : "text-dark"}`}
-            onClick={() => setActiveItem("Lịch giảng dạy")}
-          >
-            <FaChalkboardTeacher className="me-2" /> Lịch giảng dạy
-          </a>
-        </li>
-
-        <li className="nav-item mb-3">
-          <button
-            className="btn text-start nav-link d-flex align-items-center w-100"
-            onClick={() => setOpenManage(!openManage)}
-          >
-            <FaChartBar className="me-2" /> Quản lý
-          </button>
-          {openManage && (
-            <ul className="nav flex-column ps-3">
-              <li className="nav-item">
-                <a
-                  href="#"
-                  className={`nav-link ${activeItem === "Giảng viên" ? "active text-primary fw-bold" : "text-dark"}`}
-                  onClick={() => setActiveItem("Giảng viên")}
-                >
-                  <FaUser className="me-2" /> Giảng viên
-                </a>
-              </li>
-              <li className="nav-item">
-                <a
-                  href="#"
-                  className={`nav-link ${activeItem === "Môn học" ? "active text-primary fw-bold" : "text-dark"}`}
-                  onClick={() => setActiveItem("Môn học")}
-                >
-                  <FaBook className="me-2" /> Môn học
-                </a>
-              </li>
-              <li className="nav-item">
-                <a
-                  href="#"
-                  className={`nav-link ${activeItem === "Địa điểm học" ? "active text-primary fw-bold" : "text-dark"}`}
-                  onClick={() => setActiveItem("Địa điểm học")}
-                >
-                  <FaMapMarkerAlt className="me-2" /> Địa điểm học
-                </a>
-              </li>
+                <li className="nav-item mb-3">
+                    <button className="btn text-start nav-link d-flex align-items-center w-100" onClick={() => setOpenManage(!openManage)}>
+                        <FaChartBar className="me-2" /> Quản lý
+                    </button>
+                    {openManage && (
+                        <ul className="nav flex-column ps-3">
+                            {["Giảng viên", "Môn học", "Địa điểm học"].map((subItem) => (
+                                <li key={subItem} className="nav-item">
+                                    <a
+                                        href="#"
+                                        className={`nav-link ${activeItem === subItem ? "active text-primary fw-bold" : "text-dark"}`}
+                                        onClick={() => setActiveItem(subItem)}
+                                    >
+                                        {subItem === "Giảng viên" && <FaUser className="me-2" />}
+                                        {subItem === "Môn học" && <FaBook className="me-2" />}
+                                        {subItem === "Địa điểm học" && <FaMapMarkerAlt className="me-2" />}
+                                        {subItem}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </li>
             </ul>
-          )}
-        </li>
-
-        <li className="nav-item mb-3">
-          <a
-            href="#"
-            className={`nav-link d-flex align-items-center py-2 rounded ${activeItem === "Cài đặt" ? "active text-primary fw-bold" : "text-dark"}`}
-            onClick={() => setActiveItem("Cài đặt")}
-          >
-            <FaCog className="me-2" /> Cài đặt
-          </a>
-        </li>
-
-        <li className="nav-item mb-3">
-          <a
-            href="#"
-            className={`nav-link d-flex align-items-center py-2 rounded ${activeItem === "Thống kê" ? "active text-primary fw-bold" : "text-dark"}`}
-            onClick={() => setActiveItem("Thống kê")}
-          >
-            <FaChartBar className="me-2" /> Thống kê
-          </a>
-        </li>
-
-        <li className="nav-item mb-3">
-          <a
-            href="#"
-            className={`nav-link d-flex align-items-center py-2 rounded ${activeItem === "Hỗ trợ" ? "active text-primary fw-bold" : "text-dark"}`}
-            onClick={() => setActiveItem("Hỗ trợ")}
-          >
-            <FaQuestionCircle className="me-2" /> Hỗ trợ
-          </a>
-        </li>
-      </ul>
-    </div>
-  );
+        </div>
+    );
 }
 
 export default SideBar;

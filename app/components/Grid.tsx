@@ -99,7 +99,7 @@ function Grid({ objectName, attributes, gridData }: GridProps) {
                                     {attributes.map((attribute) => (
                                         renderAttribute(attribute, record)
                                     ))}
-                                    <td className='d-flex' style={{ width: 'auto'}} >
+                                    <td className='d-flex' style={{ width: 'auto', height: '70px'}}> {/*khoiph - Add height CSS */}
                                         <div>
                                             <FormModal
                                                 title={'CHỈNH SỬA ' + objectName}

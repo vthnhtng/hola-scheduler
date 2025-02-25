@@ -14,15 +14,13 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
     };
 
     return (
-        <nav aria-label="Page navigation">
+        <nav aria-label="Page navigation" style={{ zIndex: 0, position: "relative" }}>
             <ul className="pagination justify-content-center align-items-center">
-
                 <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
                     <button className="page-link" onClick={() => handlePageChange(currentPage - 1)} aria-label="Previous">
-                        <span aria-hidden="true">&laquo;</span>
+                        &laquo;
                     </button>
                 </li>
-
 
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                     <li key={page} className={`page-item ${currentPage === page ? "active" : ""}`}>
@@ -32,10 +30,9 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
                     </li>
                 ))}
 
-
                 <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
                     <button className="page-link" onClick={() => handlePageChange(currentPage + 1)} aria-label="Next">
-                        <span aria-hidden="true">&raquo;</span>
+                        &raquo;
                     </button>
                 </li>
             </ul>
