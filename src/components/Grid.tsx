@@ -1,28 +1,21 @@
 'use client';
-import { useState } from 'react';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
-import { ObjectAttribute } from '../types/ObjectAttribute';
 import FormModal from './FormModal';
 import DeleteModal from './DeleteModal';
 
 interface GridProps {
-    objectName: string;
-    attributes: ObjectAttribute[];
-    gridData: (Record<string, any> | null)[];
+    gridName: string;
+    gridAttribute: 
+    gridData: any[];
 }
 
-function Grid({ objectName, attributes, gridData }: GridProps) {
-    const [selectedRow, setSelectedRow] = useState<number | null>(null);
-
-    const handleClickAction = (index: number) => {
-        setSelectedRow((prev) => (prev === index ? null : index));
-    };
-
+function Grid({ gridName, gridData }: GridProps) {
+    const objectName = data[0]
     const renderAttribute = (attribute: ObjectAttribute, record: Record<string, any>) => {
-        const attributeType = attribute.type;   
-        const attributeName = attribute.name;
-        const attributeValue = record[attribute.name];
-
+        // const attributeType = attribute.type;   
+        // const attributeName = attribute.name;
+        // const attributeValue = record[attribute.name];
+        const attributeType = '';
         switch (attributeType) {
             case 'string':
             case 'number':
@@ -57,12 +50,7 @@ function Grid({ objectName, attributes, gridData }: GridProps) {
     };
 
     return (
-        <div
-            className="d-flex flex-column"
-            style={{
-                width: 'calc(100% - 200px)'
-            }}
-        >
+        <div className="d-flex flex-column">
             <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
                 <h2 className="fw-bold text-uppercase">DANH SÁCH {objectName}</h2>
                 <FormModal
@@ -91,7 +79,7 @@ function Grid({ objectName, attributes, gridData }: GridProps) {
                             record && (
                                 <tr 
                                     key={index} 
-                                    className={`align-middle ${selectedRow === index ? 'table-primary' : ''}`} 
+                                    className="align-middle" 
                                     style={{ cursor: 'pointer' }}
                                 >
                                     <td>{index}</td>
@@ -102,18 +90,18 @@ function Grid({ objectName, attributes, gridData }: GridProps) {
                                         <div>
                                             <FormModal
                                                 title={'CHỈNH SỬA ' + objectName}
-                                                button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}><FaEdit /></button>}
+                                                button={<button className="btn btn-outline-success me-2" onClick={() => (index)}><FaEdit /></button>}
                                                 attributes={attributes}
                                                 record={record}
-                                                onClose={() => setSelectedRow(null)}
+                                                onClose={() => (null)}
                                             />
                                         </div>
                                         <div>
                                             <DeleteModal
                                                 title={objectName}
-                                                button={<button className="btn btn-outline-danger" onClick={() => handleClickAction(index)}><FaTrashAlt /></button>}
+                                                button={<button className="btn btn-outline-danger" onClick={() => (index)}><FaTrashAlt /></button>}
                                                 record={record}
-                                                onClose={() => setSelectedRow(null)}
+                                                onClose={() => (null)}
                                             />
                                         </div>
                                     </td>

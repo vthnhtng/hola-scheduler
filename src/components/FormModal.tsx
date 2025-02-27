@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { ObjectAttribute } from '../types/ObjectAttribute';
+import { ObjectAttribute } from '../models/ObjectAttribute';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
@@ -26,7 +26,7 @@ function FormModal({ title, button, attributes, record, onClose }: FormModalProp
         handleClose();
     }
 
-    const renderFormField = (attribute: ObjectAttribute, index: number, record: Record<string, any> | null) => {
+    const renderFormField = (attribute: ObjectAttributes, index: number, record: Record<string, any> | null) => {
         const { name, label, type } = attribute;
 
         switch (type) {

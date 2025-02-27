@@ -1,6 +1,5 @@
 'use client';
 import { useState } from 'react';
-import { ObjectAttribute } from '../types/ObjectAttribute';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 

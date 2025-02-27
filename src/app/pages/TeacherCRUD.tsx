@@ -1,9 +1,7 @@
 'use client';
-import Header from '../components/Header'
-import SideBar from '../components/SideBar'
 import Grid from '../components/Grid'
 import { ObjectAttribute } from '../types/ObjectAttribute';
-import avatar from '../assets/avatar/avatar.jpg';
+import avatar from '../teachers/assets/avatar.jpg';
 
 function TeacherCRUD() {
 	const teacherAttributes: ObjectAttribute[] = [
@@ -37,15 +35,11 @@ function TeacherCRUD() {
 
 	return (
 		<>
-			<Header />
-			<main className='d-flex justify-content-between'>
-				<SideBar />
-				<Grid
-					objectName='GIẢNG VIÊN'
-					attributes={teacherAttributes}
-					gridData={teacherRows}
-				/>
-			</main>
+            <Grid
+                objectName='GIẢNG VIÊN'
+                attributes={teacherAttributes}
+                gridData={teacherRows}
+            />
 		</>
 	)
 }

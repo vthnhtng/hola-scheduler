@@ -1,5 +1,4 @@
-'use client';
-import logo from '../assets/logo/VNU_GDQPAN_Logo.png';
+import logo from '../../public/assets/logo/VNU_GDQPAN_Logo.png'
 import { FiLogOut } from 'react-icons/fi';
 
 function Header() {
@@ -14,9 +13,7 @@ function Header() {
 			}}
 		>
 			<div className="d-flex align-items-center gap-3"
-				style={{
-					minWidth: '80%'
-				}}
+				style={{ minWidth: '80%' }}
 			>
 				<div style={{ width: '100px' }}>
 					<img
