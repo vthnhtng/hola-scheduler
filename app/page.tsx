@@ -1,9 +1,9 @@
-import TeacherCRUD from "./pages/TeacherCRUD";
+import LecturersPage from "./lecturers/page";
 
 export default function Home() {
 	return (
 		<main>
-			<TeacherCRUD />
+			<LecturersPage />
 		</main>
 	);
 }

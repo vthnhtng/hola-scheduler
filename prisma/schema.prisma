@@ -1,0 +1,110 @@
+datasource db {
+    provider = "mysql"
+    url      = env("DATABASE_URL")
+}
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+enum Program {
+    DH
+    CD
+}
+
+enum Category {
+    CT
+    QS
+}
+
+// ---------- SUBJECT ----------
+model Subject {
+    subject_id   Int      @id @default(autoincrement())
+    subject_name String
+    category     Category
+
+    // Relations
+    Curriculum              Curriculum[]
+    prerequisites           SubjectPrerequisites[]    @relation("SubjectPrerequisites_subject")
+    isPrerequisiteFor       SubjectPrerequisites[]    @relation("SubjectPrerequisites_prerequisite")
+    LocationSubjects        LocationSubjects[]
+    LecturerSpecializations LecturerSpecializations[]
+}
+
+// ---------- SUBJECT_PREREQUISITES ----------
+model SubjectPrerequisites {
+    // Join table for self-relation on Subject
+    subject_id      Int
+    prerequisite_id Int
+
+    // Relations
+    subject      Subject @relation("SubjectPrerequisites_subject", fields: [subject_id], references: [subject_id])
+    prerequisite Subject @relation("SubjectPrerequisites_prerequisite", fields: [prerequisite_id], references: [subject_id])
+
+    @@id([subject_id, prerequisite_id])
+}
+
+// ---------- CURRICULUM ----------
+model Curriculum {
+    curriculum_id Int     @id @default(autoincrement())
+    subject_id    Int
+    program       Program
+
+    // Relations
+    subject Subject @relation(fields: [subject_id], references: [subject_id])
+}
+
+// ---------- TEAMS ----------
+model Teams {
+    team_id        Int     @id @default(autoincrement())
+    team_name      String
+    program        Program
+    team_leader_id Int
+}
+
+// ---------- LOCATION ----------
+model Location {
+    location_id   Int    @id @default(autoincrement())
+    location_name String
+    capacity      Int
+
+    // Relations
+    LocationSubjects LocationSubjects[]
+}
+
+// ---------- LOCATION_SUBJECTS ----------
+model LocationSubjects {
+    // Join table for many-to-many between Location and Subject
+    location_id Int
+    subject_id  Int
+
+    // Relations
+    location Location @relation(fields: [location_id], references: [location_id])
+    subject  Subject  @relation(fields: [subject_id], references: [subject_id])
+
+    @@id([location_id, subject_id])
+}
+
+// ---------- LECTURERS ----------
+model Lecturers {
+    lecturer_id           Int      @id @default(autoincrement())
+    full_name             String
+    faculty               Category
+    max_sessions_per_week Int
+
+    // Relations
+    LecturerSpecializations LecturerSpecializations[]
+}
+
+// ---------- LECTURER_SPECIALIZATIONS ----------
+model LecturerSpecializations {
+    // Join table for many-to-many between Lecturers and Subject
+    lecturer_id Int
+    subject_id  Int
+
+    // Relations
+    lecturer Lecturers @relation(fields: [lecturer_id], references: [lecturer_id])
+    subject  Subject   @relation(fields: [subject_id], references: [subject_id])
+
+    @@id([lecturer_id, subject_id])
+}

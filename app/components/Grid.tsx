@@ -9,9 +9,10 @@ interface GridProps {
     objectName: string;
     attributes: ObjectAttribute[];
     gridData: (Record<string, any> | null)[];
+    formAction: string;
 }
 
-function Grid({ objectName, attributes, gridData }: GridProps) {
+function Grid({ objectName, attributes, gridData, formAction }: GridProps) {
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
 
     const handleClickAction = (index: number) => {
@@ -72,6 +73,8 @@ function Grid({ objectName, attributes, gridData }: GridProps) {
                     }
                     attributes={attributes}
                     record={null}
+                    formAction={formAction}
+                    formMethod='POST'
                     onClose={() => {}}
                 />
             </div>
@@ -94,7 +97,7 @@ function Grid({ objectName, attributes, gridData }: GridProps) {
                                     className={`align-middle ${selectedRow === index ? 'table-primary' : ''}`} 
                                     style={{ cursor: 'pointer' }}
                                 >
-                                    <td>{index}</td>
+                                    <td>{index + 1}</td>
                                     {attributes.map((attribute) => (
                                         renderAttribute(attribute, record)
                                     ))}
@@ -105,6 +108,8 @@ function Grid({ objectName, attributes, gridData }: GridProps) {
                                                 button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}><FaEdit /></button>}
                                                 attributes={attributes}
                                                 record={record}
+                                                formAction={formAction + '/' + record.id}
+                                                formMethod='PUT'
                                                 onClose={() => setSelectedRow(null)}
                                             />
                                         </div>
