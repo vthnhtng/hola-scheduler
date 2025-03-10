@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ObjectAttribute } from '../types/ObjectAttribute';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
@@ -10,23 +10,93 @@ interface FormModalProps {
     button: React.ReactNode;
     attributes: ObjectAttribute[];
     record: Record<string, any> | null;
-    onClose: () => void
+    formAction: string;
+    formMethod: string;
+    onClose: () => void;
 }
 
-function FormModal({ title, button, attributes, record, onClose }: FormModalProps ) {
+function FormModal({
+    title,
+    button,
+    attributes,
+    record,
+    formAction,
+    formMethod,
+    onClose,
+}: FormModalProps) {
     const [show, setShow] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [message, setMessage] = useState<string | null>(null);
+    const formRef = useRef<HTMLFormElement>(null);
+
+    useEffect(() => {
+        if (show) {
+            setMessage(null);
+        }
+    }, [show]);
 
     const handleClose = () => {
         setShow(false);
         onClose();
-    }
-    const handleShow = () => setShow(true);
-    const handleSave = () => {
-        alert("To be developed");
-        handleClose();
-    }
+    };
 
-    const renderFormField = (attribute: ObjectAttribute, index: number, record: Record<string, any> | null) => {
+    const handleShow = () => {
+        setShow(true);
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        setMessage(null);
+
+        try {
+            if (!formRef.current) {
+                throw new Error('Form element not found.');
+            }
+
+            const formData = new FormData(formRef.current);
+            const data: Record<string, any> = {};
+
+            attributes.forEach((attribute) => {
+                let value = formData.get(attribute.name);
+                if (attribute.type === 'number') {
+                    data[attribute.name] = value ? Number(value) : 0;
+                } else if (attribute.type === 'boolean') {
+                    data[attribute.name] = value === 'on';
+                } else {
+                    data[attribute.name] = value || '';
+                }
+            });
+
+            const response = await fetch(formAction, {
+                method: formMethod.toUpperCase(),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Submission failed.');
+            }
+
+            setMessage('Lưu thành công!');
+        } catch (err: any) {
+            setMessage('Có lỗi xảy ra vui lòng thử lại sau!');
+        } finally {
+            setSaving(false);
+        }
+
+        setTimeout(() => {
+            handleClose();
+        }, 1500);
+    };
+
+    const renderFormField = (
+        attribute: ObjectAttribute,
+        index: number,
+        record: Record<string, any> | null
+    ) => {
         const { name, label, type } = attribute;
 
         switch (type) {
@@ -34,7 +104,12 @@ function FormModal({ title, button, attributes, record, onClose }: FormModalProp
                 return (
                     <Form.Group key={index} className="mb-3" controlId={name}>
                         <Form.Label>{label}</Form.Label>
-                        <Form.Control type="text" placeholder={`Nhập ${label}`} defaultValue={record?.[name] || ''} />
+                        <Form.Control
+                            name={name}
+                            type="text"
+                            placeholder={`Nhập ${label}`}
+                            defaultValue={record?.[name] || ''}
+                        />
                     </Form.Group>
                 );
 
@@ -42,16 +117,25 @@ function FormModal({ title, button, attributes, record, onClose }: FormModalProp
                 return (
                     <Form.Group key={index} className="mb-3" controlId={name}>
                         <Form.Label>{label}</Form.Label>
-                        <Form.Control type="number" placeholder={`Nhập ${label}`} defaultValue={record?.[name] || ''} />
+                        <Form.Control
+                            name={name}
+                            type="number"
+                            placeholder={`Nhập ${label}`}
+                            defaultValue={record?.[name] || ''}
+                        />
                     </Form.Group>
                 );
 
             case 'boolean':
                 return (
                     <Form.Group key={index} className="mb-3" controlId={name}>
-                        <div className='d-flex gap-1'>
+                        <div className="d-flex gap-1">
                             <Form.Label>{label}</Form.Label>
-                            <Form.Check type="checkbox" defaultChecked={record?.[name] || false} />
+                            <Form.Check
+                                name={name}
+                                type="checkbox"
+                                defaultChecked={record?.[name] || false}
+                            />
                         </div>
                     </Form.Group>
                 );
@@ -60,46 +144,51 @@ function FormModal({ title, button, attributes, record, onClose }: FormModalProp
                 return (
                     <Form.Group key={index} className="mb-3" controlId={name}>
                         <Form.Label>{label}</Form.Label>
-                        <Form.Control type="file" accept="image/*" />
+                        <Form.Control name={name} type="file" accept="image/*" />
                     </Form.Group>
                 );
 
             default:
-                return <></>;
+                return null;
         }
     };
 
     return (
         <>
-            <div onClick={handleShow}>
-                {button}
-            </div>
+            <div onClick={handleShow}>{button}</div>
 
             <Modal show={show} onHide={handleClose} centered>
-                <Modal.Header closeButton style={{backgroundColor: '#28a745'}}>
+                <Modal.Header closeButton style={{ backgroundColor: '#28a745' }}>
                     <Modal.Title>{title}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                    <Form>
-                        {attributes.map((attribute, index) => (
+                    <Form ref={formRef}>
+                        {attributes.map((attribute, index) =>
                             renderFormField(attribute, index, record)
-                        ))}
+                        )}
                     </Form>
+                    {message && (
+                        <p style={{ color: message.includes('Lưu thành công') ? 'green' : 'red' }}>
+                            {message}
+                        </p>
+                    )}
                 </Modal.Body>
                 <Modal.Footer>
-                    <Button 
-                        variant="success" 
-                        style={{ backgroundColor: '#28a745', borderColor: '#218838' }} 
+                    <Button
+                        variant="success"
+                        style={{ backgroundColor: '#28a745', borderColor: '#218838' }}
                         onClick={handleClose}
+                        disabled={saving}
                     >
                         Đóng
                     </Button>
-                    <Button 
-                        variant="success" 
-                        style={{ backgroundColor: '#218838', borderColor: '#1e7e34' }} 
+                    <Button
+                        variant="success"
+                        style={{ backgroundColor: '#218838', borderColor: '#1e7e34' }}
                         onClick={handleSave}
+                        disabled={saving}
                     >
-                        Lưu
+                        {saving ? 'Đang lưu...' : 'Lưu'}
                     </Button>
                 </Modal.Footer>
             </Modal>
