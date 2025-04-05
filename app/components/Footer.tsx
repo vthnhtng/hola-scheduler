@@ -1,5 +1,5 @@
 'use client';
-
+// Khoimom chinh style footer
 import React from "react";
 import logo from "../assets/logo/VNU_GDQPAN_Logo.png";
 

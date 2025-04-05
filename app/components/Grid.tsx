@@ -27,6 +27,7 @@ function Grid({ objectName, attributes, gridData, formAction }: GridProps) {
         switch (attributeType) {
             case 'string':
             case 'number':
+            case 'select':
                 return <td key={attributeName}>{attributeValue}</td>;
     
             case 'boolean':
@@ -62,7 +63,7 @@ function Grid({ objectName, attributes, gridData, formAction }: GridProps) {
             className="d-flex flex-column"
             style={{
                 width: 'calc(100% - 200px)',
-                marginLeft: "20px" //khoiph - Add left margin to grid
+                marginLeft: "20px"
             }}
         >
             <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
@@ -102,14 +103,14 @@ function Grid({ objectName, attributes, gridData, formAction }: GridProps) {
                                     {attributes.map((attribute) => (
                                         renderAttribute(attribute, record)
                                     ))}
-                                    <td className='d-flex' style={{ width: 'auto', height: '70px'}}> {/*khoiph - Add height CSS */}
+                                    <td className='d-flex' style={{ width: 'auto', height: '70px'}}>
                                         <div>
                                             <FormModal
                                                 title={'CHỈNH SỬA ' + objectName}
                                                 button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}><FaEdit /></button>}
                                                 attributes={attributes}
                                                 record={record}
-                                                formAction={formAction + '/' + record.id}
+                                                formAction={formAction}
                                                 formMethod='PUT'
                                                 onClose={() => setSelectedRow(null)}
                                             />
@@ -120,6 +121,7 @@ function Grid({ objectName, attributes, gridData, formAction }: GridProps) {
                                                 button={<button className="btn btn-outline-danger" onClick={() => handleClickAction(index)}><FaTrashAlt /></button>}
                                                 record={record}
                                                 onClose={() => setSelectedRow(null)}
+                                                formAction={formAction}
                                             />
                                         </div>
                                     </td>

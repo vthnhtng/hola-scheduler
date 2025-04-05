@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FaHome, FaUser, FaChalkboardTeacher, FaBook, FaMapMarkerAlt, FaCog, FaChartBar, FaQuestionCircle } from "react-icons/fa";
 
+// Khoimom - handle action khi click (tạo property link cho từng item trong menu)
 function SideBar() {
     const [openManage, setOpenManage] = useState(false);
     const [activeItem, setActiveItem] = useState("Giảng viên");
@@ -19,7 +20,7 @@ function SideBar() {
             <ul className="nav flex-column">
                 {menuItems.map((item) => (
                     <li key={item.name} className="nav-item mb-3">
-                        <a
+                        <a // Khoimom - có element của riêng next thay cho thẻ a href để không phải render lại element
                             href="#"
                             className={`nav-link d-flex align-items-center py-2 rounded ${activeItem === item.name ? "active text-primary fw-bold" : "text-dark"}`}
                             onClick={() => setActiveItem(item.name)}

@@ -1,5 +1,6 @@
 #!/bin/bash
 
+npm install
 # Create MySQL Docker Container
 ./run_mysql_container.sh
 

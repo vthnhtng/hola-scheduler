@@ -108,3 +108,5 @@ model LecturerSpecializations {
 
     @@id([lecturer_id, subject_id])
 }
+
+// Khoimom - chinh lai db

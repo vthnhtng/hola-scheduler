@@ -8,10 +8,11 @@ interface DeleteModal {
     title: string;
     button: React.ReactNode;
     record: Record<string, any> | null;
-    onClose: () => void
+    onClose: () => void;
+    formAction: string;
 }
 
-function DeleteModal({ title, button, record, onClose}: DeleteModal ) {
+function DeleteModal({ title, button, record, onClose, formAction}: DeleteModal ) {
     const [show, setShow] = useState(false);
 
     const handleClose = () => {
@@ -19,10 +20,33 @@ function DeleteModal({ title, button, record, onClose}: DeleteModal ) {
         onClose();
     }
     const handleShow = () => setShow(true);
-    const handleDelete = () => {
-        record = null;
-        handleClose();
-    }
+    const handleDelete = async () => {
+        if (!record) return;
+    
+        try {
+            const firstProperty = Object.keys(record)[0];
+            const response = await fetch(formAction, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id: record[firstProperty] }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert('Xóa thành công');
+                window.location.reload();
+            } else {
+                alert('Lỗi khi xóa: ' +  data.error);
+            }
+        } catch (error) {
+            alert('Lỗi kết nối tới server: ' + error);
+        } finally {
+            handleClose();
+        }
+    };    
 
     return (
         <>

@@ -56,6 +56,11 @@ function FormModal({
             const formData = new FormData(formRef.current);
             const data: Record<string, any> = {};
 
+            if (record) {
+                const firstProperty = Object.keys(record)[0];
+                data[firstProperty] = record[firstProperty];
+            }
+
             attributes.forEach((attribute) => {
                 let value = formData.get(attribute.name);
                 if (attribute.type === 'number') {
@@ -81,6 +86,7 @@ function FormModal({
             }
 
             setMessage('Lưu thành công!');
+            window.location.reload();
         } catch (err: any) {
             setMessage('Có lỗi xảy ra vui lòng thử lại sau!');
         } finally {
@@ -97,7 +103,7 @@ function FormModal({
         index: number,
         record: Record<string, any> | null
     ) => {
-        const { name, label, type } = attribute;
+        const { name, label, type, select_data } = attribute;
 
         switch (type) {
             case 'string':
@@ -147,7 +153,20 @@ function FormModal({
                         <Form.Control name={name} type="file" accept="image/*" />
                     </Form.Group>
                 );
-
+            
+            case 'select':
+                return (
+                    <Form.Group key={index} className="mb-3" controlId={name}>
+                        <Form.Label>{label}</Form.Label>
+                        <Form.Select name={name} defaultValue={record?.[name] || ''}>
+                            {select_data?.map((option, i) => (
+                                <option key={i} value={option}>
+                                    {option}
+                                </option>
+                            ))}
+                        </Form.Select>
+                    </Form.Group>
+                );
             default:
                 return null;
         }

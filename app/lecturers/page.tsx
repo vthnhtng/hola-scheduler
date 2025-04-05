@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Header from '../components/Header';
 import SideBar from '../components/SideBar';
 import Grid from '../components/Grid';
+import Footer from '../components/Footer';
 import { ObjectAttribute } from '../types/ObjectAttribute';
 import avatar from '../assets/avatar/avatar.jpg';
 
@@ -16,7 +17,7 @@ interface Lecturer {
 function LecturersPage() {
     const lecturerAttributes: ObjectAttribute[] = [
         { name: 'full_name', label: 'Họ và tên', type: 'string' },
-        { name: 'faculty', label: 'Chuyên khoa', type: 'string' },
+        { name: 'faculty', label: 'Chuyên khoa', type: 'select', select_data: ['CT', 'QS'] },
         { name: 'max_sessions_per_week', label: 'Số lớp tối đa', type: 'number' }
     ];
 
@@ -43,21 +44,29 @@ function LecturersPage() {
         fetchLecturers();
     }, []);
 
-    if (loading) return <p>Loading...</p>;
-    if (error) return <p>Error: {error}</p>;
-
     return (
         <>
             <Header />
             <main className='d-flex justify-content-between'>
                 <SideBar />
-                <Grid
-                    objectName='GIẢNG VIÊN'
-                    attributes={lecturerAttributes}
-                    gridData={lecturers}
-                    formAction='/api/lecturers'
-                />
+                {loading ? (
+                    <div className="d-flex justify-content-center align-items-center" style={{ flex: 1 }}>
+                        <div className="spinner-border" style={{ width: '3rem', height: '3rem' }} role="status">
+                            <span className="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                ) : error ? (
+                    <p>Error: {error}</p>
+                ) : (
+                    <Grid
+                        objectName='GIẢNG VIÊN'
+                        attributes={lecturerAttributes}
+                        gridData={lecturers}
+                        formAction='/api/lecturers'
+                    />
+                )}
             </main>
+            <Footer />
         </>
     )
 }
