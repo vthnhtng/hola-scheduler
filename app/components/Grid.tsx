@@ -61,7 +61,8 @@ function Grid({ objectName, attributes, gridData, formAction }: GridProps) {
         <div
             className="d-flex flex-column"
             style={{
-                width: 'calc(100% - 200px)'
+                width: 'calc(100% - 200px)',
+                marginLeft: "20px" //khoiph - Add left margin to grid
             }}
         >
             <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
@@ -101,7 +102,7 @@ function Grid({ objectName, attributes, gridData, formAction }: GridProps) {
                                     {attributes.map((attribute) => (
                                         renderAttribute(attribute, record)
                                     ))}
-                                    <td className='d-flex' style={{ width: 'auto'}} >
+                                    <td className='d-flex' style={{ width: 'auto', height: '70px'}}> {/*khoiph - Add height CSS */}
                                         <div>
                                             <FormModal
                                                 title={'CHỈNH SỬA ' + objectName}
