@@ -28,7 +28,7 @@ function Footer() {
               <b>Địa chỉ:</b> Thôn 3, xã Thạch Hoà, huyện Thạch Thất, thành phố Hà Nội
             </p>
             <p className="mb-0" style={{ fontSize: "0.75rem" }}>
-              <b>Điện thoại:</b> (84) 024 3558 9544
+              <b>Điện thoại:</b> (+84) 024 3558 9544
             </p>
             <p className="mb-0" style={{ fontSize: "0.75rem" }}>
               <b>Website:</b>{" "}

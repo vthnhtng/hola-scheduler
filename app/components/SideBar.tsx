@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { FaHome, FaUser, FaChalkboardTeacher, FaBook, FaMapMarkerAlt, FaCog, FaChartBar, FaQuestionCircle } from "react-icons/fa";
+import { FaHome, FaUser, FaChalkboardTeacher, FaBook, FaMapMarkerAlt, FaCog, FaChartBar, FaQuestionCircle, FaBars } from "react-icons/fa";
+import Link from "next/link";
 
-// Khoimom - handle action khi click (tạo property link cho từng item trong menu)
-function SideBar() {
-    const [openManage, setOpenManage] = useState(false);
+// Khoimom - handle action khi click (tạo property link cho từng item trong menu) - Done 07/04/2025
+function Sidebar() {
+    const [isOpen, setIsOpen] = useState(true);
     const [activeItem, setActiveItem] = useState("Giảng viên");
+    const [openManage, setOpenManage] = useState(false);
 
     const menuItems = [
         { name: "Trang chủ", icon: <FaHome /> },
@@ -12,50 +14,135 @@ function SideBar() {
         { name: "Lịch giảng dạy", icon: <FaChalkboardTeacher /> },
         { name: "Cài đặt", icon: <FaCog /> },
         { name: "Thống kê", icon: <FaChartBar /> },
-        { name: "Hỗ trợ", icon: <FaQuestionCircle /> }
+        { name: "Hỗ trợ", icon: <FaQuestionCircle /> },
     ];
 
-    return (
-        <div className="d-flex flex-column min-vh-100 bg-light p-3 border-end  z-3" style={{ width: "250px"}}>
-            <ul className="nav flex-column">
-                {menuItems.map((item) => (
-                    <li key={item.name} className="nav-item mb-3">
-                        <a // Khoimom - có element của riêng next thay cho thẻ a href để không phải render lại element
-                            href="#"
-                            className={`nav-link d-flex align-items-center py-2 rounded ${activeItem === item.name ? "active text-primary fw-bold" : "text-dark"}`}
-                            onClick={() => setActiveItem(item.name)}
-                        >
-                            {item.icon} <span className="ms-2">{item.name}</span>
-                        </a>
-                    </li>
-                ))}
+    const subMenuItems = ["Giảng viên", "Môn học", "Địa điểm học"];
 
-                <li className="nav-item mb-3">
-                    <button className="btn text-start nav-link d-flex align-items-center w-100" onClick={() => setOpenManage(!openManage)}>
-                        <FaChartBar className="me-2" /> Quản lý
+    return (
+        <>
+            <style>
+                {`
+                    .sidebar {
+                        transition: width 0.3s ease;
+                        overflow-x: hidden;
+                        white-space: nowrap;
+                        background-color: #f8f9fa;
+                        border-right: 1px solid #dee2e6;
+                    }
+                    .sidebar.open {
+                        width: 250px;
+                    }
+                    .sidebar.collapsed {
+                        width: 60px;
+                    }
+                    .sidebar .nav-link {
+                        padding: 0.5rem 1rem;
+                        transition: background 0.2s;
+                    }
+                    .sidebar .nav-link:hover {
+                        background-color: #e9ecef;
+                    }
+                    .sidebar .nav-link.active {
+                        background-color: #e2e6ea;
+                    }
+                    .sidebar .nav-link span {
+                        display: inline-block;
+                    }
+                    .sidebar .toggle-btn {
+                        display: flex;
+                        align-items: center;
+                        padding: 1rem 0;
+                        height: 60px;
+                    }
+                    
+                    .sidebar .toggle-btn button {
+                        width: 30px;
+                        height: 30px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin: 0 auto;
+                    }
+                    
+                    .sidebar.open .toggle-btn {
+                        justify-content: flex-start;
+                        padding-left: 1rem;
+                    }
+                    
+                    .sidebar.collapsed .toggle-btn {
+                        padding-left: 0;
+                    }
+                    
+                    .sidebar.open .toggle-btn button {
+                        margin: 0;
+                    }
+                    
+                    .sidebar.collapsed .toggle-btn button {
+                        margin: 0 auto;
+                    }
+                `}
+            </style>
+
+            <div className={`sidebar border-end ${isOpen ? "open" : "collapsed"}`}>
+                <div className="toggle-btn">
+                    <button
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() => setIsOpen(!isOpen)}
+                    >
+                        <FaBars />
                     </button>
-                    {openManage && (
-                        <ul className="nav flex-column ps-3">
-                            {["Giảng viên", "Môn học", "Địa điểm học"].map((subItem) => (
-                                <li key={subItem} className="nav-item">
-                                    <a
-                                        href="#"
-                                        className={`nav-link ${activeItem === subItem ? "active text-primary fw-bold" : "text-dark"}`}
-                                        onClick={() => setActiveItem(subItem)}
-                                    >
-                                        {subItem === "Giảng viên" && <FaUser className="me-2" />}
-                                        {subItem === "Môn học" && <FaBook className="me-2" />}
-                                        {subItem === "Địa điểm học" && <FaMapMarkerAlt className="me-2" />}
-                                        {subItem}
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </li>
-            </ul>
-        </div>
+                </div>
+
+                <ul className="nav flex-column">
+                    {menuItems.map((item) => (
+                        <li key={item.name} className="nav-item">
+                            <Link // Khoimom - có element của riêng next thay cho thẻ a href để không phải render lại element - Done 07/04/2025
+                                href="#"
+                                className={`nav-link d-flex align-items-center ${activeItem === item.name
+                                        ? "active fw-bold text-primary"
+                                        : "text-dark"
+                                    }`}
+                                onClick={() => setActiveItem(item.name)}
+                                title={!isOpen ? item.name : ""}
+                            >
+                                <span className="me-2">{item.icon}</span>
+                                {isOpen && <span>{item.name}</span>}
+                            </Link>
+                        </li>
+                    ))}
+
+                    <li className="nav-item">
+                        <button
+                            className="btn nav-link d-flex align-items-center text-start w-100"
+                            onClick={() => setOpenManage(!openManage)}
+                            title={!isOpen ? "Quản lý" : ""}
+                        >
+                            <FaChartBar className="me-2" />
+                            {isOpen && <span>Quản lý</span>}
+                        </button>
+
+                        {openManage && isOpen && (
+                            <ul className="nav flex-column ps-4">
+                                {subMenuItems.map((sub) => (
+                                    <li key={sub}>
+                                        <Link // Khoimom - có element của riêng next thay cho thẻ a href để không phải render lại element - Done 07/04/2025
+                                            href="#"
+                                            className={`nav-link ${activeItem === sub ? "active text-primary fw-bold" : "text-dark"
+                                                }`}
+                                            onClick={() => setActiveItem(sub)}
+                                        >
+                                            {sub}
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </li>
+                </ul>
+            </div>
+        </>
     );
 }
 
-export default SideBar;
+export default Sidebar;
