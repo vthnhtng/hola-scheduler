@@ -7,18 +7,19 @@ import Footer from '../components/Footer';
 import { ObjectAttribute } from '../types/ObjectAttribute';
 import avatar from '../assets/avatar/avatar.jpg';
 
+// khoiphamhuy25 - Change attribute name to match the API response - 13/04/2025
 interface Lecturer {
-    lecturer_id: number;
-    full_name: string;
+    id: number;
+    fullName: string;
     faculty: string;
-    max_sessions_per_week: number;
+    maxSessionsPerWeek: number;
 }
 
 function LecturersPage() {
     const lecturerAttributes: ObjectAttribute[] = [
-        { name: 'full_name', label: 'Họ và tên', type: 'string' },
+        { name: 'fullName', label: 'Họ và tên', type: 'string' },
         { name: 'faculty', label: 'Chuyên khoa', type: 'select', select_data: ['CT', 'QS'] },
-        { name: 'max_sessions_per_week', label: 'Số lớp tối đa', type: 'number' }
+        { name: 'maxSessionsPerWeek', label: 'Số lớp tối đa', type: 'number' }
     ];
 
     const [lecturers, setLecturers] = useState<Lecturer[]>([]);
