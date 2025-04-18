@@ -2,12 +2,12 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
 /**
- * @returns - Returns a list of lecturers from the database. 
+ * @returns - Returns a list of subjects from the database. 
  */
 export async function GET() {
     try {
-        const lecturers = await prisma.lecturer.findMany();
-        return NextResponse.json(lecturers);
+        const subjects = await prisma.subject.findMany();
+        return NextResponse.json(subjects);
     } catch (error) {
         return NextResponse.json({ error: error }, { status: 500 });
     } finally {
@@ -16,29 +16,29 @@ export async function GET() {
 }
 
 /**
- * @param request - Request object containing the lecturer data.
- * @returns - Create new lecturer in the database.
+ * @param request - Request object containing the subject data.
+ * @returns - Create new subject in the database.
  */
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { fullName, faculty, maxSessionsPerWeek } = body;
+        const { name, category, prerequisiteId } = body;
 
-        const newLecturer = await prisma.lecturer.create({
+        const newSubject = await prisma.subject.create({
             data: {
-                fullName,
-                faculty,
-                maxSessionsPerWeek,
+                name,
+                category,
+                prerequisiteId,
             },
         });
 
         return NextResponse.json(
-            { success: true, lecturer: newLecturer },
+            { success: true, subject: newSubject },
             { status: 201 }
         );
     } catch (e) {
         return NextResponse.json(
-            { error: 'Failed to create lecturer' },
+            { error: 'Failed to create subject' },
             { status: 500 }
         );
     } finally {
@@ -47,8 +47,8 @@ export async function POST(request: Request) {
 }
 
 /**
- * @param request - Request object containing the lecturer ID to delete.
- * @returns - Delete lecturer from the database.
+ * @param request - Request object containing the subject ID to delete.
+ * @returns - Delete subject from the database.
  */
 export async function DELETE(request: Request) {
     try {
@@ -60,17 +60,17 @@ export async function DELETE(request: Request) {
             );
         }
 
-        const deletedLecturer = await prisma.lecturer.delete({
+        const deletedSubject = await prisma.subject.delete({
             where: { id },
         });
 
         return NextResponse.json(
-            { success: true, lecturer: deletedLecturer },
+            { success: true, subject: deletedSubject },
             { status: 200 }
         );
     } catch (e) {
         return NextResponse.json(
-            { error: 'Failed to delete lecturer' },
+            { error: 'Failed to delete subject' },
             { status: 500 }
         );
     } finally {
@@ -79,37 +79,37 @@ export async function DELETE(request: Request) {
 }
 
 /**
- * @param request - Request object containing the lecturer data to update.
- * @returns - Change lecturer information in the database.
+ * @param request - Request object containing the subject data to update.
+ * @returns - Change subject information in the database.
  */
 export async function PUT(request: Request) {
     try {
         const body = await request.json();
-        const { id, fullName, faculty, maxSessionsPerWeek } = body;
+        const { id, name, category, prerequisiteId } = body;
 
         if (typeof id !== 'number') {
             return NextResponse.json(
-                { error: 'Invalid or missing lecturer_id' },
+                { error: 'Invalid or missing subject_id' },
                 { status: 400 }
             );
         }
 
-        const updatedLecturer = await prisma.lecturer.update({
+        const updatedSubject = await prisma.subject.update({
             where: { id },
             data: {
-                fullName,
-                faculty,
-                maxSessionsPerWeek,
+                name,
+                category,
+                prerequisiteId,
             },
         });
 
         return NextResponse.json(
-            { success: true, lecturer: updatedLecturer },
+            { success: true, subject: updatedSubject },
             { status: 200 }
         );
     } catch (error) {
         return NextResponse.json(
-            { error: 'Failed to update lecturer' },
+            { error: 'Failed to update subject' },
             { status: 500 }
         );
     } finally {

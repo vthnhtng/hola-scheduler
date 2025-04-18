@@ -5,43 +5,40 @@ import SideBar from '../components/SideBar';
 import Grid from '../components/Grid';
 import Footer from '../components/Footer';
 import { ObjectAttribute } from '../types/ObjectAttribute';
-import avatar from '../assets/avatar/avatar.jpg';
 
-interface Lecturer {
+interface Location {
     id: number;
-    fullName: string;
-    faculty: string;
-    maxSessionsPerWeek: number;
+    name: string;
+    capacity: number;
 }
 
-function LecturersPage() {
-    const lecturerAttributes: ObjectAttribute[] = [
-        { name: 'fullName', label: 'Họ và tên', type: 'string' },
-        { name: 'faculty', label: 'Chuyên khoa', type: 'select', select_data: ['CT', 'QS'] },
-        { name: 'maxSessionsPerWeek', label: 'Số lớp tối đa', type: 'number' }
+function LocationsPage() {
+    const locationAttributes: ObjectAttribute[] = [
+        { name: 'name', label: 'Tên', type: 'string' },
+        { name: 'capacity', label: 'Sức chứa', type: 'number' },
     ];
 
-    const [lecturers, setLecturers] = useState<Lecturer[]>([]);
+    const [locations, setLocations] = useState<Location[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        async function fetchLecturers() {
+        async function fetchLocations() {
             try {
-                const response = await fetch('/api/lecturers');
+                const response = await fetch('/api/locations');
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
-                const data: Lecturer[] = await response.json();
-                setLecturers(data);
+                const data: Location[] = await response.json();
+                setLocations(data);
             } catch (err: any) {
-                setError(err.message || 'Failed to fetch lecturers');
+                setError(err.message || 'Failed to fetch locations');
             } finally {
                 setLoading(false);
             }
         }
 
-        fetchLecturers();
+        fetchLocations();
     }, []);
 
     return (
@@ -59,10 +56,10 @@ function LecturersPage() {
                     <p>Error: {error}</p>
                 ) : (
                     <Grid
-                        objectName='GIẢNG VIÊN'
-                        attributes={lecturerAttributes}
-                        gridData={lecturers}
-                        formAction='/api/lecturers'
+                        objectName='ĐỊA ĐIỂM HỌC TẬP'
+                        attributes={locationAttributes}
+                        gridData={locations}
+                        formAction='/api/locations'
                     />
                 )}
             </main>
@@ -71,4 +68,4 @@ function LecturersPage() {
     )
 }
 
-export default LecturersPage;
+export default LocationsPage;

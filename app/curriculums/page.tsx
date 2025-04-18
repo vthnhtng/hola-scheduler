@@ -5,43 +5,38 @@ import SideBar from '../components/SideBar';
 import Grid from '../components/Grid';
 import Footer from '../components/Footer';
 import { ObjectAttribute } from '../types/ObjectAttribute';
-import avatar from '../assets/avatar/avatar.jpg';
 
-interface Lecturer {
+interface Curriculum {
     id: number;
-    fullName: string;
-    faculty: string;
-    maxSessionsPerWeek: number;
+    program: string;
 }
 
-function LecturersPage() {
-    const lecturerAttributes: ObjectAttribute[] = [
-        { name: 'fullName', label: 'Họ và tên', type: 'string' },
-        { name: 'faculty', label: 'Chuyên khoa', type: 'select', select_data: ['CT', 'QS'] },
-        { name: 'maxSessionsPerWeek', label: 'Số lớp tối đa', type: 'number' }
+function CurriculumsPage() {
+    const curriculumAttributes: ObjectAttribute[] = [
+        { name: 'program', label: 'Chương trình', type: 'string' },
     ];
 
-    const [lecturers, setLecturers] = useState<Lecturer[]>([]);
+    const [curriculums, setCurriculums] = useState<Curriculum[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        async function fetchLecturers() {
+        async function fetchCurriculums() {
             try {
-                const response = await fetch('/api/lecturers');
+                const response = await fetch('/api/curriculums');
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
-                const data: Lecturer[] = await response.json();
-                setLecturers(data);
+                const data: Curriculum[] = await response.json();
+                setCurriculums(data);
             } catch (err: any) {
-                setError(err.message || 'Failed to fetch lecturers');
+                setError(err.message || 'Failed to fetch curriculums');
             } finally {
                 setLoading(false);
             }
         }
 
-        fetchLecturers();
+        fetchCurriculums();
     }, []);
 
     return (
@@ -59,10 +54,10 @@ function LecturersPage() {
                     <p>Error: {error}</p>
                 ) : (
                     <Grid
-                        objectName='GIẢNG VIÊN'
-                        attributes={lecturerAttributes}
-                        gridData={lecturers}
-                        formAction='/api/lecturers'
+                        objectName='CHƯƠNG TRÌNH'
+                        attributes={curriculumAttributes}
+                        gridData={curriculums}
+                        formAction='/api/curriculums'
                     />
                 )}
             </main>
@@ -71,4 +66,4 @@ function LecturersPage() {
     )
 }
 
-export default LecturersPage;
+export default CurriculumsPage;

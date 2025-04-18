@@ -5,43 +5,42 @@ import SideBar from '../components/SideBar';
 import Grid from '../components/Grid';
 import Footer from '../components/Footer';
 import { ObjectAttribute } from '../types/ObjectAttribute';
-import avatar from '../assets/avatar/avatar.jpg';
 
-interface Lecturer {
+interface Subject {
     id: number;
-    fullName: string;
-    faculty: string;
-    maxSessionsPerWeek: number;
+    name: string;
+    category: string;
+    prerequisiteId: number;
 }
 
-function LecturersPage() {
-    const lecturerAttributes: ObjectAttribute[] = [
-        { name: 'fullName', label: 'Họ và tên', type: 'string' },
-        { name: 'faculty', label: 'Chuyên khoa', type: 'select', select_data: ['CT', 'QS'] },
-        { name: 'maxSessionsPerWeek', label: 'Số lớp tối đa', type: 'number' }
+function SubjectsPage() {
+    const subjectAttributes: ObjectAttribute[] = [
+        { name: 'name', label: 'Tên môn học', type: 'string' },
+        { name: 'category', label: 'Chuyên khoa', type: 'select', select_data: ['CT', 'QS'] },
+        { name: 'prerequisiteId', label: 'Môn tiên quyết', type: 'number' }
     ];
 
-    const [lecturers, setLecturers] = useState<Lecturer[]>([]);
+    const [subjects, setSubjects] = useState<Subject[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        async function fetchLecturers() {
+        async function fetchSubjects() {
             try {
-                const response = await fetch('/api/lecturers');
+                const response = await fetch('/api/subjects');
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
-                const data: Lecturer[] = await response.json();
-                setLecturers(data);
+                const data: Subject[] = await response.json();
+                setSubjects(data);
             } catch (err: any) {
-                setError(err.message || 'Failed to fetch lecturers');
+                setError(err.message || 'Failed to fetch subjects');
             } finally {
                 setLoading(false);
             }
         }
 
-        fetchLecturers();
+        fetchSubjects();
     }, []);
 
     return (
@@ -59,10 +58,10 @@ function LecturersPage() {
                     <p>Error: {error}</p>
                 ) : (
                     <Grid
-                        objectName='GIẢNG VIÊN'
-                        attributes={lecturerAttributes}
-                        gridData={lecturers}
-                        formAction='/api/lecturers'
+                        objectName='MÔN HỌC'
+                        attributes={subjectAttributes}
+                        gridData={subjects}
+                        formAction='/api/subjects'
                     />
                 )}
             </main>
@@ -71,4 +70,4 @@ function LecturersPage() {
     )
 }
 
-export default LecturersPage;
+export default SubjectsPage;

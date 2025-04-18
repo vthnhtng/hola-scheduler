@@ -2,12 +2,12 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
 /**
- * @returns - Returns a list of lecturers from the database. 
+ * @returns - Returns a list of teams from the database. 
  */
 export async function GET() {
     try {
-        const lecturers = await prisma.lecturer.findMany();
-        return NextResponse.json(lecturers);
+        const teams = await prisma.team.findMany();
+        return NextResponse.json(teams);
     } catch (error) {
         return NextResponse.json({ error: error }, { status: 500 });
     } finally {
@@ -16,29 +16,28 @@ export async function GET() {
 }
 
 /**
- * @param request - Request object containing the lecturer data.
- * @returns - Create new lecturer in the database.
+ * @param request - Request object containing the team data.
+ * @returns - Create new team in the database.
  */
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { fullName, faculty, maxSessionsPerWeek } = body;
+        const { name, program } = body;
 
-        const newLecturer = await prisma.lecturer.create({
+        const newTeam = await prisma.team.create({
             data: {
-                fullName,
-                faculty,
-                maxSessionsPerWeek,
+                name,
+                program,
             },
         });
 
         return NextResponse.json(
-            { success: true, lecturer: newLecturer },
+            { success: true, team: newTeam },
             { status: 201 }
         );
     } catch (e) {
         return NextResponse.json(
-            { error: 'Failed to create lecturer' },
+            { error: 'Failed to create team' },
             { status: 500 }
         );
     } finally {
@@ -47,8 +46,8 @@ export async function POST(request: Request) {
 }
 
 /**
- * @param request - Request object containing the lecturer ID to delete.
- * @returns - Delete lecturer from the database.
+ * @param request - Request object containing the team ID to delete.
+ * @returns - Delete team from the database.
  */
 export async function DELETE(request: Request) {
     try {
@@ -60,17 +59,17 @@ export async function DELETE(request: Request) {
             );
         }
 
-        const deletedLecturer = await prisma.lecturer.delete({
+        const deletedTeam = await prisma.team.delete({
             where: { id },
         });
 
         return NextResponse.json(
-            { success: true, lecturer: deletedLecturer },
+            { success: true, team: deletedTeam },
             { status: 200 }
         );
     } catch (e) {
         return NextResponse.json(
-            { error: 'Failed to delete lecturer' },
+            { error: 'Failed to delete team' },
             { status: 500 }
         );
     } finally {
@@ -79,37 +78,36 @@ export async function DELETE(request: Request) {
 }
 
 /**
- * @param request - Request object containing the lecturer data to update.
- * @returns - Change lecturer information in the database.
+ * @param request - Request object containing the team data to update.
+ * @returns - Change team information in the database.
  */
 export async function PUT(request: Request) {
     try {
         const body = await request.json();
-        const { id, fullName, faculty, maxSessionsPerWeek } = body;
+        const { id, name, program } = body;
 
         if (typeof id !== 'number') {
             return NextResponse.json(
-                { error: 'Invalid or missing lecturer_id' },
+                { error: 'Invalid or missing team_id' },
                 { status: 400 }
             );
         }
 
-        const updatedLecturer = await prisma.lecturer.update({
+        const updatedTeam = await prisma.team.update({
             where: { id },
             data: {
-                fullName,
-                faculty,
-                maxSessionsPerWeek,
+                name,
+                program,
             },
         });
 
         return NextResponse.json(
-            { success: true, lecturer: updatedLecturer },
+            { success: true, team: updatedTeam },
             { status: 200 }
         );
     } catch (error) {
         return NextResponse.json(
-            { error: 'Failed to update lecturer' },
+            { error: 'Failed to update team' },
             { status: 500 }
         );
     } finally {
