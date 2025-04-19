@@ -2,22 +2,25 @@ import { useState } from "react";
 import { FaHome, FaUser, FaChalkboardTeacher, FaBook, FaMapMarkerAlt, FaCog, FaChartBar, FaQuestionCircle, FaBars } from "react-icons/fa";
 import Link from "next/link";
 
-// Khoimom - handle action khi click (tạo property link cho từng item trong menu) - Done 07/04/2025
 function Sidebar() {
     const [isOpen, setIsOpen] = useState(true);
     const [activeItem, setActiveItem] = useState("Giảng viên");
     const [openManage, setOpenManage] = useState(false);
 
     const menuItems = [
-        { name: "Trang chủ", icon: <FaHome /> },
-        { name: "Tài khoản", icon: <FaUser /> },
-        { name: "Lịch giảng dạy", icon: <FaChalkboardTeacher /> },
-        { name: "Cài đặt", icon: <FaCog /> },
-        { name: "Thống kê", icon: <FaChartBar /> },
-        { name: "Hỗ trợ", icon: <FaQuestionCircle /> },
+        { name: "Trang chủ", icon: <FaHome />, link: "/" },
+        { name: "Tài khoản", icon: <FaUser />, link: "/account" },
+        { name: "Lịch giảng dạy", icon: <FaChalkboardTeacher />, link: "/"  },
+        // { name: "Cài đặt", icon: <FaCog /> },
+        // { name: "Thống kê", icon: <FaChartBar /> },
+        // { name: "Hỗ trợ", icon: <FaQuestionCircle />, link: "/support" },
     ];
 
-    const subMenuItems = ["Giảng viên", "Môn học", "Địa điểm học"];
+    const subMenuItems = [
+        { name: "Giảng viên", link: "/lecturers" },
+        { name: "Môn học", link: "/courses" },
+        { name: "Địa điểm học", link: "/locations" },
+    ];
 
     return (
         <>
@@ -97,11 +100,11 @@ function Sidebar() {
                 <ul className="nav flex-column">
                     {menuItems.map((item) => (
                         <li key={item.name} className="nav-item">
-                            <Link // Khoimom - có element của riêng next thay cho thẻ a href để không phải render lại element - Done 07/04/2025
-                                href="#"
+                            <Link
+                                href={item.link}
                                 className={`nav-link d-flex align-items-center ${activeItem === item.name
-                                        ? "active fw-bold text-primary"
-                                        : "text-dark"
+                                    ? "active fw-bold text-primary"
+                                    : "text-dark"
                                     }`}
                                 onClick={() => setActiveItem(item.name)}
                                 title={!isOpen ? item.name : ""}
@@ -125,14 +128,14 @@ function Sidebar() {
                         {openManage && isOpen && (
                             <ul className="nav flex-column ps-4">
                                 {subMenuItems.map((sub) => (
-                                    <li key={sub}>
-                                        <Link // Khoimom - có element của riêng next thay cho thẻ a href để không phải render lại element - Done 07/04/2025
-                                            href="#"
-                                            className={`nav-link ${activeItem === sub ? "active text-primary fw-bold" : "text-dark"
+                                    <li key={sub.name}>
+                                        <Link
+                                            href={sub.link}
+                                            className={`nav-link ${activeItem === sub.name ? "active text-primary fw-bold" : "text-dark"
                                                 }`}
-                                            onClick={() => setActiveItem(sub)}
+                                            onClick={() => setActiveItem(sub.name)}
                                         >
-                                            {sub}
+                                            {sub.name}
                                         </Link>
                                     </li>
                                 ))}
