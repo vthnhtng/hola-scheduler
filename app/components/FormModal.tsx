@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { ObjectAttribute } from '../types/ObjectAttribute';
+import { ObjectAttribute } from '../types/object-attribute';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
@@ -103,7 +103,7 @@ function FormModal({
         index: number,
         record: Record<string, any> | null
     ) => {
-        const { name, label, type, select_data } = attribute;
+        const { name, label, type, selections } = attribute;
 
         switch (type) {
             case 'string':
@@ -159,9 +159,9 @@ function FormModal({
                     <Form.Group key={index} className="mb-3" controlId={name}>
                         <Form.Label>{label}</Form.Label>
                         <Form.Select name={name} defaultValue={record?.[name] || ''}>
-                            {select_data?.map((option, i) => (
-                                <option key={i} value={option}>
-                                    {option}
+                            {selections?.map((option, i) => (
+                                <option key={i} value={option.value}>
+                                    {option.label}
                                 </option>
                             ))}
                         </Form.Select>

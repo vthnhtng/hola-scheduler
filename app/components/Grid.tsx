@@ -1,9 +1,10 @@
 'use client';
 import { useState } from 'react';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
-import { ObjectAttribute } from '../types/ObjectAttribute';
+import { ObjectAttribute } from '../types/object-attribute';
 import FormModal from './FormModal';
 import DeleteModal from './DeleteModal';
+import { GridElementRenderer } from '@/model/renderer/grid-element-renderer';
 
 interface GridProps {
     objectName: string;
@@ -14,48 +15,10 @@ interface GridProps {
 
 function Grid({ objectName, attributes, gridData, formAction }: GridProps) {
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
+    const gridElementRenderer = GridElementRenderer.getInstance();
 
     const handleClickAction = (index: number) => {
         setSelectedRow((prev) => (prev === index ? null : index));
-    };
-
-    const renderAttribute = (attribute: ObjectAttribute, record: Record<string, any>) => {
-        const attributeType = attribute.type;   
-        const attributeName = attribute.name;
-        const attributeValue = record[attribute.name];
-
-        switch (attributeType) {
-            case 'string':
-            case 'number':
-            case 'select':
-                return <td key={attributeName}>{attributeValue}</td>;
-    
-            case 'boolean':
-                return (
-                    <td key={attributeName}>
-                        <input type="checkbox" checked={Boolean(attributeValue)} readOnly />
-                    </td>
-                );
-    
-            case 'image':
-                return (
-                    <td key={attributeName}>
-                        {attributeValue ? (
-                            <img
-                                src={attributeValue}
-                                alt={attribute.label}
-                                className="me-2 rounded-circle"
-                                style={{ width: '40px', height: '40px' }}
-                            />
-                        ) : (
-                            'No Image'
-                        )}
-                    </td>
-                );
-
-            default:
-                return <td key={attributeName}></td>;
-        }
     };
 
     return (
@@ -101,7 +64,7 @@ function Grid({ objectName, attributes, gridData, formAction }: GridProps) {
                                 >
                                     <td>{index + 1}</td>
                                     {attributes.map((attribute) => (
-                                        renderAttribute(attribute, record)
+                                        gridElementRenderer.renderGridElement({value: record[attribute.name], type: attribute.type, selections: attribute.selections})
                                     ))}
                                     <td className='d-flex' style={{ width: 'auto', height: '70px'}}>
                                         <div>

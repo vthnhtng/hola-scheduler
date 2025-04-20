@@ -4,8 +4,8 @@ import Header from '../components/Header';
 import SideBar from '../components/SideBar';
 import Grid from '../components/Grid';
 import Footer from '../components/Footer';
-import { ObjectAttribute } from '../types/ObjectAttribute';
-
+import { ObjectAttribute } from '../types/object-attribute';
+import { SubjectSelectionsProvider } from '@/model/service/subject-selections-provider';
 interface Subject {
     id: number;
     name: string;
@@ -14,10 +14,13 @@ interface Subject {
 }
 
 function SubjectsPage() {
+    const subjectSelectionsProvider = SubjectSelectionsProvider.getInstance();
+
+    const [prerequisiteMappings, setPrerequisiteMappings] = useState<{ value: string; label: string }[]>([]);
     const subjectAttributes: ObjectAttribute[] = [
         { name: 'name', label: 'Tên môn học', type: 'string' },
-        { name: 'category', label: 'Chuyên khoa', type: 'select', select_data: ['CT', 'QS'] },
-        { name: 'prerequisiteId', label: 'Môn tiên quyết', type: 'number' }
+        { name: 'category', label: 'Chuyên khoa', type: 'select', selections: subjectSelectionsProvider.getCategoryMappings() },
+        { name: 'prerequisiteId', label: 'Môn tiên quyết', type: 'select', selections: prerequisiteMappings }
     ];
 
     const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -25,6 +28,11 @@ function SubjectsPage() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        async function fetchPrerequisiteMappings() {
+            const prerequisites = await subjectSelectionsProvider.getPrerequisiteMappings();
+            setPrerequisiteMappings(prerequisites);
+        }
+
         async function fetchSubjects() {
             try {
                 const response = await fetch('/api/subjects');
@@ -41,6 +49,7 @@ function SubjectsPage() {
         }
 
         fetchSubjects();
+        fetchPrerequisiteMappings();
     }, []);
 
     return (
