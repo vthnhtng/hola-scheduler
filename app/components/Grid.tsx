@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { FaEdit, FaTrashAlt} from 'react-icons/fa';
 import { ObjectAttribute } from '../types/ObjectAttribute';
 import FormModal from './FormModal';
 import DeleteModal from './DeleteModal';

@@ -4,6 +4,7 @@ import { ObjectAttribute } from '../types/ObjectAttribute';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
+import { FaEye } from 'react-icons/fa';
 
 interface FormModalProps {
     title: string;
@@ -43,6 +44,10 @@ function FormModal({
     const handleShow = () => {
         setShow(true);
     };
+
+    // const showPassword = () => {
+    //     setShowPassword(true);
+    // };
 
     const handleSave = async () => {
         setSaving(true);
@@ -173,9 +178,18 @@ function FormModal({
     };
 
     return (
-        <>
-            <div onClick={handleShow}>{button}</div>
-
+        <>  
+            <div className="d-flex align-items-center" style={{ marginBottom: '10px' }}>
+                {title.toUpperCase() === 'THÊM NGƯỜI DÙNG' && (
+                    <button /*onClick={showPassword}*/ className="btn btn-success me-2 d-flex align-items-center">
+                        <FaEye className="me-2" />
+                        HIỂN THỊ MẬT KHẨU
+                    </button>
+                )}
+                <div onClick={handleShow}>
+                    {button}
+                </div>
+            </div>
             <Modal show={show} onHide={handleClose} centered>
                 <Modal.Header closeButton style={{ backgroundColor: '#28a745' }}>
                     <Modal.Title>{title}</Modal.Title>

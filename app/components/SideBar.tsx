@@ -9,7 +9,7 @@ function Sidebar() {
 
     const menuItems = [
         { name: "Trang chủ", icon: <FaHome />, link: "/" },
-        { name: "Tài khoản", icon: <FaUser />, link: "/account" },
+        { name: "Tài khoản", icon: <FaUser />, link: "/users" },
         { name: "Lịch giảng dạy", icon: <FaChalkboardTeacher />, link: "/"  },
         // { name: "Cài đặt", icon: <FaCog /> },
         // { name: "Thống kê", icon: <FaChartBar /> },

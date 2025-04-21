@@ -21,7 +21,7 @@ function UsersPage() {
         { name: 'fullName', label: 'Họ tên', type: 'string' },
         { name: 'email', label: 'Email', type: 'string' },
         { name: 'role', label: 'Vai trò', type: 'string' },
-        { name: 'password', label: 'Mật khẩu', type: 'string' }, // Mật khẩu vẫn là string
+        { name: 'password', label: 'Mật khẩu', type: 'string' },
     ];
 
     const [users, setUsers] = useState<User[]>([]);
