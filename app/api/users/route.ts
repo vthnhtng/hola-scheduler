@@ -13,7 +13,7 @@ export async function GET() {
                 fullName: true,
                 email: true,
                 role: true,
-                password: true,  // Mật khẩu vẫn trả về dạng plain text
+                password: true,
             },
         });
 
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
         const newUser = await prisma.appUser.create({
             data: {
                 username,
-                password,  // Lưu mật khẩu dưới dạng plain text
+                password,
                 fullName,
                 email,
                 role,
@@ -69,7 +69,7 @@ export async function PUT(request: Request) {
             where: { id },
             data: {
                 username,
-                password,  // Lưu mật khẩu dưới dạng plain text
+                password,
                 fullName,
                 email,
                 role,

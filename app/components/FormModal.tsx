@@ -4,7 +4,7 @@ import { ObjectAttribute } from '../types/ObjectAttribute';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
-import { FaEye } from 'react-icons/fa';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 interface FormModalProps {
     title: string;
@@ -14,6 +14,8 @@ interface FormModalProps {
     formAction: string;
     formMethod: string;
     onClose: () => void;
+    showPassword?: boolean;
+    togglePasswordVisibility?: () => void;
 }
 
 function FormModal({
@@ -24,6 +26,8 @@ function FormModal({
     formAction,
     formMethod,
     onClose,
+    showPassword,
+    togglePasswordVisibility,
 }: FormModalProps) {
     const [show, setShow] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -44,10 +48,6 @@ function FormModal({
     const handleShow = () => {
         setShow(true);
     };
-
-    // const showPassword = () => {
-    //     setShowPassword(true);
-    // };
 
     const handleSave = async () => {
         setSaving(true);
@@ -172,6 +172,20 @@ function FormModal({
                         </Form.Select>
                     </Form.Group>
                 );
+
+            case 'password':
+                return (
+                    <Form.Group key={index} className="mb-3" controlId={name}>
+                        <Form.Label>{label}</Form.Label>
+                        <Form.Control
+                            name={name}
+                            type="text"
+                            placeholder={`Nhập ${label}`}
+                            defaultValue={record?.[name] || ''}
+                        />
+                    </Form.Group>
+                );
+
             default:
                 return null;
         }
@@ -179,14 +193,8 @@ function FormModal({
 
     return (
         <>  
-            <div className="d-flex align-items-center" style={{ marginBottom: '10px' }}>
-                {title.toUpperCase() === 'THÊM NGƯỜI DÙNG' && (
-                    <button /*onClick={showPassword}*/ className="btn btn-success me-2 d-flex align-items-center">
-                        <FaEye className="me-2" />
-                        HIỂN THỊ MẬT KHẨU
-                    </button>
-                )}
-                <div onClick={handleShow}>
+            <div className="d-flex align-items-center" style={{ marginBottom: '10px' }}>       
+                <div onClick={() => setShow(true)}>
                     {button}
                 </div>
             </div>

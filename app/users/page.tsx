@@ -21,12 +21,13 @@ function UsersPage() {
         { name: 'fullName', label: 'Họ tên', type: 'string' },
         { name: 'email', label: 'Email', type: 'string' },
         { name: 'role', label: 'Vai trò', type: 'string' },
-        { name: 'password', label: 'Mật khẩu', type: 'string' },
+        { name: 'password', label: 'Mật khẩu', type: 'password' },
     ];
 
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState<boolean>(false);
 
     useEffect(() => {
         async function fetchUsers() {
@@ -47,6 +48,10 @@ function UsersPage() {
         fetchUsers();
     }, []);
 
+    const togglePasswordVisibility = () => {
+        setShowPassword(!showPassword);
+    };
+
     return (
         <>
             <Header />
@@ -66,6 +71,8 @@ function UsersPage() {
                         attributes={userAttributes}
                         gridData={users}
                         formAction='/api/users'
+                        showPassword={showPassword}
+                        togglePasswordVisibility={togglePasswordVisibility}
                     />
                 )}
             </main>
