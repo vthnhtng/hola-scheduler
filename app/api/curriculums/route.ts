@@ -4,15 +4,38 @@ import prisma from '@/lib/prisma';
 /**
  * @returns - Returns a list of curriculums from the database. 
  */
-export async function GET() {
-    try {
-        const curriculums = await prisma.curriculum.findMany();
-        return NextResponse.json(curriculums);
-    } catch (error) {
-        return NextResponse.json({ error: error }, { status: 500 });
-    } finally {
-        await prisma.$disconnect();
-    }
+/**
+ * @returns - Returns a list of subjects from the database. 
+ */
+export async function GET(request: Request) {
+	try {
+		const url = new URL(request.url);
+		const page = parseInt(url.searchParams.get('page') || '1', 10);
+		const recordsPerPage = parseInt(url.searchParams.get('recordsPerPage') || '10', 10);
+		const skip = (page - 1) * recordsPerPage;
+		const take = recordsPerPage;
+
+		const curriculums = await prisma.curriculum.findMany({
+			skip,
+			take,
+		});
+
+		const totalCount = await prisma.curriculum.count();
+		const totalPages = Math.ceil(totalCount / recordsPerPage);
+
+		return NextResponse.json({
+			data: curriculums,
+			pagination: {
+				currentPage: page,
+				totalPages: totalPages,
+				totalCount: totalCount,
+			},
+		});
+	} catch (error) {
+		return NextResponse.json({ error: 'Failed to fetch courses' }, { status: 500 });
+	} finally {
+		await prisma.$disconnect();
+	}
 }
 
 /**

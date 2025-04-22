@@ -22,7 +22,6 @@ interface PaginationData {
 
 function SubjectsPage() {
     const subjectAttributes: ObjectAttribute[] = [
-        // { name: 'id', label: 'STT', type: 'number' },
         { name: 'name', label: 'Tên môn học', type: 'string' },
         { name: 'category', label: 'Chuyên khoa', type: 'select', select_data: ['CT', 'QS'] },
         { name: 'prerequisiteId', label: 'Môn tiên quyết', type: 'number' }

@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import SideBar from '../components/SideBar';
 import Grid from '../components/Grid';
 import Footer from '../components/Footer';
+import Pagination from '../components/Pagination';
 import { ObjectAttribute } from '../types/ObjectAttribute';
 import avatar from '../assets/avatar/avatar.jpg';
 
@@ -12,6 +13,12 @@ interface Lecturer {
     fullName: string;
     faculty: string;
     maxSessionsPerWeek: number;
+}
+
+interface PaginationData {
+    currentPage: number;
+    totalPages: number;
+    totalCount: number;
 }
 
 function LecturersPage() {
@@ -24,30 +31,42 @@ function LecturersPage() {
     const [lecturers, setLecturers] = useState<Lecturer[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const [pagination, setPagination] = useState<PaginationData>({
+        currentPage: 1,
+        totalPages: 1,
+        totalCount: 0
+    });
+    const [recordsPerPage, setRecordsPerPage] = useState<number>(10);
+
+    const fetchLecturers = async (page: number = 1) => {
+        try {
+            setLoading(true);
+            const response = await fetch(`/api/lecturers?page=${page}`);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const data = await response.json();
+            setLecturers(data.data);
+            setPagination(data.pagination);
+        } catch (err: any) {
+            setError(err.message || 'Failed to fetch lecturers');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        async function fetchLecturers() {
-            try {
-                const response = await fetch('/api/lecturers');
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                const data: Lecturer[] = await response.json();
-                setLecturers(data);
-            } catch (err: any) {
-                setError(err.message || 'Failed to fetch lecturers');
-            } finally {
-                setLoading(false);
-            }
-        }
-
         fetchLecturers();
     }, []);
+
+    const handlePageChange = (page: number) => {
+        fetchLecturers(page);
+    };
 
     return (
         <>
             <Header />
-            <main className='d-flex justify-content-between'>
+            <main className="d-flex justify-content-between">
                 <SideBar />
                 {loading ? (
                     <div className="d-flex justify-content-center align-items-center" style={{ flex: 1 }}>
@@ -56,14 +75,21 @@ function LecturersPage() {
                         </div>
                     </div>
                 ) : error ? (
-                    <p>Error: {error}</p>
+                    <p className="text-danger">Error: {error}</p>
                 ) : (
-                    <Grid
-                        objectName='GIẢNG VIÊN'
-                        attributes={lecturerAttributes}
-                        gridData={lecturers}
-                        formAction='/api/lecturers'
-                    />
+                    <div className="d-flex flex-column justify-content-center align-items-center" style={{ flex: 1 }}>
+                        <Grid
+                            objectName="GIẢNG VIÊN"
+                            attributes={lecturerAttributes}
+                            gridData={lecturers}
+                            formAction="/api/lecturers"
+                        />
+                        <Pagination
+                            currentPage={pagination.currentPage}
+                            totalPages={pagination.totalPages}
+                            onPageChange={handlePageChange}
+                        />
+                    </div>
                 )}
             </main>
             <Footer />

@@ -34,16 +34,6 @@ export async function GET(request: Request) {
 		await prisma.$disconnect();
 	}
 }
-// export async function GET() {
-//     try {
-//         const subjects = await prisma.subject.findMany();
-//         return NextResponse.json(subjects);
-//     } catch (error) {
-//         return NextResponse.json({ error: error }, { status: 500 });
-//     } finally {
-//         await prisma.$disconnect();
-//     }
-// }
 
 /**
  * @param request - Request object containing the subject data.

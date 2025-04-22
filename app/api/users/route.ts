@@ -4,26 +4,56 @@ import prisma from '@/lib/prisma';
 /**
  * @returns - Returns a list of users from the database.
  */
-export async function GET() {
-    try {
-        const users = await prisma.appUser.findMany({
-            select: {
-                id: true,
-                username: true,
-                fullName: true,
-                email: true,
-                role: true,
-                password: true,
-            },
-        });
+export async function GET(request: Request) {
+	try {
+		const url = new URL(request.url);
+		const page = parseInt(url.searchParams.get('page') || '1', 10);
+		const recordsPerPage = parseInt(url.searchParams.get('recordsPerPage') || '10', 10);
+		const skip = (page - 1) * recordsPerPage;
+		const take = recordsPerPage;
 
-        return NextResponse.json(users);
-    } catch (error) {
-        return NextResponse.json({ error: error }, { status: 500 });
-    } finally {
-        await prisma.$disconnect();
-    }
+		const appUsers = await prisma.appUser.findMany({
+			skip,
+			take,
+		});
+
+		const totalCount = await prisma.appUser.count();
+		const totalPages = Math.ceil(totalCount / recordsPerPage);
+
+		return NextResponse.json({
+			data: appUsers,
+			pagination: {
+				currentPage: page,
+				totalPages: totalPages,
+				totalCount: totalCount,
+			},
+		});
+	} catch (error) {
+		return NextResponse.json({ error: 'Failed to fetch courses' }, { status: 500 });
+	} finally {
+		await prisma.$disconnect();
+	}
 }
+// export async function GET() {
+//     try {
+//         const users = await prisma.appUser.findMany({
+//             select: {
+//                 id: true,
+//                 username: true,
+//                 fullName: true,
+//                 email: true,
+//                 role: true,
+//                 password: true,
+//             },
+//         });
+
+//         return NextResponse.json(users);
+//     } catch (error) {
+//         return NextResponse.json({ error: error }, { status: 500 });
+//     } finally {
+//         await prisma.$disconnect();
+//     }
+// }
 
 /**
  * @param request - Request object containing user data.

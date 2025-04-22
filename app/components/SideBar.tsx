@@ -19,8 +19,10 @@ function Sidebar() {
 
     const subMenuItems = [
         { name: "Giảng viên", link: "/lecturers" },
-        { name: "Môn học", link: "/subjects" },
+        { name: "Học phần", link: "/subjects" },
         { name: "Địa điểm học", link: "/locations" },
+        { name: "Chương trình học", link: "/curriculums" },
+        { name: "Đại đội", link: "/teams" },
     ];
 
     useEffect(() => {
@@ -35,7 +37,6 @@ function Sidebar() {
             <style>
                 {`
                 .sidebar {
-                    height: 100vh;
                     background-color: #f8f9fa;
                     border-right: 1px solid #dee2e6;
                     transition: width 0.3s ease;
