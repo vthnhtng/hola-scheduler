@@ -47,7 +47,7 @@ function initEmptySchedule(weekCount: number, startDate: Date): WeekSchedule {
             ? getFirstWeekDays(startDate) 
             : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         for (const day of orderedDays) {
-            schedule[week][day] = {};
+            schedule[week][day as DayOfWeek] = {}; // Ép kiểu ở đây
         }
     }
     return schedule;
@@ -159,16 +159,19 @@ async function writeSchedulesToFile(startDate: Date, endDate: Date, schedules: C
             const week = Number(weekStr);
             content += `  Week ${week}:\n`;
 
-            const orderedDays = week === 1 
+            // Sửa ở đây: Ép kiểu orderedDays thành DayOfWeek[]
+            const orderedDays = (week === 1 
                 ? getFirstWeekDays(startDate) 
-                : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']) as DayOfWeek[];
 
             for (const day of orderedDays) {
                 content += `    ${day}:\n`;
-                const daySchedule = days[day] || {};
+                // Sửa ở đây: Ép kiểu day thành DayOfWeek
+                const daySchedule = days[day as DayOfWeek] || {};
 
                 for (const slot of daySlotOrder) {
-                    const currentDate = getDateOfWeekAndDay(startDate, week, day);
+                    // Sửa ở đây: Ép kiểu day thành DayOfWeek
+                    const currentDate = getDateOfWeekAndDay(startDate, week, day as DayOfWeek);
                     const dateStr = currentDate.toISOString().split('T')[0];
                     const subject = daySchedule[slot];
                     
@@ -229,8 +232,8 @@ export async function generateSchedulesForTeams(teams: Team[], startDate: Date):
                 ? getFirstWeekDays(startDate) 
                 : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-            for (const day of orderedDays) {
-                for (const slot of daySlotOrder) {
+                for (const day of orderedDays as DayOfWeek[]) { // Ép kiểu mảng
+                    for (const slot of daySlotOrder) {
                     if (shouldSkipSlot(day, slot)) continue;
 
                     const currentDate = getDateOfWeekAndDay(startDate, week, day);
