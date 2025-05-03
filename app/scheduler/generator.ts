@@ -218,6 +218,14 @@ export async function generateSchedulesForTeams(teams: Team[], startDate: Date):
     const schedules: ClassSchedule[] = [];
     const breaksPerWeekOptions = [3, 4];
 
+    function getBreakPriority(day: DayOfWeek, slot: DaySlot): number {
+        if (day === 'Wed' && slot === 'evening') return 4;
+        if (day === 'Sat' && slot === 'afternoon') return 3;
+        if (day === 'Sat' && slot === 'morning') return 2;
+        if (slot === 'evening') return 1;
+        return 0;
+    }
+
     for (const team of teams) {
         const subjectQueue = [...sortedSubjects];
         const schedule = initEmptySchedule(weekCount, startDate);
@@ -225,32 +233,52 @@ export async function generateSchedulesForTeams(teams: Team[], startDate: Date):
 
         for (let week = 1; week <= weekCount; week++) {
             let breakCount = 0;
-            let previousSubject: Subject | null = null;
             const totalBreaks = breaksPerWeekOptions[Math.floor(Math.random() * breaksPerWeekOptions.length)];
 
             const orderedDays = week === 1 
                 ? getFirstWeekDays(startDate) 
-                : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as DayOfWeek[];
 
-                for (const day of orderedDays as DayOfWeek[]) { // Ép kiểu mảng
-                    for (const slot of daySlotOrder) {
+            // Tạo danh sách slot và sắp xếp theo ưu tiên BREAK
+            const allSlots: Array<{ day: DayOfWeek, slot: DaySlot }> = [];
+            for (const day of orderedDays) {
+                for (const slot of daySlotOrder) {
+                    if (shouldSkipSlot(day, slot)) continue;
+                    allSlots.push({ day, slot });
+                }
+            }
+
+            // Sắp xếp theo độ ưu tiên giảm dần
+            allSlots.sort((a, b) => {
+                return getBreakPriority(b.day, b.slot) - getBreakPriority(a.day, a.slot);
+            });
+
+            // Đặt BREAK vào các slot ưu tiên trước
+            for (const { day, slot } of allSlots) {
+                if (breakCount >= totalBreaks) break;
+
+                const currentDate = getDateOfWeekAndDay(startDate, week, day);
+                const dateString = currentDate.toISOString().split('T')[0];
+
+                // Bỏ qua ngày lễ và slot đã có dữ liệu
+                if (holidays.has(dateString) || schedule[week][day][slot]) continue;
+
+                schedule[week][day][slot] = 'BREAK';
+                breakCount++;
+            }
+
+            // Xử lý các slot còn lại để đặt môn học
+            let previousSubject: Subject | null = null;
+            for (const day of orderedDays) {
+                for (const slot of daySlotOrder) {
                     if (shouldSkipSlot(day, slot)) continue;
 
                     const currentDate = getDateOfWeekAndDay(startDate, week, day);
                     const dateString = currentDate.toISOString().split('T')[0];
-
-                    if (holidays.has(dateString)) {
-                        schedule[week][day][slot] = 'BREAK';
-                        continue;
-                    }
-
                     const key = `${team.id}-${week}-${day}-${slot}`;
 
-                    if (breakCount < totalBreaks && (day === 'Wed' && slot === 'evening' || Math.random() < 0.15)) {
-                        schedule[week][day][slot] = 'BREAK';
-                        breakCount++;
-                        continue;
-                    }
+                    // Đã xử lý BREAK hoặc ngày lễ
+                    if (holidays.has(dateString) || schedule[week][day][slot] === 'BREAK') continue;
 
                     let inserted = false;
                     for (let i = 0; i < subjectQueue.length; i++) {
@@ -265,6 +293,7 @@ export async function generateSchedulesForTeams(teams: Team[], startDate: Date):
                         }
                     }
 
+                    // Nếu không đặt được môn học và còn slot BREAK
                     if (!inserted && breakCount < totalBreaks) {
                         schedule[week][day][slot] = 'BREAK';
                         breakCount++;
