@@ -1,4 +1,4 @@
-import { PrismaClient, Lecturer, Location, Category } from '@prisma/client';
+import { PrismaClient, Lecturer, Location, Category, Subject, Program } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 
@@ -19,37 +19,60 @@ interface ScheduleSession {
 }
 
 interface ResourceQueues {
-    lecturers: (Lecturer & { specializations: { subjectId: number }[] })[];
-    locations: (Location & { subjects: { subjectId: number }[] })[];
+    lecturers: (Lecturer & {
+        specializations: { subjectId: number }[];
+    })[];
+    locations: (Location & {
+        subjects: { subjectId: number }[];
+    })[];
 }
 
-const usedLocations: Map<string, Set<number>> = new Map();
+interface TeamQueue {
+    teamId: number;
+    sessions: ScheduleSession[];
+    resources: ResourceQueues;
+}
 
-function shuffleArray<T>(array: T[]): T[] {
+interface TimeSlot {
+    date: string;
+    session: SessionType;
+}
+
+interface TimeSlotGroup {
+    timeSlot: TimeSlot;
+    sessions: ScheduleSession[];
+}
+
+const locationUsage = new Map<string, Map<number, number>>();
+
+// Helper functions
+const shuffleArray = <T>(array: T[]): T[] => {
     const copy = [...array];
     for (let i = copy.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [copy[i], copy[j]] = [copy[j], copy[i]];
     }
     return copy;
-}
+};
 
-function getSlotKey(session: ScheduleSession): string {
-    return `${session.date}-${session.session}`;
-}
+const getSlotKey = (session: ScheduleSession): string => 
+    `${session.date}-${session.session}`;
 
-function canAssignLocation(slotKey: string, locationId: number, capacity: number): boolean {
-    const used = usedLocations.get(slotKey) || new Set<number>();
-    return used.size < capacity && !used.has(locationId);
-}
+const canAssignLocation = (session: ScheduleSession, locationId: number, capacity: number): boolean => {
+    const slotKey = getSlotKey(session);
+    return (locationUsage.get(slotKey)?.get(locationId) || 0) < capacity;
+};
 
-function markLocationUsed(slotKey: string, locationId: number): void {
-    if (!usedLocations.has(slotKey)) {
-        usedLocations.set(slotKey, new Set());
+const markLocationUsed = (session: ScheduleSession, locationId: number): void => {
+    const slotKey = getSlotKey(session);
+    if (!locationUsage.has(slotKey)) {
+        locationUsage.set(slotKey, new Map());
     }
-    usedLocations.get(slotKey)?.add(locationId);
-}
+    const current = locationUsage.get(slotKey)!.get(locationId) || 0;
+    locationUsage.get(slotKey)!.set(locationId, current + 1);
+};
 
+// Core logic
 async function getTeamCurriculum(teamId: number): Promise<number[]> {
     const team = await prisma.team.findUnique({
         where: { id: teamId },
@@ -68,114 +91,169 @@ async function getTeamCurriculum(teamId: number): Promise<number[]> {
 
 async function initializeQueues(teamId: number): Promise<ResourceQueues> {
     const curriculumSubjects = await getTeamCurriculum(teamId);
-    console.log(`Curriculum subjects for team ${teamId}: ${curriculumSubjects}`);
+    console.log(`Curriculum subjects for team ${teamId}:`, curriculumSubjects);
 
-    // Lấy tất cả giảng viên có thể dạy
-    const allLecturers = await prisma.lecturer.findMany({
-        include: { 
-            specializations: { select: { subjectId: true } }
+    // Get all subjects with categories
+    const subjects = await prisma.subject.findMany({
+        where: { id: { in: curriculumSubjects } },
+        select: { id: true, category: true, name: true }
+    });
+
+    // Get all lecturers with their specializations
+    const lecturers = await prisma.lecturer.findMany({
+        include: {
+            specializations: { 
+                select: { subjectId: true },
+                where: { subjectId: { in: curriculumSubjects } }
+            }
         },
-        where: { 
-            maxSessionsPerWeek: { gt: 0 },
-            OR: [
-                { specializations: { some: { subjectId: { in: curriculumSubjects } } }},
-                { faculty: Category.CT } // Fallback cho giảng viên CT
-            ]
+        where: {
+            maxSessionsPerWeek: { gt: 0 }
         }
     });
 
-    // Lấy location và nhân bản theo capacity
+    // Get all locations with subject associations
     const locations = await prisma.location.findMany({
-        include: { 
-            subjects: { select: { subjectId: true } }
-        },
-        where: { 
-            subjects: { some: { subjectId: { in: curriculumSubjects } } }
+        include: {
+            subjects: {
+                select: { subjectId: true },
+                where: { subjectId: { in: curriculumSubjects } }
+            }
         }
     });
 
-    console.log(`Found ${locations.length} locations for curriculum`);
+    // Filter and sort lecturers by priority
+    const sortedLecturers = lecturers
+        .filter(l => l.maxSessionsPerWeek > 0)
+        .sort((a, b) => {
+            // Prioritize lecturers with specializations
+            const aHasSpecialization = a.specializations.length > 0;
+            const bHasSpecialization = b.specializations.length > 0;
+            if (aHasSpecialization !== bHasSpecialization) {
+                return bHasSpecialization ? 1 : -1;
+            }
+            // Then sort by maxSessionsPerWeek
+            return b.maxSessionsPerWeek - a.maxSessionsPerWeek;
+        });
 
-    const locationQueue = locations.flatMap(loc => 
-        Array.from({ length: loc.capacity }, (_, index) => ({
-            ...loc,
-            id: loc.id * 1000 + index // Unique ID cho mỗi slot
-        }))
-    );
+    // Filter locations to only those that can be used
+    const validLocations = locations.filter(l => l.subjects.length > 0);
 
     return {
-        lecturers: shuffleArray(allLecturers),
-        locations: shuffleArray(locationQueue)
+        lecturers: sortedLecturers,
+        locations: shuffleArray(validLocations)
     };
 }
 
-async function assignSessionResources(
-    session: ScheduleSession,
-    queues: ResourceQueues,
-    week: number
-): Promise<void> {
-    if (!session.subjectId) return;
+// Helper function to group sessions by time slot
+function groupSessionsByTimeSlot(sessions: ScheduleSession[]): TimeSlotGroup[] {
+    const groups = new Map<string, TimeSlotGroup>();
+    
+    for (const session of sessions) {
+        const key = `${session.date}-${session.session}`;
+        if (!groups.has(key)) {
+            groups.set(key, {
+                timeSlot: {
+                    date: session.date,
+                    session: session.session
+                },
+                sessions: []
+            });
+        }
+        groups.get(key)!.sessions.push(session);
+    }
+    
+    return Array.from(groups.values());
+}
 
-    try {
-        // Tìm giảng viên có chuyên môn trước
-        let lecturer = queues.lecturers.find(l => 
+async function assignLecturersForTimeSlot(
+    timeSlotGroup: TimeSlotGroup,
+    lecturers: (Lecturer & { specializations: { subjectId: number }[] })[]
+): Promise<void> {
+    // Create a queue of lecturers
+    let lecturerQueue = [...lecturers];
+    
+    for (const session of timeSlotGroup.sessions) {
+        if (!session.subjectId) continue;
+        
+        // Get subject information
+        const subject = await prisma.subject.findUnique({
+            where: { id: session.subjectId },
+            select: { id: true, name: true, category: true }
+        });
+        
+        if (!subject) continue;
+        
+        // Step 1: Try to find lecturer with specialization
+        let lecturerIndex = lecturerQueue.findIndex(l => 
             l.specializations.some(s => s.subjectId === session.subjectId) &&
             l.maxSessionsPerWeek > 0
         );
-
-        // Nếu không có, chọn giảng viên bất kỳ
-        if (!lecturer) {
-            lecturer = queues.lecturers.find(l => l.maxSessionsPerWeek > 0);
+        
+        // Step 2: If no specialization, find lecturer with same category
+        if (lecturerIndex === -1) {
+            lecturerIndex = lecturerQueue.findIndex(l => 
+                l.faculty === subject.category && 
+                l.maxSessionsPerWeek > 0
+            );
         }
-
-        const location = queues.locations.find(l => 
-            l.subjects.some(s => s.subjectId === session.subjectId)
-        );
-
-        if (!lecturer || !location) {
-            console.warn(`Resources not found for subject ${session.subjectId}`);
-            return;
-        }
-
-        const slotKey = getSlotKey(session);
-        if (!canAssignLocation(slotKey, location.id, location.capacity)) {
-            console.warn(`Location ${location.id} at ${slotKey} is full`);
-            return;
-        }
-
-        const updatedLecturer = await prisma.$transaction(async (tx) => {
-            const current = await tx.lecturer.findUnique({
-                where: { id: lecturer!.id },
-                select: { maxSessionsPerWeek: true }
-            });
-
-            if (!current || current.maxSessionsPerWeek <= 0) return null;
+        
+        // If found suitable lecturer
+        if (lecturerIndex !== -1) {
+            const lecturer = lecturerQueue[lecturerIndex];
+            session.lecturerId = lecturer.id;
             
-            return tx.lecturer.update({
-                where: { id: lecturer!.id },
+            // Update lecturer's maxSessionsPerWeek
+            await prisma.lecturer.update({
+                where: { id: lecturer.id },
                 data: { maxSessionsPerWeek: { decrement: 1 } }
             });
-        });
-
-        if (!updatedLecturer) {
-            console.warn(`Lecturer ${lecturer.id} has no available sessions`);
-            return;
+            
+            // Remove lecturer from queue
+            lecturerQueue.splice(lecturerIndex, 1);
         }
-
-        session.lecturerId = updatedLecturer.id;
-        session.locationId = location.id;
-        markLocationUsed(slotKey, location.id);
-
-        // Cập nhật queue
-        queues.lecturers = queues.lecturers.filter(l => l.id !== lecturer!.id);
-        queues.locations = queues.locations.filter(l => l.id !== location.id);
-
-    } catch (error) {
-        console.error(`Assignment failed for session:`, session);
-        throw error;
     }
 }
 
+async function assignLocationsForTimeSlot(
+    timeSlotGroup: TimeSlotGroup,
+    locations: (Location & { subjects: { subjectId: number }[] })[]
+): Promise<void> {
+    // Create a queue of locations with capacity
+    let locationQueue: { location: Location & { subjects: { subjectId: number }[] }, remainingCapacity: number }[] = [];
+    
+    for (const location of locations) {
+        for (let i = 0; i < location.capacity; i++) {
+            locationQueue.push({ location, remainingCapacity: 1 });
+        }
+    }
+    
+    // Shuffle the queue
+    locationQueue = shuffleArray(locationQueue);
+    
+    for (const session of timeSlotGroup.sessions) {
+        if (!session.subjectId) continue;
+        
+        // Find suitable location
+        const locationIndex = locationQueue.findIndex(l => 
+            l.location.subjects.some(s => s.subjectId === session.subjectId) &&
+            l.remainingCapacity > 0
+        );
+        
+        if (locationIndex !== -1) {
+            const locationEntry = locationQueue[locationIndex];
+            session.locationId = locationEntry.location.id;
+            locationEntry.remainingCapacity--;
+            
+            // Remove location if capacity is exhausted
+            if (locationEntry.remainingCapacity === 0) {
+                locationQueue.splice(locationIndex, 1);
+            }
+        }
+    }
+}
+
+// Validation and processing
 function isValidSession(session: unknown): session is ScheduleSession {
     const validDays: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const validSessions: SessionType[] = ['sáng', 'chiều', 'tối'];
@@ -196,30 +274,57 @@ function isValidSession(session: unknown): session is ScheduleSession {
 }
 
 async function processScheduleFile(filePath: string): Promise<string> {
-    usedLocations.clear();
+    locationUsage.clear();
 
     try {
         const rawData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-        const data = rawData.filter(isValidSession);
+        const data = rawData.filter(isValidSession) as ScheduleSession[];
 
         if (rawData.length !== data.length) {
-            console.warn(`Filtered ${rawData.length - data.length} invalid records in ${path.basename(filePath)}`);
+            console.warn(`Filtered ${rawData.length - data.length} invalid records`);
         }
 
-        // Sửa ở đây: Thêm kiểu cho callback
-        const weeks = Array.from(new Set<number>(data.map((s: ScheduleSession) => s.week)));
-
+        // Get all unique weeks sorted
+        const weeks = Array.from(new Set(data.map(s => s.week))).sort((a, b) => a - b);
+        
+        // Process each week sequentially
         for (const week of weeks) {
-            const teamId = data[0]?.teamId;
-            if (!teamId) throw new Error('Missing teamId in schedule data');
-
-            const queues = await initializeQueues(teamId);
-            // Sửa ở đây: Thêm kiểu cho callback
-            const weekSessions = data.filter((s: ScheduleSession) => s.week === week);
-
-            for (const session of weekSessions) {
-                await assignSessionResources(session, queues, week);
+            console.log(`\nProcessing week ${week}`);
+            
+            // Get all sessions for this week
+            const weekSessions = data.filter(s => s.week === week);
+            
+            // Get all lecturers and locations for this week
+            const { lecturers, locations } = await initializeQueues(weekSessions[0].teamId);
+            
+            // Group sessions by time slot
+            const timeSlotGroups = groupSessionsByTimeSlot(weekSessions);
+            
+            // Process each time slot group
+            for (const timeSlotGroup of timeSlotGroups) {
+                console.log(`Processing time slot: ${timeSlotGroup.timeSlot.date} ${timeSlotGroup.timeSlot.session}`);
+                
+                // Phase 1: Assign lecturers
+                await assignLecturersForTimeSlot(timeSlotGroup, lecturers);
+                
+                // Phase 2: Assign locations
+                await assignLocationsForTimeSlot(timeSlotGroup, locations);
             }
+            
+            // Log unassigned sessions for this week
+            const unassigned = weekSessions.filter(s => !s.lecturerId || !s.locationId);
+            if (unassigned.length > 0) {
+                console.warn(`Could not assign resources for ${unassigned.length} sessions in week ${week}`);
+            }
+            
+            // Reset lecturer maxSessionsPerWeek for next week
+            await prisma.lecturer.updateMany({
+                data: {
+                    maxSessionsPerWeek: {
+                        set: 5 // Reset to default value or get from config
+                    }
+                }
+            });
         }
 
         const newFilePath = filePath.replace('_incomplete', '_complete');
@@ -228,11 +333,12 @@ async function processScheduleFile(filePath: string): Promise<string> {
 
         return newFilePath;
     } catch (error) {
-        console.error(`File processing failed: ${path.basename(filePath)}`, error);
+        console.error(`File processing failed: ${error}`);
         throw error;
     }
 }
 
+// Main job runner
 export async function runAssignmentJob(): Promise<{ processedFiles: string[]; errors: string[] }> {
     const processedFiles: string[] = [];
     const errors: string[] = [];
@@ -248,11 +354,8 @@ export async function runAssignmentJob(): Promise<{ processedFiles: string[]; er
                 const newFilePath = await processScheduleFile(filePath);
                 processedFiles.push(path.basename(newFilePath));
             } catch (error) {
-                let errorMessage = 'Unknown error';
-                if (error instanceof Error) {
-                    errorMessage = error.message;
-                }
-                errors.push(`Failed to process ${file}: ${errorMessage}`);
+                const message = error instanceof Error ? error.message : 'Unknown error';
+                errors.push(`Failed to process ${file}: ${message}`);
             }
         }
     } finally {
