@@ -1,7 +1,8 @@
-import prisma from '@/lib/prisma';
-import { Program, Category } from '@prisma/client';
+import { PrismaClient, Program, Category } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
+
+const prisma = new PrismaClient();
 
 interface Subject {
     id: number;
@@ -27,6 +28,11 @@ type DaySchedule = Partial<Record<DaySlot, Subject | 'BREAK'>>;
 type WeekSchedule = Record<number, Record<DayOfWeek, DaySchedule>>;
 type ClassSchedule = { classId: number; schedule: WeekSchedule };
 
+interface JobResult {
+    processedFiles: string[];
+    errors: string[];
+}
+
 const daySlotOrder: DaySlot[] = ['morning', 'afternoon', 'evening'];
 
 /* --- Utils --- */
@@ -47,7 +53,7 @@ function initEmptySchedule(weekCount: number, startDate: Date): WeekSchedule {
             ? getFirstWeekDays(startDate)
             : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         for (const day of orderedDays) {
-            schedule[week][day as DayOfWeek] = {}; // Ép kiểu ở đây
+            schedule[week][day as DayOfWeek] = {};
         }
     }
     return schedule;
@@ -112,7 +118,6 @@ function getFirstWeekDays(startDate: Date): DayOfWeek[] {
 }
 
 function getDateOfWeekAndDay(startDate: Date, week: number, day: DayOfWeek): Date {
-    // Tuần đầu tiên: Bắt đầu từ startDate
     if (week === 1) {
         const firstWeekDays = getFirstWeekDays(startDate);
         if (!firstWeekDays.includes(day)) {
@@ -122,22 +127,14 @@ function getDateOfWeekAndDay(startDate: Date, week: number, day: DayOfWeek): Dat
         const result = new Date(startDate);
         result.setDate(startDate.getDate() + dayIndex);
         return result;
-    }
-    // Các tuần sau: Bắt đầu từ thứ Hai tiếp theo
-    else {
+    } else {
         const firstMonday = new Date(startDate);
         const startDay = firstMonday.getDay();
         const diff = startDay === 0 ? 6 : startDay - 1;
         firstMonday.setDate(startDate.getDate() - diff + 7 * (week - 1));
 
         const dayOffset: Record<DayOfWeek, number> = {
-            Mon: 0,
-            Tue: 1,
-            Wed: 2,
-            Thu: 3,
-            Fri: 4,
-            Sat: 5,
-            Sun: 6
+            Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6
         };
         const result = new Date(firstMonday);
         result.setDate(firstMonday.getDate() + dayOffset[day]);
@@ -157,33 +154,22 @@ async function writeSchedulesToFile(startDate: Date, endDate: Date, schedules: C
                     const currentDate = getDateOfWeekAndDay(startDate, week, day as DayOfWeek);
                     const dateString = currentDate.toISOString().split('T')[0];
 
-                    // Bỏ qua các slot không hợp lệ
                     if (shouldSkipSlot(day as DayOfWeek, slot)) continue;
 
                     const sessionValue = daySchedule[slot];
                     let sessionName: string;
 
-                    // Chuyển đổi session sang tiếng Việt
                     switch (slot) {
-                        case 'morning':
-                            sessionName = 'sáng';
-                            break;
-                        case 'afternoon':
-                            sessionName = 'chiều';
-                            break;
-                        case 'evening':
-                            sessionName = 'tối';
-                            break;
-                        default:
-                            sessionName = '';
+                        case 'morning': sessionName = 'sáng'; break;
+                        case 'afternoon': sessionName = 'chiều'; break;
+                        case 'evening': sessionName = 'tối'; break;
+                        default: sessionName = '';
                     }
 
                     jsonOutput.push({
                         week: week,
                         teamId: classId,
-                        subjectId: sessionValue === 'BREAK' || !sessionValue
-                            ? null
-                            : (sessionValue as Subject).id,
+                        subjectId: sessionValue === 'BREAK' || !sessionValue ? null : (sessionValue as Subject).id,
                         date: dateString,
                         dayOfWeek: day,
                         session: sessionName,
@@ -204,7 +190,7 @@ async function writeSchedulesToFile(startDate: Date, endDate: Date, schedules: C
     fs.writeFileSync(filePath, JSON.stringify(jsonOutput, null, 2), 'utf8');
 }
 
-export async function generateSchedulesForTeams(teams: Team[], startDate: Date): Promise<ClassSchedule[]> {
+async function generateSchedulesForTeams(teams: Team[], startDate: Date): Promise<ClassSchedule[]> {
     if (teams.length === 0) return [];
 
     const program = teams[0].program;
@@ -253,7 +239,6 @@ export async function generateSchedulesForTeams(teams: Team[], startDate: Date):
                 ? getFirstWeekDays(startDate)
                 : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as DayOfWeek[];
 
-            // Tạo danh sách slot và sắp xếp theo ưu tiên BREAK
             const allSlots: Array<{ day: DayOfWeek, slot: DaySlot }> = [];
             for (const day of orderedDays) {
                 for (const slot of daySlotOrder) {
@@ -262,26 +247,22 @@ export async function generateSchedulesForTeams(teams: Team[], startDate: Date):
                 }
             }
 
-            // Sắp xếp theo độ ưu tiên giảm dần
             allSlots.sort((a, b) => {
                 return getBreakPriority(b.day, b.slot) - getBreakPriority(a.day, a.slot);
             });
 
-            // Đặt BREAK vào các slot ưu tiên trước
             for (const { day, slot } of allSlots) {
                 if (breakCount >= totalBreaks) break;
 
                 const currentDate = getDateOfWeekAndDay(startDate, week, day);
                 const dateString = currentDate.toISOString().split('T')[0];
 
-                // Bỏ qua ngày lễ và slot đã có dữ liệu
                 if (holidays.has(dateString) || schedule[week][day][slot]) continue;
 
                 schedule[week][day][slot] = 'BREAK';
                 breakCount++;
             }
 
-            // Xử lý các slot còn lại để đặt môn học
             let previousSubject: Subject | null = null;
             for (const day of orderedDays) {
                 for (const slot of daySlotOrder) {
@@ -291,7 +272,6 @@ export async function generateSchedulesForTeams(teams: Team[], startDate: Date):
                     const dateString = currentDate.toISOString().split('T')[0];
                     const key = `${team.id}-${week}-${day}-${slot}`;
 
-                    // Đã xử lý BREAK hoặc ngày lễ
                     if (holidays.has(dateString) || schedule[week][day][slot] === 'BREAK') continue;
 
                     let inserted = false;
@@ -307,7 +287,6 @@ export async function generateSchedulesForTeams(teams: Team[], startDate: Date):
                         }
                     }
 
-                    // Nếu không đặt được môn học và còn slot BREAK
                     if (!inserted && breakCount < totalBreaks) {
                         schedule[week][day][slot] = 'BREAK';
                         breakCount++;
@@ -322,4 +301,60 @@ export async function generateSchedulesForTeams(teams: Team[], startDate: Date):
     await writeSchedulesToFile(startDate, endDate, schedules);
 
     return schedules;
+}
+
+export async function generateSchedulesForTeamsJob(startDate: Date): Promise<JobResult> {
+    const processedFiles: string[] = [];
+    const errors: string[] = [];
+
+    try {
+        // Lấy tất cả teams từ database
+        const teams = await prisma.team.findMany({
+            select: {
+                id: true,
+                name: true,
+                program: true
+            }
+        });
+
+        if (teams.length === 0) {
+            throw new Error('No teams found in database');
+        }
+
+        // Tạo schedule cho tất cả teams
+        const schedules = await generateSchedulesForTeams(teams, startDate);
+        
+        // Lấy danh sách các file đã tạo
+        const scheduleDir = path.join(process.cwd(), 'schedules');
+        const files = fs.readdirSync(scheduleDir)
+            .filter(f => f.endsWith('_incomplete.json'));
+
+        processedFiles.push(...files);
+
+        console.log(`Successfully generated schedules for ${teams.length} teams`);
+        console.log(`Generated files: ${files.join(', ')}`);
+
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        errors.push(`Failed to generate schedules: ${message}`);
+        console.error('Schedule generation failed:', error);
+    } finally {
+        await prisma.$disconnect();
+    }
+
+    return { processedFiles, errors };
+}
+
+// Hàm helper để chạy job từ command line
+if (require.main === module) {
+    const startDate = new Date();
+    generateSchedulesForTeamsJob(startDate)
+        .then(result => {
+            console.log('Job completed with result:', result);
+            process.exit(0);
+        })
+        .catch(error => {
+            console.error('Job failed:', error);
+            process.exit(1);
+        });
 }
