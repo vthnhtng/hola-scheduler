@@ -43,8 +43,8 @@ function initEmptySchedule(weekCount: number, startDate: Date): WeekSchedule {
     const schedule: WeekSchedule = {};
     for (let week = 1; week <= weekCount; week++) {
         schedule[week] = {} as Record<DayOfWeek, DaySchedule>;
-        const orderedDays = week === 1 
-            ? getFirstWeekDays(startDate) 
+        const orderedDays = week === 1
+            ? getFirstWeekDays(startDate)
             : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         for (const day of orderedDays) {
             schedule[week][day as DayOfWeek] = {}; // Ép kiểu ở đây
@@ -103,7 +103,7 @@ function getFirstWeekDays(startDate: Date): DayOfWeek[] {
     const days: DayOfWeek[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const startDayIndex = startDate.getDay();
     const firstWeekDays: DayOfWeek[] = [];
-    
+
     for (let i = startDayIndex; i < 7; i++) {
         const day = days[i];
         if (day !== 'Sun') firstWeekDays.push(day);
@@ -146,48 +146,62 @@ function getDateOfWeekAndDay(startDate: Date, week: number, day: DayOfWeek): Dat
 }
 
 async function writeSchedulesToFile(startDate: Date, endDate: Date, schedules: ClassSchedule[]) {
-    const startStr = startDate.toISOString().split('T')[0];
-    const endStr = endDate.toISOString().split('T')[0];
-    const fileName = `scheduler_${startStr}_${endStr}.txt`;
-    const filePath = path.join(process.cwd(), 'schedules', fileName);
-
-    let content = '';
+    const jsonOutput: any[] = [];
 
     for (const { classId, schedule } of schedules) {
-        content += `Class ID: ${classId}\n`;
-        for (const [weekStr, days] of Object.entries(schedule)) {
+        for (const [weekStr, weekSchedule] of Object.entries(schedule)) {
             const week = Number(weekStr);
-            content += `  Week ${week}:\n`;
 
-            // Sửa ở đây: Ép kiểu orderedDays thành DayOfWeek[]
-            const orderedDays = (week === 1 
-                ? getFirstWeekDays(startDate) 
-                : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']) as DayOfWeek[];
-
-            for (const day of orderedDays) {
-                content += `    ${day}:\n`;
-                // Sửa ở đây: Ép kiểu day thành DayOfWeek
-                const daySchedule = days[day as DayOfWeek] || {};
-
+            for (const [day, daySchedule] of Object.entries(weekSchedule)) {
                 for (const slot of daySlotOrder) {
-                    // Sửa ở đây: Ép kiểu day thành DayOfWeek
                     const currentDate = getDateOfWeekAndDay(startDate, week, day as DayOfWeek);
-                    const dateStr = currentDate.toISOString().split('T')[0];
-                    const subject = daySchedule[slot];
-                    
-                    const displayText = subject 
-                        ? (subject === 'BREAK' ? 'BREAK' : subject.name)
-                        : 'FREE';
+                    const dateString = currentDate.toISOString().split('T')[0];
 
-                    content += `      ${slot} (${dateStr}): ${displayText}\n`;
+                    // Bỏ qua các slot không hợp lệ
+                    if (shouldSkipSlot(day as DayOfWeek, slot)) continue;
+
+                    const sessionValue = daySchedule[slot];
+                    let sessionName: string;
+
+                    // Chuyển đổi session sang tiếng Việt
+                    switch (slot) {
+                        case 'morning':
+                            sessionName = 'sáng';
+                            break;
+                        case 'afternoon':
+                            sessionName = 'chiều';
+                            break;
+                        case 'evening':
+                            sessionName = 'tối';
+                            break;
+                        default:
+                            sessionName = '';
+                    }
+
+                    jsonOutput.push({
+                        week: week,
+                        teamId: classId,
+                        subjectId: sessionValue === 'BREAK' || !sessionValue
+                            ? null
+                            : (sessionValue as Subject).id,
+                        date: dateString,
+                        dayOfWeek: day,
+                        session: sessionName,
+                        lecturerId: null,
+                        locationId: null
+                    });
                 }
             }
         }
-        content += '\n';
     }
 
+    const startStr = startDate.toISOString().split('T')[0];
+    const endStr = endDate.toISOString().split('T')[0];
+    const fileName = `scheduler_${startStr}_${endStr}_incomplete.json`;
+    const filePath = path.join(process.cwd(), 'schedules', fileName);
+
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, content, 'utf8');
+    fs.writeFileSync(filePath, JSON.stringify(jsonOutput, null, 2), 'utf8');
 }
 
 export async function generateSchedulesForTeams(teams: Team[], startDate: Date): Promise<ClassSchedule[]> {
@@ -235,8 +249,8 @@ export async function generateSchedulesForTeams(teams: Team[], startDate: Date):
             let breakCount = 0;
             const totalBreaks = breaksPerWeekOptions[Math.floor(Math.random() * breaksPerWeekOptions.length)];
 
-            const orderedDays = week === 1 
-                ? getFirstWeekDays(startDate) 
+            const orderedDays = week === 1
+                ? getFirstWeekDays(startDate)
                 : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as DayOfWeek[];
 
             // Tạo danh sách slot và sắp xếp theo ưu tiên BREAK
