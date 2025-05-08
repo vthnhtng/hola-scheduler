@@ -44,7 +44,7 @@ function SubjectsPage() {
     const fetchSubjects = async (page: number = 1) => {
         try {
             setLoading(true);
-            const response = await fetch(`/api/subjects?page=${page}`);
+            const response = await fetch(`/api/subjects?page=${page}&recordsPerPage=10`);
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
@@ -70,8 +70,9 @@ function SubjectsPage() {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
-                const data: Subject[] = await response.json();
-                setSubjects(data);
+                const subjects = await response.json();
+                setSubjects(subjects.data);
+                setPagination(subjects.pagination);
             } catch (err: any) {
                 setError(err.message || 'Failed to fetch subjects');
             } finally {
@@ -90,7 +91,7 @@ function SubjectsPage() {
     return (
         <>
             <Header />
-            <main className="d-flex justify-content-between">
+            <main className="d-flex justify-content-between align-items-start" style={{ minHeight: '70vh' }}>
                 <SideBar />
                 {loading ? (
                     <div className="d-flex justify-content-center align-items-center" style={{ flex: 1 }}>
@@ -107,6 +108,7 @@ function SubjectsPage() {
                             attributes={subjectAttributes}
                             gridData={subjects}
                             formAction="/api/subjects"
+                            page={pagination.currentPage}
                         />
                         <Pagination
                             currentPage={pagination.currentPage}

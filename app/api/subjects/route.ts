@@ -9,19 +9,17 @@ export async function GET(request: Request) {
 		const url = new URL(request.url);
 		const page = parseInt(url.searchParams.get('page') || '1', 10);
 		const recordsPerPage = parseInt(url.searchParams.get('recordsPerPage') || '10', 10);
-		const skip = (page - 1) * recordsPerPage;
-		const take = recordsPerPage;
 
-		const courses = await prisma.subject.findMany({
-			skip,
-			take,
-		});
+        const subjects = await prisma.subject.findMany({
+            skip: (page - 1) * recordsPerPage,
+            take: recordsPerPage,
+        });
 
 		const totalCount = await prisma.subject.count();
 		const totalPages = Math.ceil(totalCount / recordsPerPage);
 
 		return NextResponse.json({
-			data: courses,
+			data: subjects,
 			pagination: {
 				currentPage: page,
 				totalPages: totalPages,

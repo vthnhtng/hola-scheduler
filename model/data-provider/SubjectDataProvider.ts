@@ -24,7 +24,7 @@ export class SubjectDataProvider {
         const subjects = await response.json();
         const prerequisites = [
             { value: null, label: "Không" },
-            ...subjects.map((subject: Subject) => ({
+            ...subjects.data.map((subject: Subject) => ({
                 value: subject.id.toString(),
                 label: subject.name
             }))

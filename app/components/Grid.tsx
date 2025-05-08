@@ -13,9 +13,10 @@ interface GridProps {
     formAction: string;
     showPassword?: boolean;
     togglePasswordVisibility?: () => void;
+    page: number;
 }
 
-function Grid({ objectName, attributes, gridData, formAction, showPassword, togglePasswordVisibility }: GridProps) {
+function Grid({ objectName, attributes, gridData, formAction, showPassword, togglePasswordVisibility, page }: GridProps) {
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
     const gridElementRenderer = GridElementRenderer.getInstance();
 
@@ -122,7 +123,7 @@ function Grid({ objectName, attributes, gridData, formAction, showPassword, togg
                                     className={`align-middle ${selectedRow === index ? 'table-primary' : ''}`}
                                     style={{ cursor: 'pointer' }}
                                 >
-                                    <td>{index + 1}</td>
+                                    <td>{index + 1 + (page - 1) * 10}</td>
                                     {attributes.map((attribute) => (
                                         gridElementRenderer.renderGridElement({value: record[attribute.name], type: attribute.type, selections: attribute.selections})
                                     ))}
@@ -147,36 +148,6 @@ function Grid({ objectName, attributes, gridData, formAction, showPassword, togg
                                                 formAction={formAction}
                                             />
                                         </div>
-                                    </td>
-                                    {attributes.map((attribute) =>
-                                        renderAttribute(attribute, record)
-                                    )}
-                                    <td className='d-flex' style={{ width: 'auto', height: '70px' }}>
-                                        <FormModal
-                                            title={'CHỈNH SỬA ' + objectName}
-                                            button={
-                                                <button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}>
-                                                    <FaEdit />
-                                                </button>
-                                            }
-                                            attributes={attributes}
-                                            record={record}
-                                            formAction={formAction}
-                                            formMethod='PUT'
-                                            onClose={() => setSelectedRow(null)}
-                                            showPassword={showPassword}
-                                        />
-                                        <DeleteModal
-                                            title={objectName}
-                                            button={
-                                                <button className="btn btn-outline-danger" onClick={() => handleClickAction(index)}>
-                                                    <FaTrashAlt />
-                                                </button>
-                                            }
-                                            record={record}
-                                            onClose={() => setSelectedRow(null)}
-                                            formAction={formAction}
-                                        />
                                     </td>
                                 </tr>
                             )

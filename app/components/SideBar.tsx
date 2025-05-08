@@ -91,7 +91,7 @@ function Sidebar() {
                 `}
             </style>
 
-            <div className={`sidebar ${isOpen ? "open" : "collapsed"}`}>
+            <div className={`sidebar ${isOpen ? "open" : "collapsed"}`} style={{ height: '100vh' }}>
                 <ul className="nav flex-column">
                     <li className="nav-item">
                         <button

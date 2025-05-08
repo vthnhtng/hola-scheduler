@@ -5,6 +5,8 @@ import SideBar from '../components/SideBar';
 import Grid from '../components/Grid';
 import Footer from '../components/Footer';
 import { ObjectAttribute } from '../types/object-attribute';
+import Pagination from '../components/Pagination';
+import { DataProviderFactory } from '@/model/factory/DataProviderFactory';
 
 interface Team {
     id: number;
@@ -19,9 +21,10 @@ interface PaginationData {
 }
 
 function TeamsPage() {
+    const curriculumDataProvider = DataProviderFactory.getInstance().getCurriculumDataProvider();
     const teamAttributes: ObjectAttribute[] = [
         { name: 'name', label: 'Tên', type: 'string' },
-        { name: 'program', label: 'Chương trình', type: 'string' },
+        { name: 'program', label: 'Chương trình', type: 'select', selections: curriculumDataProvider.getPrograms() },
     ];
 
     const [teams, setTeams] = useState<Team[]>([]);
@@ -40,9 +43,9 @@ function TeamsPage() {
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
-            const data = await response.json();
-            setTeams(data.data);
-            setPagination(data.pagination);
+            const teams = await response.json();
+            setTeams(teams.data);
+            setPagination(teams.pagination);
         } catch (err: any) {
             setError(err.message || 'Failed to fetch teams');
         } finally {
@@ -61,7 +64,7 @@ function TeamsPage() {
     return (
         <>
             <Header />
-            <main className="d-flex justify-content-between">
+            <main className="d-flex justify-content-between align-items-start" style={{ minHeight: '70vh' }}>
                 <SideBar />
                 {loading ? (
                     <div className="d-flex justify-content-center align-items-center" style={{ flex: 1 }}>
@@ -78,6 +81,7 @@ function TeamsPage() {
                             attributes={teamAttributes}
                             gridData={teams}
                             formAction="/api/teams"
+                            page={pagination.currentPage}
                         />
                         <Pagination
                             currentPage={pagination.currentPage}

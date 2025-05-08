@@ -73,7 +73,7 @@ function UsersPage() {
     return (
         <>
             <Header />
-            <main className="d-flex justify-content-between">
+            <main className="d-flex justify-content-between align-items-start" style={{ minHeight: '70vh' }}>
                 <SideBar />
                 {loading ? (
                     <div className="d-flex justify-content-center align-items-center" style={{ flex: 1 }}>
@@ -92,6 +92,7 @@ function UsersPage() {
                             formAction="/api/users"
                             showPassword={showPassword}
                             togglePasswordVisibility={togglePasswordVisibility}
+                            page={pagination.currentPage}
                         />
                         <Pagination
                             currentPage={pagination.currentPage}

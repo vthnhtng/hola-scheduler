@@ -69,7 +69,7 @@ function LecturersPage() {
     return (
         <>
             <Header />
-            <main className="d-flex justify-content-between">
+            <main className="d-flex justify-content-between" style={{ minHeight: '100vh' }}>
                 <SideBar />
                 {loading ? (
                     <div className="d-flex justify-content-center align-items-center" style={{ flex: 1 }}>
@@ -86,6 +86,7 @@ function LecturersPage() {
                             attributes={lecturerAttributes}
                             gridData={lecturers}
                             formAction="/api/lecturers"
+                            page={pagination.currentPage}
                         />
                         <Pagination
                             currentPage={pagination.currentPage}

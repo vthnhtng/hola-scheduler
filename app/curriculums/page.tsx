@@ -61,7 +61,7 @@ function CurriculumsPage() {
     return (
         <>
             <Header />
-            <main className="d-flex justify-content-between">
+            <main className="d-flex justify-content-between align-items-start" style={{ minHeight: '100vh' }}>
                 <SideBar />
                 {loading ? (
                     <div className="d-flex justify-content-center align-items-center" style={{ flex: 1 }}>
@@ -78,6 +78,7 @@ function CurriculumsPage() {
                             attributes={curriculumAttributes}
                             gridData={curriculums}
                             formAction="/api/curriculums"
+                            page={pagination.currentPage}
                         />
                         <Pagination
                             currentPage={pagination.currentPage}
