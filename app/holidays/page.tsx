@@ -59,34 +59,6 @@ export default function HolidaysPage() {
                 </div>
             </main>
             <Footer />
-
-            {/* Modal */}
-            {modalDate && (
-                <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-xl shadow-lg p-8 min-w-[320px] flex flex-col items-center">
-                        <div className="text-lg font-semibold mb-4">
-                            {modalType === 'add' ? 'Thêm ngày nghỉ' : 'Xóa ngày nghỉ'}
-                        </div>
-                        <div className="mb-6 text-gray-700 text-center">
-                            {format(modalDate, 'EEEE, dd/MM/yyyy')}
-                        </div>
-                        <div className="flex gap-4">
-                            <button
-                                onClick={handleModalSave}
-                                className={`px-4 py-2 rounded text-white font-semibold transition-colors ${modalType === 'add' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-red-500 hover:bg-red-600'}`}
-                            >
-                                Lưu
-                            </button>
-                            <button
-                                onClick={handleModalClose}
-                                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold"
-                            >
-                                Hủy
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </>
     );
 } 

@@ -33,15 +33,15 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
     // Render header tháng + nút
     const renderHeader = () => (
         <div className="flex items-center justify-between w-full bg-slate-800 rounded-t-xl px-4 py-3">
-            <button 
-                onClick={prevMonth} 
+            <button
+                onClick={prevMonth}
                 className="text-white text-2xl font-bold px-2 hover:bg-slate-700 rounded transition-colors"
             >
                 &#8592;
             </button>
             <div className="text-2xl font-bold text-white tracking-widest uppercase">{format(currentMonth, 'MMMM')}</div>
-            <button 
-                onClick={nextMonth} 
+            <button
+                onClick={nextMonth}
                 className="text-white text-2xl font-bold px-2 hover:bg-slate-700 rounded transition-colors"
             >
                 &#8594;
@@ -53,9 +53,9 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
     const renderDays = () => {
         const days = ['S', 'M', 'T', 'W', 'Th', 'F', 'S'];
         return (
-            <div className="grid grid-cols-7">
+            <div className="row g-0">
                 {days.map((day, idx) => (
-                    <div key={idx} className="text-center font-semibold text-white py-2 bg-orange-500 border-b border-orange-400">
+                    <div key={idx} className="col text-center fw-bold text-white py-2 bg-warning border-bottom border-warning">
                         {day}
                     </div>
                 ))}
@@ -67,11 +67,13 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
     const renderCells = () => {
         const monthStart = startOfMonth(currentMonth);
         const monthEnd = endOfMonth(monthStart);
-        const startDate = startOfWeek(monthStart, { weekStartsOn: 0 }); // Sunday start
+        const startDate = startOfWeek(monthStart, { weekStartsOn: 0 });
         const endDate = endOfWeek(monthEnd, { weekStartsOn: 0 });
 
-        const days = [];
+        const rows = [];
+        let days = [];
         let day = startDate;
+        let idx = 0;
 
         while (day <= endDate) {
             const formattedDate = format(day, 'd');
@@ -85,33 +87,31 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
                 <div
                     key={fullDateStr}
                     onClick={() => isCurrentMonth && onDateSelect?.(day)}
-                    className={`
-                        aspect-square w-10 h-10 mx-auto my-1 flex items-center justify-center text-center cursor-pointer select-none
-                        text-base
-                        ${isCurrentMonth ? 'text-slate-800' : 'text-gray-300'}
-                        ${isSelected ? 'bg-blue-500 text-white font-bold' : ''}
-                        ${isHoliday ? 'bg-orange-100 text-orange-600 font-bold' : ''}
-                        ${isCurrentDay ? 'ring-2 ring-blue-500' : ''}
-                        ${isCurrentMonth && !isSelected && !isHoliday ? 'hover:bg-orange-50' : ''}
-                        rounded-full transition-all
-                        ${!isCurrentMonth ? 'pointer-events-none' : ''}
-                    `}
+                    className={`col text-center align-middle py-2 border bg-white ${isCurrentMonth ? '' : 'text-secondary'} ${isSelected ? 'bg-primary text-white fw-bold' : ''} ${isHoliday ? 'bg-warning text-danger fw-bold' : ''} ${isCurrentDay ? 'border border-primary border-2' : ''} ${!isCurrentMonth ? 'opacity-50' : ''} rounded-circle`}
+                    style={{ cursor: isCurrentMonth ? 'pointer' : 'default', minHeight: 40 }}
                 >
                     {formattedDate}
                 </div>
             );
+            if ((idx + 1) % 7 === 0) {
+                rows.push(<div className="row g-0" key={day.toISOString()}>{days}</div>);
+                days = [];
+            }
             day = addDays(day, 1);
+            idx++;
         }
-
-        return (
-            <div className="grid grid-cols-7 bg-white px-2 pb-4 rounded-b-xl w-full">
-                {days}
-            </div>
-        );
+        // Nếu còn ngày lẻ cuối tháng
+        if (days.length > 0) {
+            while (days.length < 7) {
+                days.push(<div className="col" key={`empty-${days.length}`}></div>);
+            }
+            rows.push(<div className="row g-0" key="last-row">{days}</div>);
+        }
+        return <div className="bg-white p-2">{rows}</div>;
     };
 
     return (
-        <div className="rounded-xl shadow-lg w-[340px] bg-white mx-auto">
+        <div className="rounded shadow w-100 mx-auto bg-white p-3" style={{maxWidth: 500}}>
             {renderHeader()}
             {renderDays()}
             {renderCells()}
