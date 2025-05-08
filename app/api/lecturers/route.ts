@@ -4,15 +4,35 @@ import prisma from '@/lib/prisma';
 /**
  * @returns - Returns a list of lecturers from the database. 
  */
-export async function GET() {
-    try {
-        const lecturers = await prisma.lecturer.findMany();
-        return NextResponse.json(lecturers);
-    } catch (error) {
-        return NextResponse.json({ error: error }, { status: 500 });
-    } finally {
-        await prisma.$disconnect();
-    }
+export async function GET(request: Request) {
+	try {
+		const url = new URL(request.url);
+		const page = parseInt(url.searchParams.get('page') || '1', 10);
+		const recordsPerPage = parseInt(url.searchParams.get('recordsPerPage') || '10', 10);
+		const skip = (page - 1) * recordsPerPage;
+		const take = recordsPerPage;
+
+		const lecturers = await prisma.lecturer.findMany({
+			skip,
+			take,
+		});
+
+		const totalCount = await prisma.lecturer.count();
+		const totalPages = Math.ceil(totalCount / recordsPerPage);
+
+		return NextResponse.json({
+			data: lecturers,
+			pagination: {
+				currentPage: page,
+				totalPages: totalPages,
+				totalCount: totalCount,
+			},
+		});
+	} catch (error) {
+		return NextResponse.json({ error: 'Failed to fetch courses' }, { status: 500 });
+	} finally {
+		await prisma.$disconnect();
+	}
 }
 
 /**

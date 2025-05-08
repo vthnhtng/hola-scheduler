@@ -5,6 +5,7 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 import { FormValidator } from '@/model/form/form-validator';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 interface FormModalProps {
     title: string;
@@ -14,6 +15,8 @@ interface FormModalProps {
     formAction: string;
     formMethod: string;
     onClose: () => void;
+    showPassword?: boolean;
+    togglePasswordVisibility?: () => void;
 }
 
 function FormModal({
@@ -24,6 +27,8 @@ function FormModal({
     formAction,
     formMethod,
     onClose,
+    showPassword,
+    togglePasswordVisibility,
 }: FormModalProps) {
     const [show, setShow] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -165,15 +170,32 @@ function FormModal({
                         </Form.Select>
                     </Form.Group>
                 );
+
+            case 'password':
+                return (
+                    <Form.Group key={index} className="mb-3" controlId={name}>
+                        <Form.Label>{label}</Form.Label>
+                        <Form.Control
+                            name={name}
+                            type="text"
+                            placeholder={`Nhập ${label}`}
+                            defaultValue={record?.[name] || ''}
+                        />
+                    </Form.Group>
+                );
+
             default:
                 return null;
         }
     };
 
     return (
-        <>
-            <div onClick={handleShow}>{button}</div>
-
+        <>  
+            <div className="d-flex align-items-center" style={{ marginBottom: '10px' }}>       
+                <div onClick={() => setShow(true)}>
+                    {button}
+                </div>
+            </div>
             <Modal show={show} onHide={handleClose} centered>
                 <Modal.Header closeButton style={{ backgroundColor: '#28a745' }}>
                     <Modal.Title>{title}</Modal.Title>
