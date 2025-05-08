@@ -5,7 +5,6 @@ import SideBar from '../components/SideBar';
 import Grid from '../components/Grid';
 import Footer from '../components/Footer';
 import { ObjectAttribute } from '../types/object-attribute';
-import { CurriculumSelectionsProvider } from '@/model/service/curriculum-selections-provider';
 
 interface Curriculum {
     id: number;
@@ -14,7 +13,7 @@ interface Curriculum {
 
 function CurriculumsPage() {
     const curriculumAttributes: ObjectAttribute[] = [
-        { name: 'program', label: 'Chương trình', type: 'select', selections: CurriculumSelectionsProvider.getInstance().getProgramMappings() },
+        { name: 'program', label: 'Chương trình', type: 'string' },
     ];
 
     const [curriculums, setCurriculums] = useState<Curriculum[]>([]);

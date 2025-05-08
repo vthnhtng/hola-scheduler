@@ -5,7 +5,8 @@ import SideBar from '../components/SideBar';
 import Grid from '../components/Grid';
 import Footer from '../components/Footer';
 import { ObjectAttribute } from '../types/object-attribute';
-import { SubjectSelectionsProvider } from '@/model/service/subject-selections-provider';
+import { DataProviderFactory } from '@/model/factory/DataProviderFactory';
+
 interface Subject {
     id: number;
     name: string;
@@ -14,13 +15,13 @@ interface Subject {
 }
 
 function SubjectsPage() {
-    const subjectSelectionsProvider = SubjectSelectionsProvider.getInstance();
-
-    const [prerequisiteMappings, setPrerequisiteMappings] = useState<{ value: string; label: string }[]>([]);
+    const subjectDataProvider = DataProviderFactory.getInstance().getSubjectDataProvider();
+    const categories = subjectDataProvider.getCategories();
+    const [prerequisites, setPrerequisites] = useState<{ value: string; label: string }[]>([]);
     const subjectAttributes: ObjectAttribute[] = [
         { name: 'name', label: 'Tên môn học', type: 'string' },
-        { name: 'category', label: 'Chuyên khoa', type: 'select', selections: subjectSelectionsProvider.getCategoryMappings() },
-        { name: 'prerequisiteId', label: 'Môn tiên quyết', type: 'select', selections: prerequisiteMappings }
+        { name: 'category', label: 'Chuyên khoa', type: 'select', selections: categories },
+        { name: 'prerequisiteId', label: 'Môn tiên quyết', type: 'select', selections: prerequisites }
     ];
 
     const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -28,9 +29,9 @@ function SubjectsPage() {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        async function fetchPrerequisiteMappings() {
-            const prerequisites = await subjectSelectionsProvider.getPrerequisiteMappings();
-            setPrerequisiteMappings(prerequisites);
+        async function fetchPrerequisites() {
+            const prerequisites = await subjectDataProvider.getPrerequisites();
+            setPrerequisites(prerequisites);
         }
 
         async function fetchSubjects() {
@@ -49,8 +50,8 @@ function SubjectsPage() {
         }
 
         fetchSubjects();
-        fetchPrerequisiteMappings();
-    }, []);
+        fetchPrerequisites();
+    }, [subjectDataProvider]);
 
     return (
         <>

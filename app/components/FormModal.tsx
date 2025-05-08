@@ -4,6 +4,7 @@ import { ObjectAttribute } from '../types/object-attribute';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
+import { FormValidator } from '@/model/form/form-validator';
 
 interface FormModalProps {
     title: string;
@@ -62,13 +63,11 @@ function FormModal({
             }
 
             attributes.forEach((attribute) => {
-                let value = formData.get(attribute.name);
-                if (attribute.type === 'number') {
-                    data[attribute.name] = value ? Number(value) : 0;
-                } else if (attribute.type === 'boolean') {
-                    data[attribute.name] = value === 'on';
+                const value = formData.get(attribute.name);
+                if (FormValidator.getInstance().validateField({ type: attribute.type, value: value as string })) {
+                    data[attribute.name] = value;
                 } else {
-                    data[attribute.name] = value || '';
+                    throw new Error(`Dữ liệu ${attribute.label} không hợp lệ`);
                 }
             });
 
@@ -87,15 +86,14 @@ function FormModal({
 
             setMessage('Lưu thành công!');
             window.location.reload();
-        } catch (err: any) {
-            setMessage('Có lỗi xảy ra vui lòng thử lại sau!');
+            setTimeout(() => {
+                handleClose();
+            }, 2000);
+        } catch (err: Error | unknown) {
+            setMessage('Không thể lưu: ' + err);
         } finally {
             setSaving(false);
         }
-
-        setTimeout(() => {
-            handleClose();
-        }, 1500);
     };
 
     const renderFormField = (
@@ -127,7 +125,7 @@ function FormModal({
                             name={name}
                             type="number"
                             placeholder={`Nhập ${label}`}
-                            defaultValue={record?.[name] || ''}
+                            defaultValue={record?.[name] || 1}
                         />
                     </Form.Group>
                 );

@@ -5,7 +5,6 @@ import SideBar from '../components/SideBar';
 import Grid from '../components/Grid';
 import Footer from '../components/Footer';
 import { ObjectAttribute } from '../types/object-attribute';
-import avatar from '../assets/avatar/avatar.jpg';
 
 interface Lecturer {
     id: number;
@@ -15,9 +14,13 @@ interface Lecturer {
 }
 
 function LecturersPage() {
+    const faculties = [
+        {value: 'CT', label: 'Chính trị'},
+        {value: 'QS', label: 'Quân sự'}
+    ];
     const lecturerAttributes: ObjectAttribute[] = [
         { name: 'fullName', label: 'Họ và tên', type: 'string' },
-        { name: 'faculty', label: 'Chuyên khoa', type: 'select', select_data: ['CT', 'QS'] },
+        { name: 'faculty', label: 'Chuyên khoa', type: 'select', selections: faculties },
         { name: 'maxSessionsPerWeek', label: 'Số lớp tối đa', type: 'number' }
     ];
 

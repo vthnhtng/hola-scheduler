@@ -98,13 +98,13 @@ ALTER TABLE `curriculum_subject` ADD CONSTRAINT `curriculum_subject_curriculum_i
 ALTER TABLE `curriculum_subject` ADD CONSTRAINT `curriculum_subject_subject_id_fkey` FOREIGN KEY (`subject_id`) REFERENCES `subjects`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION;
 
 -- AddForeignKey
-ALTER TABLE `lecturer_specialization` ADD CONSTRAINT `lecturer_specialization_lecturer_id_fkey` FOREIGN KEY (`lecturer_id`) REFERENCES `lecturers`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+ALTER TABLE `lecturer_specialization` ADD CONSTRAINT `lecturer_specialization_lecturer_id_fkey` FOREIGN KEY (`lecturer_id`) REFERENCES `lecturers`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION;
 
 -- AddForeignKey
-ALTER TABLE `lecturer_specialization` ADD CONSTRAINT `lecturer_specialization_subject_id_fkey` FOREIGN KEY (`subject_id`) REFERENCES `subjects`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+ALTER TABLE `lecturer_specialization` ADD CONSTRAINT `lecturer_specialization_subject_id_fkey` FOREIGN KEY (`subject_id`) REFERENCES `subjects`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION;
 
 -- AddForeignKey
-ALTER TABLE `location_subject` ADD CONSTRAINT `location_subject_location_id_fkey` FOREIGN KEY (`location_id`) REFERENCES `locations`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+ALTER TABLE `location_subject` ADD CONSTRAINT `location_subject_location_id_fkey` FOREIGN KEY (`location_id`) REFERENCES `locations`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION;
 
 -- AddForeignKey
-ALTER TABLE `location_subject` ADD CONSTRAINT `location_subject_subject_id_fkey` FOREIGN KEY (`subject_id`) REFERENCES `subjects`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+ALTER TABLE `location_subject` ADD CONSTRAINT `location_subject_subject_id_fkey` FOREIGN KEY (`subject_id`) REFERENCES `subjects`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION;

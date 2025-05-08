@@ -16,19 +16,18 @@ export async function GET() {
 }
 
 /**
- * @param request - Request object containing the lecturer data.
- * @returns - Create new lecturer in the database.
+ * @param request - Request object containing the subject data.
+ * @returns - Create new subject in the database.
  */
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { fullName, faculty, maxSessionsPerWeek } = body;
 
         const newLecturer = await prisma.lecturer.create({
             data: {
-                fullName,
-                faculty,
-                maxSessionsPerWeek,
+                fullName: body.fullName,
+                faculty: body.faculty,
+                maxSessionsPerWeek: parseInt(body.maxSessionsPerWeek),
             },
         });
 
@@ -47,21 +46,16 @@ export async function POST(request: Request) {
 }
 
 /**
- * @param request - Request object containing the lecturer ID to delete.
- * @returns - Delete lecturer from the database.
+ * @param request - Request object containing the subject ID to delete.
+ * @returns - Delete subject from the database.
  */
 export async function DELETE(request: Request) {
     try {
-        const { id } = await request.json();
-        if (typeof id !== 'number') {
-            return NextResponse.json(
-                { error: 'Invalid or missing id' },
-                { status: 400 }
-            );
-        }
+        const body = await request.json();
+        const lecturerId = parseInt(body.id);
 
         const deletedLecturer = await prisma.lecturer.delete({
-            where: { id },
+            where: { id: lecturerId }
         });
 
         return NextResponse.json(
@@ -69,8 +63,9 @@ export async function DELETE(request: Request) {
             { status: 200 }
         );
     } catch (e) {
+        console.log(e);
         return NextResponse.json(
-            { error: 'Failed to delete lecturer' },
+            { error: 'Có lỗi xảy ra khi xóa môn học' },
             { status: 500 }
         );
     } finally {
@@ -79,27 +74,19 @@ export async function DELETE(request: Request) {
 }
 
 /**
- * @param request - Request object containing the lecturer data to update.
- * @returns - Change lecturer information in the database.
+ * @param request - Request object containing the subject data to update.
+ * @returns - Change subject information in the database.
  */
 export async function PUT(request: Request) {
     try {
         const body = await request.json();
-        const { id, fullName, faculty, maxSessionsPerWeek } = body;
-
-        if (typeof id !== 'number') {
-            return NextResponse.json(
-                { error: 'Invalid or missing lecturer_id' },
-                { status: 400 }
-            );
-        }
 
         const updatedLecturer = await prisma.lecturer.update({
-            where: { id },
+            where: { id: parseInt(body.id) },
             data: {
-                fullName,
-                faculty,
-                maxSessionsPerWeek,
+                fullName: body.fullName,
+                faculty: body.faculty,
+                maxSessionsPerWeek: parseInt(body.maxSessionsPerWeek),
             },
         });
 

@@ -1,5 +1,3 @@
-import { ObjectAttribute } from "@/app/types/object-attribute";
-
 export class GridElementRenderer {
     private static instance: GridElementRenderer;
 
