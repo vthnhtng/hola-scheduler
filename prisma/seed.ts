@@ -1,4 +1,4 @@
-import { PrismaClient, Program, Category, Role } from '@prisma/client';
+import { PrismaClient, Program, Category, Role, Status } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -8,6 +8,15 @@ async function main() {
     data: [
       { id: 1, username: 'admin', password: 'admin123', fullName: 'Nguyen Van A', role: Role.scheduler, email: 'admin@example.com' },
       { id: 2, username: 'viewer1', password: 'pass123', fullName: 'Tran Thi B', role: Role.viewer, email: 'viewer1@example.com' },
+    ],
+    skipDuplicates: true,
+  });
+
+  // Universities
+  await prisma.university.createMany({
+    data: [
+      { id: 1, name: 'Đại học Bách Khoa', status: Status.Done },
+      { id: 3, name: 'Đại học Sư phạm', status: Status.Done },
     ],
     skipDuplicates: true,
   });
@@ -85,19 +94,19 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Teams
+  // Teams (updated with universityId and teamLeaderId)
   await prisma.team.createMany({
     data: [
-      { id: 1, name: 'Team1', program: Program.DH },
-      { id: 2, name: 'Team2', program: Program.DH },
-      { id: 3, name: 'Team3', program: Program.DH },
-      { id: 4, name: 'Team4', program: Program.DH },
-      { id: 5, name: 'Team5', program: Program.DH },
-      { id: 6, name: 'Team6', program: Program.DH },
-      { id: 7, name: 'Team7', program: Program.DH },
-      { id: 8, name: 'Team8', program: Program.DH },
-      { id: 9, name: 'Team9', program: Program.CD },
-      { id: 10, name: 'Team2', program: Program.CD },
+      { id: 1, name: 'Team1', program: Program.DH, universityId: 1, teamLeaderId: 1 },
+      { id: 2, name: 'Team2', program: Program.DH, universityId: 1, teamLeaderId: 2 },
+      { id: 3, name: 'Team3', program: Program.DH, universityId: 2, teamLeaderId: 3 },
+      { id: 4, name: 'Team4', program: Program.DH, universityId: 2, teamLeaderId: 4 },
+      { id: 5, name: 'Team5', program: Program.DH, universityId: 3, teamLeaderId: 5 },
+      { id: 6, name: 'Team6', program: Program.DH, universityId: 3, teamLeaderId: 6 },
+      { id: 7, name: 'Team7', program: Program.DH, universityId: 1, teamLeaderId: 7 },
+      { id: 8, name: 'Team8', program: Program.DH, universityId: 2, teamLeaderId: 8 },
+      { id: 9, name: 'Team9', program: Program.DH, universityId: 3, teamLeaderId: 9 },
+      { id: 10, name: 'Team10', program: Program.DH, universityId: 1, teamLeaderId: 10 },
     ],
     skipDuplicates: true,
   });
@@ -107,10 +116,37 @@ async function main() {
     data: [
       { id: 1, filePath: 'path/schedule1.csv' },
       { id: 2, filePath: 'path/schedule2.csv' },
+      { id: 3, filePath: 'path/schedule3.csv' },
     ],
     skipDuplicates: true,
   });
 
+  // Holidays
+  await prisma.holiday.createMany({
+    data: [
+      { id: 1, date: '2025-01-01' }, // Tết Dương lịch
+      { id: 2, date: '2025-02-10' }, // Tết Nguyên đán
+      { id: 3, date: '2025-04-18' }, // Giỗ tổ Hùng Vương
+      { id: 4, date: '2025-04-30' }, // Ngày Giải phóng
+      { id: 5, date: '2025-05-01' }, // Quốc tế Lao động
+      { id: 6, date: '2025-09-02' }, // Quốc khánh
+    ],
+    skipDuplicates: true,
+  });
+
+  // Lecturer Statistics
+  await prisma.lecturerStatistic.createMany({
+    data: [
+      { id: 1, lecturerId: 1, fromDate: '2025-01-01', toDate: '2025-01-31', numberOfSessions: 8 },
+      { id: 2, lecturerId: 2, fromDate: '2025-01-01', toDate: '2025-01-31', numberOfSessions: 6 },
+      { id: 3, lecturerId: 3, fromDate: '2025-01-01', toDate: '2025-01-31', numberOfSessions: 10 },
+      { id: 4, lecturerId: 1, fromDate: '2025-02-01', toDate: '2025-02-28', numberOfSessions: 7 },
+      { id: 5, lecturerId: 6, fromDate: '2025-01-01', toDate: '2025-01-31', numberOfSessions: 9 },
+    ],
+    skipDuplicates: true,
+  });
+
+  // Location Subjects
   await prisma.locationSubject.createMany({
     data: [
       { locationId: 1, subjectId: 1 },
@@ -136,6 +172,7 @@ async function main() {
     skipDuplicates: true,
   });
 
+  // Lecturer Specializations
   await prisma.lecturerSpecialization.createMany({
     data: [
       { lecturerId: 1, subjectId: 1 },
@@ -153,6 +190,7 @@ async function main() {
     skipDuplicates: true,
   });
 
+  // Curriculum Subjects
   await prisma.curriculumSubject.createMany({
     data: [
       { curriculumId: 1, subjectId: 1 },
@@ -195,7 +233,7 @@ async function main() {
     skipDuplicates: true,
   });
 
-  console.log('✅ Seeding completed!');
+  console.log('Seeding completed!');
 }
 
 main()
