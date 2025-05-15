@@ -13,8 +13,8 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [hoveredDate, setHoveredDate] = useState<string | null>(null);
     const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
+    const [isLoading, setIsLoading] = useState(false);
 
-    // Hàm chuyển tháng
     const nextMonth = () => {
         setCurrentMonth(addMonths(currentMonth, 1));
     };
@@ -23,39 +23,39 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
         setCurrentMonth(subMonths(currentMonth, 1));
     };
 
-    // Fetch holidays khi load hoặc khi currentMonth thay đổi
     useEffect(() => {
+        fetchHolidays();
+    }, [currentMonth]);
+
+    const fetchHolidays = () => {
         fetch('/api/holiday')
             .then(res => res.json())
             .then(data => {
-                // data là mảng holiday, mỗi holiday có trường date
                 setHolidaySet(new Set(data.map((h: { date: string }) => h.date)));
             });
-    }, [currentMonth]);
+    };
 
-    // Xử lý click vào ngày
     const handleDateClick = async (dateObj: Date) => {
         const dateStr = format(dateObj, 'yyyy-MM-dd');
-        if (holidaySet.has(dateStr)) {
-            // Đã active, xóa ngày nghỉ
-            await fetch(`/api/holiday?date=${dateStr}`, { method: 'DELETE' });
-            setHolidaySet(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(dateStr);
-                return newSet;
-            });
-        } else {
-            // Chưa active, thêm ngày nghỉ
-            await fetch('/api/holiday', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ date: dateStr })
-            });
-            setHolidaySet(prev => new Set(prev).add(dateStr));
+        setIsLoading(true);
+        try {
+            if (holidaySet.has(dateStr)) {
+                const res = await fetch(`/api/holiday?date=${dateStr}`, { method: 'DELETE' });
+                const resData = await res.text();
+            } else {
+                const res = await fetch('/api/holiday', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date: dateStr })
+                });
+                const resData = await res.json();
+            }
+            fetchHolidays();
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    // Render header tháng + nút
     const renderHeader = () => (
         <div
             style={{
@@ -117,7 +117,6 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
         </div>
     );
 
-    // Render tiêu đề ngày trong tuần
     const renderDays = () => {
         const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
         return (
@@ -134,7 +133,6 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
         );
     };
 
-    // Render các ngày trong tháng
     const renderCells = () => {
         const monthStart = startOfMonth(currentMonth);
         const monthEnd = endOfMonth(monthStart);
@@ -147,6 +145,7 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
         let idx = 0;
 
         while (day <= endDate) {
+            const thisDay = day;
             const formattedDate = format(day, 'd');
             const fullDateStr = format(day, 'yyyy-MM-dd');
             const isSelected = selectedDates.has(fullDateStr);
@@ -158,7 +157,7 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
             days.push(
                 <div
                     key={fullDateStr}
-                    onClick={() => isCurrentMonth && onDateSelect?.(day)}
+                    onClick={() => isCurrentMonth && handleDateClick(thisDay)}
                     onMouseEnter={() => isCurrentMonth && setHoveredDate(fullDateStr)}
                     onMouseLeave={() => isCurrentMonth && setHoveredDate(null)}
                     style={{
@@ -170,7 +169,7 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
                         background: isHoliday
                             ? '#4CAF50'
                             : (isHovered && isCurrentMonth ? '#e6f4ff' : 'transparent'),
-                        borderRadius: isSelected ? '50%' : (isHovered && isCurrentMonth ? '50%' : 'none'),
+                        borderRadius: (isHoliday || isSelected || (isHovered && isCurrentMonth)) ? '50%' : 'none',
                         cursor: isCurrentMonth ? 'pointer' : 'default',
                         minHeight: 32,
                         fontSize: 15,
@@ -218,8 +217,37 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'flex-start',
+                position: 'relative',
             }}
         >
+            {isLoading && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    background: 'rgba(255,255,255,0.7)',
+                    zIndex: 10,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 16,
+                }}>
+                    <div style={{
+                        width: 36,
+                        height: 36,
+                        border: '4px solid #4CAF50',
+                        borderTop: '4px solid transparent',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        marginBottom: 12,
+                    }} />
+                    <span style={{ color: '#222', fontWeight: 600 }}>Loading...</span>
+                    <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
+                </div>
+            )}
             {renderHeader()}
             {renderDays()}
             {renderCells()}
