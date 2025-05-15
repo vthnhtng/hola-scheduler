@@ -1,77 +1,64 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { method } = req;
+export async function GET(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
 
-  switch (method) {
-    case 'POST':
-      // Create a new holiday
-      try {
-        const { date } = req.body;
-        const holiday = await prisma.holiday.create({
-          data: { date },
-        });
-        res.status(201).json(holiday);
-      } catch (error) {
-        res.status(400).json({ error: 'Unable to create holiday' });
-      }
-      break;
-
-    case 'GET':
-      // Get all holidays or a specific holiday by ID
-      try {
-        const { id } = req.query;
         if (id) {
-          const holiday = await prisma.holiday.findUnique({
-            where: { id: Number(id) },
-          });
-          if (holiday) {
-            res.status(200).json(holiday);
-          } else {
-            res.status(404).json({ error: 'Holiday not found' });
-          }
-        } else {
-          const holidays = await prisma.holiday.findMany();
-          res.status(200).json(holidays);
+            const holiday = await prisma.holiday.findUnique({
+                where: { id: Number(id) },
+            });
+
+            if (!holiday) {
+                return NextResponse.json({ error: 'Holiday not found' }, { status: 404 });
+            }
+
+            return NextResponse.json(holiday);
         }
-      } catch (error) {
-        res.status(500).json({ error: 'Unable to fetch holidays' });
-      }
-      break;
 
-    case 'PUT':
-      // Update a holiday
-      try {
-        const { id } = req.query;
-        const { date } = req.body;
-        const holiday = await prisma.holiday.update({
-          where: { id: Number(id) },
-          data: { date },
+        const holidays = await prisma.holiday.findMany();
+        return NextResponse.json(holidays);
+    } catch (error) {
+        console.error('GET error:', error);
+        return NextResponse.json({ error: 'Unable to fetch holidays' }, { status: 500 });
+    }
+}
+
+export async function POST(request: Request) {
+    try {
+        const body = await request.json();
+        const { date } = body;
+
+        const holiday = await prisma.holiday.create({
+            data: { date },
         });
-        res.status(200).json(holiday);
-      } catch (error) {
-        res.status(400).json({ error: 'Unable to update holiday' });
-      }
-      break;
 
-    case 'DELETE':
-      // Delete a holiday
-      try {
-        const { id } = req.query;
+        return NextResponse.json(holiday, { status: 201 });
+    } catch (error) {
+        console.error('POST error:', error);
+        return NextResponse.json({ error: 'Unable to create holiday' }, { status: 400 });
+    }
+}
+
+export async function DELETE(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const date = searchParams.get('date');
+        if (!date) {
+            return NextResponse.json({ error: 'Date is required' }, { status: 400 });
+        }
+
         await prisma.holiday.delete({
-          where: { id: Number(id) },
+            where: { date },
         });
-        res.status(204).end();
-      } catch (error) {
-        res.status(400).json({ error: 'Unable to delete holiday' });
-      }
-      break;
 
-    default:
-      res.setHeader('Allow', ['POST', 'GET', 'PUT', 'DELETE']);
-      res.status(405).end(`Method ${method} Not Allowed`);
-  }
+        return new NextResponse(null, { status: 204 });
+    } catch (error) {
+        console.error('DELETE error:', error);
+        return NextResponse.json({ error: 'Unable to delete holiday' }, { status: 400 });
+    }
 }
