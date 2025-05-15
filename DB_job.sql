@@ -1,3 +1,4 @@
+-- Clean up old holidays and reset auto-increment ID
 DELIMITER //
 
 CREATE EVENT IF NOT EXISTS cleanup_old_holidays
