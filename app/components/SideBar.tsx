@@ -92,7 +92,7 @@ function Sidebar() {
                 `}
             </style>
 
-            <div className={`sidebar ${isOpen ? "open" : "collapsed"}`} style={{ height: '100vh' }}>
+            <div className={`sidebar ${isOpen ? "open" : "collapsed"}`} style={{ height: pathname === '/holidays' ? '680px' : '900px' }}>
                 <ul className="nav flex-column">
                     <li className="nav-item">
                         <button
