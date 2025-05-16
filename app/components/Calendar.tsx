@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import {
-    format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isToday
-} from 'date-fns';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isToday } from 'date-fns';
 
 interface CalendarProps {
     onDateSelect?: (date: Date) => void;
@@ -63,8 +61,8 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
                 alignItems: "center",
                 justifyContent: "space-between",
                 background: "#fff",
-                borderRadius: "12px 12px 0 0",
-                padding: "8px 0 4px 0",
+                borderRadius: "18px 18px 0 0",
+                padding: "16px 0 8px 0",
                 borderBottom: "none"
             }}
         >
@@ -74,11 +72,11 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
                     background: "none",
                     border: "none",
                     outline: "none",
-                    fontSize: "1.2rem",
+                    fontSize: "clamp(1rem, 1.5vw, 1.4rem)",
                     color: "#222",
                     cursor: "pointer",
                     padding: 0,
-                    marginRight: 12,
+                    marginRight: 18,
                     transition: "color 0.2s"
                 }}
                 aria-label="Previous month"
@@ -88,8 +86,8 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
 
             <div style={{ flex: 1, textAlign: "center" }}>
                 <span style={{
-                    fontSize: "1.05rem",
-                    fontWeight: 600,
+                    fontSize: "clamp(1.05rem, 2vw, 1.5rem)",
+                    fontWeight: 700,
                     color: "#222",
                     letterSpacing: 1
                 }}>
@@ -103,11 +101,11 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
                     background: "none",
                     border: "none",
                     outline: "none",
-                    fontSize: "1.2rem",
+                    fontSize: "clamp(1rem, 1.5vw, 1.4rem)",
                     color: "#222",
                     cursor: "pointer",
                     padding: 0,
-                    marginLeft: 12,
+                    marginLeft: 18,
                     transition: "color 0.2s"
                 }}
                 aria-label="Next month"
@@ -124,7 +122,7 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
                 {days.map((day, idx) => (
                     <div
                         key={idx}
-                        style={{ flex: 1, textAlign: 'center', fontWeight: 600, color: '#888', padding: '4px 0', fontSize: 13, letterSpacing: 1 }}
+                        style={{ flex: 1, textAlign: 'center', fontWeight: 600, color: '#888', padding: '8px 0', fontSize: 'clamp(0.85rem, 1.1vw, 1.05rem)', letterSpacing: 1 }}
                     >
                         {day}
                     </div>
@@ -163,17 +161,17 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
                     style={{
                         flex: 1,
                         textAlign: 'center',
-                        padding: '7px 0',
+                        padding: '12px 0',
                         fontWeight: isHoliday ? 700 : (isHovered && isCurrentMonth ? 700 : 500),
                         color: isHoliday ? '#fff' : (isCurrentMonth ? '#222' : '#bbb'),
                         background: isHoliday
-                            ? '#4CAF50'
-                            : (isHovered && isCurrentMonth ? '#e6f4ff' : 'transparent'),
+                            ? '#91cc6b'
+                            : (isHovered && isCurrentMonth ? '#dbdbdb' : 'transparent'),
                         borderRadius: (isHoliday || isSelected || (isHovered && isCurrentMonth)) ? '50%' : 'none',
                         cursor: isCurrentMonth ? 'pointer' : 'default',
-                        minHeight: 32,
-                        fontSize: 15,
-                        margin: '1.5px 0',
+                        minHeight: 40,
+                        fontSize: 'clamp(0.95rem, 1.5vw, 1.15rem)',
+                        margin: '2.5px 0',
                         transition: 'background 0.2s, color 0.2s, font-weight 0.2s',
                         border: 'none',
                         boxShadow: 'none',
@@ -206,14 +204,15 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
         <div
             className="mx-auto"
             style={{
-                width: 340,
+                width: '100%',
+                maxWidth: 600,
+                minWidth: 380,
                 minHeight: 400,
-                maxWidth: 340,
-                borderRadius: 16,
+                borderRadius: 28,
                 boxShadow: "0 12px 32px 0 rgba(60,60,60,0.22), 0 2px 12px 0 rgba(60,60,60,0.16)",
                 background: '#fff',
-                padding: 24,
-                margin: 32,
+                padding: '40px 56px',
+                margin: '40px auto',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'flex-start',
@@ -233,7 +232,7 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: 16,
+                    borderRadius: 28,
                 }}>
                     <div style={{
                         width: 36,

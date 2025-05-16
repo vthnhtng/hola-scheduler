@@ -4,23 +4,13 @@ import { useState } from 'react';
 import Header from '../components/Header';
 import SideBar from '../components/SideBar';
 import Footer from '../components/Footer';
-import {
-    format,
-    addMonths,
-    subMonths,
-    startOfMonth,
-    endOfMonth,
-    startOfWeek,
-    endOfWeek,
-    addDays,
-    isSameMonth
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth
 } from 'date-fns';
 
 function HolidaySelectPage() {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
 
-    // Hàm chuyển tháng
     const nextMonth = () => {
         setCurrentMonth(addMonths(currentMonth, 1));
     };
@@ -29,7 +19,6 @@ function HolidaySelectPage() {
         setCurrentMonth(subMonths(currentMonth, 1));
     };
 
-    // Hàm chọn / bỏ chọn ngày
     const toggleDate = (date: Date) => {
         const dateStr = format(date, 'yyyy-MM-dd');
         const updated = new Set(selectedDates);
@@ -41,7 +30,6 @@ function HolidaySelectPage() {
         setSelectedDates(updated);
     };
 
-    // Render header tháng + nút
     const renderHeader = () => (
         <div className="flex items-center justify-between w-full mb-4">
             <button onClick={prevMonth} className="p-2 border rounded hover:bg-gray-100">
@@ -54,7 +42,6 @@ function HolidaySelectPage() {
         </div>
     );
 
-    // Render tiêu đề ngày trong tuần
     const renderDays = () => {
         const days = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
         return (
@@ -66,7 +53,6 @@ function HolidaySelectPage() {
         );
     };
 
-    // Render các ngày trong tháng
     const renderCells = () => {
         const monthStart = startOfMonth(currentMonth);
         const monthEnd = endOfMonth(monthStart);

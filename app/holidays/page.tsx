@@ -47,9 +47,9 @@ export default function HolidaysPage() {
             <main className="d-flex">
                 <SideBar />
                 <div className="flex-grow-1 px-4 py-3 min-h-screen bg-gray-50">
-                    <h2 className="fw-bold text-uppercase mb-3">DANH SÁCH NGÀY NGHỈ</h2>
-                    <div className="max-w-6xl mx-auto py-4">
-                        <div className="flex justify-center">
+                    <h2 className="fw-bold text-uppercase mb-3">DANH SÁCH NGÀY NGHỈ LỄ</h2>
+                    <div className="max-w-6xl mx-auto py-2">
+                        <div className="flex justify-center" style={{ marginTop: 0 }}>
                             <Calendar 
                                 onDateSelect={handleDateSelect}
                                 holidays={holidays}
