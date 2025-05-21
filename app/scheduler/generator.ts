@@ -308,7 +308,6 @@ export async function generateSchedulesForTeamsJob(startDate: Date): Promise<Job
     const errors: string[] = [];
 
     try {
-        // Lấy tất cả teams từ database
         const teams = await prisma.team.findMany({
             select: {
                 id: true,
