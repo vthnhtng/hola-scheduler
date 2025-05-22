@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
 /**
- * @returns - Returns a list of teams from the database. 
+ * @returns - Returns a list of teams from the database with pagination. 
  */
 export async function GET(request: Request) {
 	try {
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
 			},
 		});
 	} catch (error) {
-		return NextResponse.json({ error: 'Failed to fetch courses' }, { status: 500 });
+		return NextResponse.json({ error: 'Failed to fetch teams' }, { status: 500 });
 	} finally {
 		await prisma.$disconnect();
 	}
@@ -42,12 +42,14 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, program } = body;
+        const { name, program, teamLeaderId, universityId } = body;
 
         const newTeam = await prisma.team.create({
             data: {
                 name,
                 program,
+                teamLeaderId: parseInt(teamLeaderId),
+                universityId: parseInt(universityId)
             },
         });
 

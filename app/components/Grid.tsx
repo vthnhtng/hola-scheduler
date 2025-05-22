@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import { FaEdit, FaEye, FaEyeSlash, FaTrashAlt } from 'react-icons/fa';
 import { ObjectAttribute } from '../types/object-attribute';
 import FormModal from './FormModal';
@@ -19,6 +19,8 @@ interface GridProps {
 function Grid({ objectName, attributes, gridData, formAction, showPassword, togglePasswordVisibility, page }: GridProps) {
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
     const gridElementRenderer = GridElementRenderer.getInstance();
+    const rowRef = useRef<HTMLTableRowElement>(null);
+    const [rowHeight, setRowHeight] = useState<number>(48);
 
     const handleClickAction = (index: number) => {
         setSelectedRow((prev) => (prev === index ? null : index));
@@ -66,6 +68,12 @@ function Grid({ objectName, attributes, gridData, formAction, showPassword, togg
                 return <td key={name}></td>;
         }
     };
+
+    useLayoutEffect(() => {
+        if (rowRef.current) {
+            setRowHeight(rowRef.current.offsetHeight);
+        }
+    }, [gridData]);
 
     return (
         <div
@@ -120,6 +128,7 @@ function Grid({ objectName, attributes, gridData, formAction, showPassword, togg
                             record && (
                                 <tr
                                     key={index}
+                                    ref={index === 0 ? rowRef : undefined}
                                     className={`align-middle ${selectedRow === index ? 'table-primary' : ''}`}
                                     style={{ cursor: 'pointer' }}
                                 >
@@ -154,9 +163,14 @@ function Grid({ objectName, attributes, gridData, formAction, showPassword, togg
                         )
                     ) : (
                         <tr>
-                            <td colSpan={attributes.length + 2} className="text-left">Chưa có dữ liệu</td>
+                            <td colSpan={attributes.length + 2} className="text-left" style={{ height: rowHeight }}>Chưa có dữ liệu</td>
                         </tr>
                     )}
+                    {Array.from({ length: Math.max(0, 10 - gridData.filter(Boolean).length) }).map((_, i) => (
+                        <tr key={`empty-row-${i}`}>
+                            <td colSpan={attributes.length + 2} style={{ height: rowHeight, background: '#fff', padding: 0 }}></td>
+                        </tr>
+                    ))}
                 </tbody>
             </table>
         </div>
