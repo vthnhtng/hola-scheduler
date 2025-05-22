@@ -188,32 +188,20 @@ async function assignLecturersForTimeSlot(
         
         if (!subject) continue;
         
-        // Step 1: Try to find lecturer with specialization
-        let lecturerIndex = lecturerQueue.findIndex(l => 
-            l.specializations.some(s => s.subjectId === session.subjectId) &&
-            l.maxSessionsPerWeek > 0
+        // 1. Duyệt toàn bộ queue, tìm giảng viên có specialization trùng
+        let lecturerIndex = lecturerQueue.findIndex(l =>
+            l.specializations.some(s => s.subjectId === session.subjectId)
         );
-        
-        // Step 2: If no specialization, find lecturer with same category
-        if (lecturerIndex === -1) {
-            lecturerIndex = lecturerQueue.findIndex(l => 
-                l.faculty === subject.category && 
-                l.maxSessionsPerWeek > 0
+        // 2. Nếu không có, duyệt lại queue, tìm giảng viên có category CT hoặc QS trùng với subject.category
+        if (lecturerIndex === -1 && (subject.category === 'CT' || subject.category === 'QS')) {
+            lecturerIndex = lecturerQueue.findIndex(l =>
+                l.faculty === subject.category
             );
         }
-        
-        // If found suitable lecturer
+        // 3. Nếu tìm được, assign và pop khỏi queue
         if (lecturerIndex !== -1) {
             const lecturer = lecturerQueue[lecturerIndex];
             session.lecturerId = lecturer.id;
-            
-            // Update lecturer's maxSessionsPerWeek
-            await prisma.lecturer.update({
-                where: { id: lecturer.id },
-                data: { maxSessionsPerWeek: { decrement: 1 } }
-            });
-            
-            // Remove lecturer from queue
             lecturerQueue.splice(lecturerIndex, 1);
         }
     }
@@ -382,17 +370,21 @@ async function processScheduleFile(filePath: string): Promise<string> {
                         
                         if (!subject) continue;
 
-                        // Find suitable lecturer
-                        let lecturerIndex = lecturerQueue.findIndex(l => 
-                            l.specializations.some(s => s.subjectId === session.subjectId) &&
-                            l.maxSessionsPerWeek > 0
+                        // 1. Duyệt toàn bộ queue, tìm giảng viên có specialization trùng
+                        let lecturerIndex = lecturerQueue.findIndex(l =>
+                            l.specializations.some(s => s.subjectId === session.subjectId)
                         );
-                        
-                        if (lecturerIndex === -1) {
-                            lecturerIndex = lecturerQueue.findIndex(l => 
-                                l.faculty === subject.category && 
-                                l.maxSessionsPerWeek > 0
+                        // 2. Nếu không có, duyệt lại queue, tìm giảng viên có category CT hoặc QS trùng với subject.category
+                        if (lecturerIndex === -1 && (subject.category === 'CT' || subject.category === 'QS')) {
+                            lecturerIndex = lecturerQueue.findIndex(l =>
+                                l.faculty === subject.category
                             );
+                        }
+                        // 3. Nếu tìm được, assign và pop khỏi queue
+                        if (lecturerIndex !== -1) {
+                            const lecturer = lecturerQueue[lecturerIndex];
+                            session.lecturerId = lecturer.id;
+                            lecturerQueue.splice(lecturerIndex, 1);
                         }
 
                         // Find suitable location
