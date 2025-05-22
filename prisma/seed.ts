@@ -1,4 +1,4 @@
-import { PrismaClient, Program, Category, Role, Status } from '@prisma/client';
+import { PrismaClient, Program, Category, Role } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -15,8 +15,8 @@ async function main() {
   // Universities
   await prisma.university.createMany({
     data: [
-      { id: 1, name: 'Đại học Bách Khoa', status: Status.Done },
-      { id: 3, name: 'Đại học Sư phạm', status: Status.Done },
+      { id: 1, name: 'Đại học Bách Khoa', status: 'Undone' },
+      { id: 3, name: 'Đại học Sư phạm', status: 'Undone' },
     ],
     skipDuplicates: true,
   });

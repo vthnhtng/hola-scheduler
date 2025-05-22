@@ -5,7 +5,7 @@ import path from 'path';
 const prisma = new PrismaClient();
 
 type DayOfWeek = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat';
-type SessionType = 'sáng' | 'chiều' | 'tối';
+type SessionType = 'morning' | 'afternoon' | 'evening';
 
 interface ScheduleSession {
     week: number;
@@ -25,12 +25,6 @@ interface ResourceQueues {
     locations: (Location & {
         subjects: { subjectId: number }[];
     })[];
-}
-
-interface TeamQueue {
-    teamId: number;
-    sessions: ScheduleSession[];
-    resources: ResourceQueues;
 }
 
 interface TimeSlot {
@@ -72,39 +66,16 @@ const markLocationUsed = (session: ScheduleSession, locationId: number): void =>
     locationUsage.get(slotKey)!.set(locationId, current + 1);
 };
 
-// Core logic
-async function getTeamCurriculum(teamId: number): Promise<number[]> {
-    const team = await prisma.team.findUnique({
-        where: { id: teamId },
-        select: { program: true }
-    });
+async function getAvailableResources(week: number, date: string, session: SessionType): Promise<ResourceQueues> {
+    const doneDir = path.join(process.cwd(), 'schedules/done');
+    const existingFiles = fs.readdirSync(doneDir)
+        .filter(f => f.endsWith('.json'));
 
-    if (!team) throw new Error(`Team ${teamId} not found`);
-
-    const curriculum = await prisma.curriculum.findFirst({
-        where: { program: team.program },
-        include: { subjects: true }
-    });
-
-    return curriculum?.subjects.map(cs => cs.subjectId) || [];
-}
-
-async function initializeQueues(teamId: number): Promise<ResourceQueues> {
-    const curriculumSubjects = await getTeamCurriculum(teamId);
-    console.log(`Curriculum subjects for team ${teamId}:`, curriculumSubjects);
-
-    // Get all subjects with categories
-    const subjects = await prisma.subject.findMany({
-        where: { id: { in: curriculumSubjects } },
-        select: { id: true, category: true, name: true }
-    });
-
-    // Get all lecturers with their specializations
-    const lecturers = await prisma.lecturer.findMany({
+    // Get all lecturers and locations
+    const allLecturers = await prisma.lecturer.findMany({
         include: {
             specializations: { 
-                select: { subjectId: true },
-                where: { subjectId: { in: curriculumSubjects } }
+                select: { subjectId: true }
             }
         },
         where: {
@@ -112,36 +83,69 @@ async function initializeQueues(teamId: number): Promise<ResourceQueues> {
         }
     });
 
-    // Get all locations with subject associations
-    const locations = await prisma.location.findMany({
+    const allLocations = await prisma.location.findMany({
         include: {
             subjects: {
-                select: { subjectId: true },
-                where: { subjectId: { in: curriculumSubjects } }
+                select: { subjectId: true }
             }
         }
     });
 
-    // Filter and sort lecturers by priority
-    const sortedLecturers = lecturers
-        .filter(l => l.maxSessionsPerWeek > 0)
+    // If no existing files, return all resources
+    if (existingFiles.length === 0) {
+        return {
+            lecturers: allLecturers.sort((a, b) => {
+                const aHasSpecialization = a.specializations.length > 0;
+                const bHasSpecialization = b.specializations.length > 0;
+                if (aHasSpecialization !== bHasSpecialization) {
+                    return bHasSpecialization ? 1 : -1;
+                }
+                return b.maxSessionsPerWeek - a.maxSessionsPerWeek;
+            }),
+            locations: shuffleArray(allLocations.filter(l => l.subjects.length > 0))
+        };
+    }
+
+    // Check existing schedules for conflicts
+    const usedLecturerIds = new Set<number>();
+    const usedLocationIds = new Set<number>();
+
+    for (const file of existingFiles) {
+        const fileData = JSON.parse(fs.readFileSync(path.join(doneDir, file), 'utf-8'));
+        const conflictingSessions = fileData.filter((s: ScheduleSession) => 
+            s.week === week && 
+            s.date === date && 
+            s.session === session
+        );
+
+        for (const session of conflictingSessions) {
+            if (session.lecturerId) usedLecturerIds.add(session.lecturerId);
+            if (session.locationId) usedLocationIds.add(session.locationId);
+        }
+    }
+
+    // Filter out used resources
+    const availableLecturers = allLecturers
+        .filter(l => !usedLecturerIds.has(l.id))
         .sort((a, b) => {
-            // Prioritize lecturers with specializations
             const aHasSpecialization = a.specializations.length > 0;
             const bHasSpecialization = b.specializations.length > 0;
             if (aHasSpecialization !== bHasSpecialization) {
                 return bHasSpecialization ? 1 : -1;
             }
-            // Then sort by maxSessionsPerWeek
             return b.maxSessionsPerWeek - a.maxSessionsPerWeek;
         });
 
-    // Filter locations to only those that can be used
-    const validLocations = locations.filter(l => l.subjects.length > 0);
+    const availableLocations = shuffleArray(
+        allLocations.filter(l => 
+            !usedLocationIds.has(l.id) && 
+            l.subjects.length > 0
+        )
+    );
 
     return {
-        lecturers: sortedLecturers,
-        locations: shuffleArray(validLocations)
+        lecturers: availableLecturers,
+        locations: availableLocations
     };
 }
 
@@ -256,7 +260,7 @@ async function assignLocationsForTimeSlot(
 // Validation and processing
 function isValidSession(session: unknown): session is ScheduleSession {
     const validDays: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const validSessions: SessionType[] = ['sáng', 'chiều', 'tối'];
+    const validSessions: SessionType[] = ['morning', 'afternoon', 'evening'];
     
     if (typeof session !== 'object' || session === null) return false;
     
@@ -275,17 +279,41 @@ function isValidSession(session: unknown): session is ScheduleSession {
 
 async function processScheduleFile(filePath: string): Promise<string> {
     locationUsage.clear();
+    const scheduledDir = path.join(process.cwd(), 'schedules/scheduled');
 
     try {
+        console.log(`\nProcessing file: ${filePath}`);
         const rawData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        console.log(`Total records in file: ${rawData.length}`);
+        
         const data = rawData.filter(isValidSession) as ScheduleSession[];
+        console.log(`Valid records after filtering: ${data.length}`);
 
         if (rawData.length !== data.length) {
             console.warn(`Filtered ${rawData.length - data.length} invalid records`);
+            const invalidRecords = rawData.filter((record: unknown) => !isValidSession(record));
+            console.log('Sample of invalid records:', JSON.stringify(invalidRecords.slice(0, 3), null, 2));
         }
+
+        // Get team and university info from first session
+        const firstSession = data[0];
+        console.log(`\nFirst session info:`, firstSession);
+        
+        const team = await prisma.team.findUnique({
+            where: { id: firstSession.teamId },
+            select: { id: true, program: true }
+        });
+
+        if (!team) {
+            throw new Error(`Team ${firstSession.teamId} not found`);
+        }
+
+        const universityId = team.program;
+        console.log(`\nTeam program: ${universityId}`);
 
         // Get all unique weeks sorted
         const weeks = Array.from(new Set(data.map(s => s.week))).sort((a, b) => a - b);
+        console.log(`\nProcessing ${weeks.length} weeks:`, weeks);
         
         // Process each week sequentially
         for (const week of weeks) {
@@ -293,28 +321,120 @@ async function processScheduleFile(filePath: string): Promise<string> {
             
             // Get all sessions for this week
             const weekSessions = data.filter(s => s.week === week);
-            
-            // Get all lecturers and locations for this week
-            const { lecturers, locations } = await initializeQueues(weekSessions[0].teamId);
-            
-            // Group sessions by time slot
-            const timeSlotGroups = groupSessionsByTimeSlot(weekSessions);
-            
-            // Process each time slot group
-            for (const timeSlotGroup of timeSlotGroups) {
-                console.log(`Processing time slot: ${timeSlotGroup.timeSlot.date} ${timeSlotGroup.timeSlot.session}`);
-                
-                // Phase 1: Assign lecturers
-                await assignLecturersForTimeSlot(timeSlotGroup, lecturers);
-                
-                // Phase 2: Assign locations
-                await assignLocationsForTimeSlot(timeSlotGroup, locations);
-            }
-            
-            // Log unassigned sessions for this week
-            const unassigned = weekSessions.filter(s => !s.lecturerId || !s.locationId);
-            if (unassigned.length > 0) {
-                console.warn(`Could not assign resources for ${unassigned.length} sessions in week ${week}`);
+            console.log(`Found ${weekSessions.length} sessions for week ${week}`);
+
+            // Get all unique dates in this week
+            const dates = Array.from(new Set(weekSessions.map(s => s.date))).sort();
+            console.log(`\nProcessing ${dates.length} dates:`, dates);
+
+            // Process each date
+            for (const date of dates) {
+                console.log(`\nProcessing date: ${date}`);
+
+                // Get all sessions for this date
+                const dateSessions = weekSessions.filter(s => s.date === date);
+                console.log(`Found ${dateSessions.length} sessions for date ${date}`);
+
+                // Get all unique session types (morning, afternoon, evening)
+                const sessionTypes: SessionType[] = ['morning', 'afternoon', 'evening'];
+
+                // Process each session type
+                for (const sessionType of sessionTypes) {
+                    console.log(`\nProcessing ${sessionType} session`);
+                    
+                    // Get sessions for this time slot
+                    const timeSlotSessions = dateSessions.filter(s => s.session === sessionType);
+                    console.log(`Found ${timeSlotSessions.length} sessions for ${sessionType}`);
+
+                    if (timeSlotSessions.length === 0) {
+                        console.log(`No sessions to process for ${sessionType}`);
+                        continue;
+                    }
+
+                    // Get available resources for this time slot
+                    const { lecturers, locations } = await getAvailableResources(
+                        week,
+                        date,
+                        sessionType
+                    );
+
+                    console.log(`Available resources for ${sessionType}:`);
+                    console.log(`- Lecturers: ${lecturers.length}`);
+                    console.log(`- Locations: ${locations.length}`);
+
+                    // Create queues for this time slot
+                    let lecturerQueue = [...lecturers];
+                    let locationQueue = [...locations];
+
+                    // Shuffle both queues
+                    lecturerQueue = shuffleArray(lecturerQueue);
+                    locationQueue = shuffleArray(locationQueue);
+
+                    // Process each session in this time slot
+                    for (const session of timeSlotSessions) {
+                        if (!session.subjectId) continue;
+
+                        // Get subject information
+                        const subject = await prisma.subject.findUnique({
+                            where: { id: session.subjectId },
+                            select: { id: true, name: true, category: true }
+                        });
+                        
+                        if (!subject) continue;
+
+                        // Find suitable lecturer
+                        let lecturerIndex = lecturerQueue.findIndex(l => 
+                            l.specializations.some(s => s.subjectId === session.subjectId) &&
+                            l.maxSessionsPerWeek > 0
+                        );
+                        
+                        if (lecturerIndex === -1) {
+                            lecturerIndex = lecturerQueue.findIndex(l => 
+                                l.faculty === subject.category && 
+                                l.maxSessionsPerWeek > 0
+                            );
+                        }
+
+                        // Find suitable location
+                        const locationIndex = locationQueue.findIndex(l => 
+                            l.subjects.some(s => s.subjectId === session.subjectId)
+                        );
+
+                        // Only assign if both lecturer and location are available
+                        if (lecturerIndex !== -1 && locationIndex !== -1) {
+                            const lecturer = lecturerQueue[lecturerIndex];
+                            const location = locationQueue[locationIndex];
+
+                            // Assign lecturer
+                            session.lecturerId = lecturer.id;
+                            await prisma.lecturer.update({
+                                where: { id: lecturer.id },
+                                data: { maxSessionsPerWeek: { decrement: 1 } }
+                            });
+
+                            // Assign location
+                            session.locationId = location.id;
+                            markLocationUsed(session, location.id);
+
+                            // Remove assigned resources from queues
+                            lecturerQueue.splice(lecturerIndex, 1);
+                            locationQueue.splice(locationIndex, 1);
+                        }
+                    }
+
+                    // Log assignment results for this time slot
+                    const assigned = timeSlotSessions.filter(s => s.lecturerId && s.locationId);
+                    const unassigned = timeSlotSessions.filter(s => !s.lecturerId || !s.locationId);
+                    console.log(`Assigned: ${assigned.length}, Unassigned: ${unassigned.length}`);
+                    
+                    if (unassigned.length > 0) {
+                        console.log('Unassigned sessions:', unassigned.map(s => ({
+                            subjectId: s.subjectId,
+                            date: s.date,
+                            session: s.session
+                        })));
+                    }
+                }
             }
             
             // Reset lecturer maxSessionsPerWeek for next week
@@ -327,13 +447,12 @@ async function processScheduleFile(filePath: string): Promise<string> {
             });
         }
 
-        const newFilePath = filePath.replace('_incomplete', '_complete');
-        fs.writeFileSync(newFilePath, JSON.stringify(data, null, 2));
-        fs.unlinkSync(filePath);
-
-        return newFilePath;
+        // Write processed data back to the same file
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+        console.log(`\nSuccessfully processed file: ${filePath}`);
+        return filePath;
     } catch (error) {
-        console.error(`File processing failed: ${error}`);
+        console.error(`\nFile processing failed: ${error}`);
         throw error;
     }
 }
@@ -344,23 +463,58 @@ export async function runAssignmentJob(): Promise<{ processedFiles: string[]; er
     const errors: string[] = [];
 
     try {
-        const scheduleDir = path.join(process.cwd(), 'schedules');
-        const files = fs.readdirSync(scheduleDir)
-            .filter(f => f.endsWith('_incomplete.json'));
+        const scheduledDir = path.join(process.cwd(), 'schedules/scheduled');
+        const doneDir = path.join(process.cwd(), 'schedules/done');
+        console.log('\nChecking directories:', { scheduledDir, doneDir });
+        
+        // Create directories if they don't exist
+        if (!fs.existsSync(scheduledDir)) {
+            console.log('Scheduled directory does not exist, creating...');
+            fs.mkdirSync(scheduledDir, { recursive: true });
+        }
+        if (!fs.existsSync(doneDir)) {
+            console.log('Done directory does not exist, creating...');
+            fs.mkdirSync(doneDir, { recursive: true });
+        }
+
+        const files = fs.readdirSync(scheduledDir)
+            .filter(f => f.endsWith('.json'));
+        
+        console.log('\nFound files in scheduled:', files);
+
+        if (files.length === 0) {
+            console.log('No files found to process');
+            return { processedFiles, errors };
+        }
 
         for (const file of files) {
             try {
-                const filePath = path.join(scheduleDir, file);
+                console.log(`\nProcessing file: ${file}`);
+                const filePath = path.join(scheduledDir, file);
                 const newFilePath = await processScheduleFile(filePath);
-                processedFiles.push(path.basename(newFilePath));
+                
+                // Move file to done directory
+                const doneFilePath = path.join(doneDir, path.basename(newFilePath));
+                fs.renameSync(newFilePath, doneFilePath);
+                
+                processedFiles.push(path.basename(doneFilePath));
+                console.log(`Successfully processed and moved ${file} to done directory`);
             } catch (error) {
                 const message = error instanceof Error ? error.message : 'Unknown error';
+                console.error(`Failed to process ${file}:`, message);
                 errors.push(`Failed to process ${file}: ${message}`);
             }
         }
+    } catch (error) {
+        console.error('Error in runAssignmentJob:', error);
+        errors.push(error instanceof Error ? error.message : 'Unknown error');
     } finally {
         await prisma.$disconnect();
     }
 
+    console.log('\nJob completed:');
+    console.log('Processed files:', processedFiles);
+    console.log('Errors:', errors);
+
     return { processedFiles, errors };
-}
+} 

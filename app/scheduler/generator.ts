@@ -1,6 +1,7 @@
-import { PrismaClient, Program, Category } from '@prisma/client';
+import { PrismaClient, Program, Category, Lecturer, Location } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
+import { Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -15,6 +16,7 @@ interface Team {
     id: number;
     name: string;
     program: Program;
+    universityId: number;
 }
 
 type DaySlot = 'morning' | 'afternoon' | 'evening';
@@ -35,14 +37,49 @@ interface JobResult {
 
 const daySlotOrder: DaySlot[] = ['morning', 'afternoon', 'evening'];
 
+const lecturerUsage = new Map<string, Set<number>>();
+
+const getSlotKey = (date: string, session: string): string => 
+    `${date}-${session}`;
+
+const isLecturerAvailable = (date: string, session: string, lecturerId: number): boolean => {
+    const slotKey = getSlotKey(date, session);
+    return !lecturerUsage.get(slotKey)?.has(lecturerId);
+};
+
+const markLecturerUsed = (date: string, session: string, lecturerId: number): void => {
+    const slotKey = getSlotKey(date, session);
+    if (!lecturerUsage.has(slotKey)) {
+        lecturerUsage.set(slotKey, new Set());
+    }
+    lecturerUsage.get(slotKey)!.add(lecturerId);
+};
+
 /* --- Utils --- */
 
+/**
+ * Gets holiday dates from the database for a given date range
+ * @param startDate - Start date of the range
+ * @param endDate - End date of the range
+ * @returns Set of holiday dates in YYYY-MM-DD format
+ */
 async function getHolidayDates(startDate: Date, endDate: Date): Promise<Set<string>> {
-    const year = startDate.getFullYear();
-    const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/VN`);
-    if (!res.ok) throw new Error('Failed to fetch holidays');
-    const data: Holiday[] = await res.json();
-    return new Set(data.map(h => h.date));
+    const startStr = startDate.toISOString().split('T')[0];
+    const endStr = endDate.toISOString().split('T')[0];
+
+    const holidays = await prisma.holiday.findMany({
+        where: {
+            date: {
+                gte: startStr,
+                lte: endStr
+            }
+        },
+        select: {
+            date: true
+        }
+    });
+
+    return new Set(holidays.map(h => h.date));
 }
 
 function initEmptySchedule(weekCount: number, startDate: Date): WeekSchedule {
@@ -142,79 +179,58 @@ function getDateOfWeekAndDay(startDate: Date, week: number, day: DayOfWeek): Dat
     }
 }
 
-async function writeSchedulesToFile(startDate: Date, endDate: Date, schedules: ClassSchedule[]) {
-    const jsonOutput: any[] = [];
-
-    for (const { classId, schedule } of schedules) {
-        for (const [weekStr, weekSchedule] of Object.entries(schedule)) {
-            const week = Number(weekStr);
-
-            for (const [day, daySchedule] of Object.entries(weekSchedule)) {
-                for (const slot of daySlotOrder) {
-                    const currentDate = getDateOfWeekAndDay(startDate, week, day as DayOfWeek);
-                    const dateString = currentDate.toISOString().split('T')[0];
-
-                    if (shouldSkipSlot(day as DayOfWeek, slot)) continue;
-
-                    const sessionValue = daySchedule[slot];
-                    let sessionName: string;
-
-                    switch (slot) {
-                        case 'morning': sessionName = 'sáng'; break;
-                        case 'afternoon': sessionName = 'chiều'; break;
-                        case 'evening': sessionName = 'tối'; break;
-                        default: sessionName = '';
-                    }
-
-                    jsonOutput.push({
-                        week: week,
-                        teamId: classId,
-                        subjectId: sessionValue === 'BREAK' || !sessionValue ? null : (sessionValue as Subject).id,
-                        date: dateString,
-                        dayOfWeek: day,
-                        session: sessionName,
-                        lecturerId: null,
-                        locationId: null
-                    });
-                }
-            }
-        }
-    }
-
-    const startStr = startDate.toISOString().split('T')[0];
-    const endStr = endDate.toISOString().split('T')[0];
-    const fileName = `scheduler_${startStr}_${endStr}_incomplete.json`;
-    const filePath = path.join(process.cwd(), 'schedules', fileName);
-
-    fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, JSON.stringify(jsonOutput, null, 2), 'utf8');
-}
-
+/**
+ * Generates schedules for a list of teams
+ * @param teams - Array of teams to generate schedules for
+ * @param startDate - The start date for the schedule generation
+ * @returns Array of class schedules with week schedules for each team
+ * 
+ * Process:
+ * 1. Get curriculum and subjects for the program
+ * 2. Sort subjects based on prerequisites
+ * 3. Calculate total slots needed and weeks required
+ * 4. For each team:
+ *    - Create empty schedule
+ *    - Add breaks based on priority
+ *    - Fill in subjects while respecting constraints
+ */
 async function generateSchedulesForTeams(teams: Team[], startDate: Date): Promise<ClassSchedule[]> {
+    console.log('Starting generateSchedulesForTeams with teams:', teams);
     if (teams.length === 0) return [];
 
     const program = teams[0].program;
+    console.log('Program:', program);
     const subjectMap = await buildSubjectMap();
+    console.log('Subject map size:', subjectMap.size);
 
+    // Get curriculum and subjects for the program
     const curriculum = await prisma.curriculum.findFirst({
         where: { program },
         include: { subjects: true },
     });
+    console.log('Found curriculum:', curriculum);
     if (!curriculum) throw new Error('No curriculum found for this program.');
 
+    // Map and filter valid subjects
     const subjectRefs = curriculum.subjects
         .map(cs => subjectMap.get(cs.subjectId))
         .filter((s): s is Subject => !!s);
+    console.log('Valid subjects:', subjectRefs.length);
 
+    // Sort subjects based on prerequisites
     const sortedSubjects = await topologicalSort(shuffleSubjects(subjectRefs), subjectMap);
+    console.log('Sorted subjects:', sortedSubjects.length);
 
+    // Calculate schedule parameters
     const totalSubjects = sortedSubjects.length;
     const slotsPerSubject = 2;
     const totalSlots = totalSubjects * slotsPerSubject;
     const slotsPerWeek = 15;
     const weekCount = Math.ceil(totalSlots / slotsPerWeek);
+    console.log('Schedule parameters:', { totalSubjects, slotsPerSubject, totalSlots, slotsPerWeek, weekCount });
 
     const holidays = await getHolidayDates(startDate, new Date(startDate.getFullYear(), 11, 31));
+    console.log('Holidays:', holidays.size);
     const schedules: ClassSchedule[] = [];
     const breaksPerWeekOptions = [3, 4];
 
@@ -227,7 +243,10 @@ async function generateSchedulesForTeams(teams: Team[], startDate: Date): Promis
     }
 
     for (const team of teams) {
-        const subjectQueue = [...sortedSubjects];
+        // Reset queue môn học cho từng lớp
+        const teamSubjectQueue = await topologicalSort(
+            shuffleSubjects(subjectRefs), subjectMap
+        );
         const schedule = initEmptySchedule(weekCount, startDate);
         const globalSchedule = new Map<string, Subject>();
 
@@ -267,21 +286,22 @@ async function generateSchedulesForTeams(teams: Team[], startDate: Date): Promis
             for (const day of orderedDays) {
                 for (const slot of daySlotOrder) {
                     if (shouldSkipSlot(day, slot)) continue;
+                    if (schedule[week][day][slot]) continue;
 
                     const currentDate = getDateOfWeekAndDay(startDate, week, day);
                     const dateString = currentDate.toISOString().split('T')[0];
-                    const key = `${team.id}-${week}-${day}-${slot}`;
+                    const key = `${team.id}-${dateString}-${slot}`;
 
                     if (holidays.has(dateString) || schedule[week][day][slot] === 'BREAK') continue;
 
                     let inserted = false;
-                    for (let i = 0; i < subjectQueue.length; i++) {
-                        const candidate = subjectQueue[i];
+                    for (let i = 0; i < teamSubjectQueue.length; i++) {
+                        const candidate = teamSubjectQueue[i];
                         if (isValidSubjectForSlot(candidate, previousSubject, globalSchedule)) {
                             schedule[week][day][slot] = candidate;
                             previousSubject = candidate;
                             globalSchedule.set(key, candidate);
-                            subjectQueue.splice(i, 1);
+                            teamSubjectQueue.splice(i, 1); // pop ra khỏi queue
                             inserted = true;
                             break;
                         }
@@ -303,57 +323,103 @@ async function generateSchedulesForTeams(teams: Team[], startDate: Date): Promis
     return schedules;
 }
 
-export async function generateSchedulesForTeamsJob(startDate: Date): Promise<JobResult> {
+/**
+ * Main job function to generate schedules
+ * @param startDate - The start date for schedule generation
+ * @param teams - Array of teams to generate schedules for
+ * @returns JobResult containing processed files and any errors
+ */
+export async function generateSchedulesForTeamsJob(startDate: Date, teams: Team[]): Promise<JobResult> {
     const processedFiles: string[] = [];
     const errors: string[] = [];
 
     try {
-        const teams = await prisma.team.findMany({
-            select: {
-                id: true,
-                name: true,
-                program: true
-            }
-        });
-
         if (teams.length === 0) {
-            throw new Error('No teams found in database');
+            return {
+                processedFiles,
+                errors: ['No teams provided for schedule generation']
+            };
         }
 
-        // Tạo schedule cho tất cả teams
+        // Set specific date range
+        const endDate = new Date('2025-05-24');
+        startDate = new Date('2025-05-19');
+
+        // Get unique university IDs from teams
+        const universityIds = [...new Set(teams.map(team => team.universityId))];
+
+        // Update university status to Processing
+        await prisma.$executeRaw`
+            UPDATE universities 
+            SET status = 'Done' 
+            WHERE id IN (${Prisma.join(universityIds)})
+        `;
+
+        // Generate schedules
         const schedules = await generateSchedulesForTeams(teams, startDate);
-        
-        // Lấy danh sách các file đã tạo
+        await writeSchedulesToFile(startDate, endDate, schedules);
+
+        // Get all generated files
         const scheduleDir = path.join(process.cwd(), 'schedules');
         const files = fs.readdirSync(scheduleDir)
-            .filter(f => f.endsWith('_incomplete.json'));
+            .filter(f => f.startsWith('week_') && f.endsWith('.json'));
 
         processedFiles.push(...files);
 
-        console.log(`Successfully generated schedules for ${teams.length} teams`);
-        console.log(`Generated files: ${files.join(', ')}`);
-
+        return { processedFiles, errors };
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        errors.push(`Failed to generate schedules: ${message}`);
-        console.error('Schedule generation failed:', error);
-    } finally {
-        await prisma.$disconnect();
+        console.error('Error generating schedules:', error);
+        errors.push(error instanceof Error ? error.message : 'Unknown error');
+        return { processedFiles, errors };
     }
-
-    return { processedFiles, errors };
 }
 
-// Hàm helper để chạy job từ command line
-if (require.main === module) {
-    const startDate = new Date();
-    generateSchedulesForTeamsJob(startDate)
-        .then(result => {
-            console.log('Job completed with result:', result);
-            process.exit(0);
-        })
-        .catch(error => {
-            console.error('Job failed:', error);
-            process.exit(1);
-        });
+async function writeSchedulesToFile(startDate: Date, endDate: Date, schedules: ClassSchedule[]) {
+    const baseDir = path.join(process.cwd(), 'schedules', 'scheduled');
+    fs.mkdirSync(baseDir, { recursive: true });
+
+    // Group by week
+    const weekMap: { [week: number]: any[] } = {};
+
+    for (const { classId, schedule } of schedules) {
+        for (const [weekStr, weekSchedule] of Object.entries(schedule)) {
+            const week = Number(weekStr);
+            if (!weekMap[week]) weekMap[week] = [];
+            const seen = new Set<string>();
+
+            for (const [day, daySchedule] of Object.entries(weekSchedule)) {
+                for (const slot of daySlotOrder) {
+                    if (shouldSkipSlot(day as DayOfWeek, slot)) continue;
+                    const currentDate = getDateOfWeekAndDay(startDate, week, day as DayOfWeek);
+                    const dateString = currentDate.toISOString().split('T')[0];
+                    const sessionValue = daySchedule[slot];
+                    const key = `${classId}-${dateString}-${slot}`;
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+
+                    weekMap[week].push({
+                        week,
+                        teamId: classId,
+                        subjectId: sessionValue === 'BREAK' || !sessionValue ? null : (sessionValue as Subject).id,
+                        date: dateString,
+                        dayOfWeek: day,
+                        session: slot,
+                        lecturerId: null,
+                        locationId: null
+                    });
+                }
+            }
+        }
+    }
+
+    // Write each week to a separate file
+    for (const [weekStr, data] of Object.entries(weekMap)) {
+        if (!data.length) continue;
+        const week = Number(weekStr);
+        const weekStart = getDateOfWeekAndDay(startDate, week, 'Mon');
+        const weekEnd = getDateOfWeekAndDay(startDate, week, 'Sat');
+        const fileName = `week_${weekStart.toISOString().split('T')[0]}_${weekEnd.toISOString().split('T')[0]}.json`;
+        const filePath = path.join(baseDir, fileName);
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+    }
 }
