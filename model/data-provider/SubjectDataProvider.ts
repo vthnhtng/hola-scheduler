@@ -1,6 +1,7 @@
 import { Subject } from "@prisma/client";
+import { DataProvider } from "@/interface/data-provider-interface";
 
-export class SubjectDataProvider {
+export class SubjectDataProvider implements DataProvider {
     private static instance: SubjectDataProvider;
 
     private constructor() {}
@@ -10,6 +11,10 @@ export class SubjectDataProvider {
             SubjectDataProvider.instance = new SubjectDataProvider();
         }
         return SubjectDataProvider.instance;
+    }
+
+    public getSelections(): { value: string; label: string }[] {
+        return this.getCategories();
     }
 
     public getCategories(): { value: string; label: string }[] {
@@ -24,6 +29,7 @@ export class SubjectDataProvider {
         const subjects = await response.json();
         const prerequisites = [
             { value: null, label: "Không" },
+            { value: "", label: "Không" },
             ...subjects.data.map((subject: Subject) => ({
                 value: subject.id.toString(),
                 label: subject.name

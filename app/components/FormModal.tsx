@@ -5,7 +5,6 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 import { FormValidator } from '@/model/form/form-validator';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 interface FormModalProps {
     title: string;
@@ -13,10 +12,7 @@ interface FormModalProps {
     attributes: ObjectAttribute[];
     record: Record<string, any> | null;
     formAction: string;
-    formMethod: string;
-    onClose: () => void;
-    showPassword?: boolean;
-    togglePasswordVisibility?: () => void;
+    formMethod: 'POST' | 'PUT';
 }
 
 function FormModal({
@@ -26,9 +22,6 @@ function FormModal({
     record,
     formAction,
     formMethod,
-    onClose,
-    showPassword,
-    togglePasswordVisibility,
 }: FormModalProps) {
     const [show, setShow] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -43,7 +36,6 @@ function FormModal({
 
     const handleClose = () => {
         setShow(false);
-        onClose();
     };
 
     const handleShow = () => {

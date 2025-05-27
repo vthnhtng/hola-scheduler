@@ -1,35 +1,36 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
 /**
  * @returns - Returns a list of teams from the database. 
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+	const { searchParams } = request.nextUrl;
+    if (request.method !== 'GET') {
+        return NextResponse.json({ message: 'Phương thức không hợp lệ' }, { status: 405 })
+    }
+
 	try {
-		const url = new URL(request.url);
-		const page = parseInt(url.searchParams.get('page') || '1', 10);
-		const recordsPerPage = parseInt(url.searchParams.get('recordsPerPage') || '10', 10);
-		const skip = (page - 1) * recordsPerPage;
-		const take = recordsPerPage;
+        const page = parseInt(searchParams.get('page') || '1', 10);
+        const limit = parseInt(searchParams.get('limit') || '10', 10);
+        const teams = await prisma.team.findMany({
+            skip: (page - 1) * limit,
+            take: limit,
+        });
 
-		const teams = await prisma.team.findMany({
-			skip,
-			take,
-		});
+        const totalCount = await prisma.team.count();
+        const totalPages = Math.ceil(totalCount / limit);
 
-		const totalCount = await prisma.team.count();
-		const totalPages = Math.ceil(totalCount / recordsPerPage);
-
-		return NextResponse.json({
-			data: teams,
-			pagination: {
-				currentPage: page,
-				totalPages: totalPages,
-				totalCount: totalCount,
-			},
-		});
+        return NextResponse.json({
+            data: teams,
+            pagination: {
+                currentPage: page,
+                totalPages: totalPages,
+                totalCount: totalCount,
+            },
+        });
 	} catch (error) {
-		return NextResponse.json({ error: 'Failed to fetch courses' }, { status: 500 });
+		return NextResponse.json({ error: 'Có lỗi xảy ra khi lấy danh sách đại đội' }, { status: 500 });
 	} finally {
 		await prisma.$disconnect();
 	}

@@ -1,33 +1,36 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
 /**
  * @returns - Returns a list of subjects from the database. 
  */
-export async function GET(request: Request) {
-	try {
-		const url = new URL(request.url);
-		const page = parseInt(url.searchParams.get('page') || '1', 10);
-		const recordsPerPage = parseInt(url.searchParams.get('recordsPerPage') || '10', 10);
+export async function GET(request: NextRequest) {
+    const { searchParams } = request.nextUrl;
+    if (request.method !== 'GET') {
+        return NextResponse.json({ message: 'Phương thức không hợp lệ' }, { status: 405 })
+    }
 
+	try {
+        const page = parseInt(searchParams.get('page') || '1', 10);
+        const limit = parseInt(searchParams.get('limit') || '10', 10);
         const subjects = await prisma.subject.findMany({
-            skip: (page - 1) * recordsPerPage,
-            take: recordsPerPage,
+            skip: (page - 1) * limit,
+            take: limit,
         });
 
-		const totalCount = await prisma.subject.count();
-		const totalPages = Math.ceil(totalCount / recordsPerPage);
+        const totalCount = await prisma.subject.count();
+        const totalPages = Math.ceil(totalCount / limit);
 
-		return NextResponse.json({
-			data: subjects,
-			pagination: {
-				currentPage: page,
-				totalPages: totalPages,
-				totalCount: totalCount,
-			},
-		});
+        return NextResponse.json({
+            data: subjects,
+            pagination: {
+                currentPage: page,
+                totalPages: totalPages,
+                totalCount: totalCount,
+            },
+        });
 	} catch (error) {
-		return NextResponse.json({ error: 'Failed to fetch courses' }, { status: 500 });
+		return NextResponse.json({ error: 'Có lỗi xảy ra khi lấy danh sách môn học' }, { status: 500 });
 	} finally {
 		await prisma.$disconnect();
 	}
