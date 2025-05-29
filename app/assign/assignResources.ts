@@ -360,57 +360,73 @@ async function processScheduleFile(filePath: string): Promise<string> {
 
                     // Process each session in this time slot
                     for (const session of timeSlotSessions) {
-                        if (!session.subjectId) continue;
+                        try {
+                            if (!session.subjectId) {
+                                console.log('Session missing subjectId, skipping...');
+                                continue;
+                            }
 
-                        // Get subject information
-                        const subject = await prisma.subject.findUnique({
-                            where: { id: session.subjectId },
-                            select: { id: true, name: true, category: true }
-                        });
-                        
-                        if (!subject) continue;
-
-                        // 1. Duyệt toàn bộ queue, tìm giảng viên có specialization trùng
-                        let lecturerIndex = lecturerQueue.findIndex(l =>
-                            l.specializations.some(s => s.subjectId === session.subjectId)
-                        );
-                        // 2. Nếu không có, duyệt lại queue, tìm giảng viên có category CT hoặc QS trùng với subject.category
-                        if (lecturerIndex === -1 && (subject.category === 'CT' || subject.category === 'QS')) {
-                            lecturerIndex = lecturerQueue.findIndex(l =>
-                                l.faculty === subject.category
-                            );
-                        }
-                        // 3. Nếu tìm được, assign và pop khỏi queue
-                        if (lecturerIndex !== -1) {
-                            const lecturer = lecturerQueue[lecturerIndex];
-                            session.lecturerId = lecturer.id;
-                            lecturerQueue.splice(lecturerIndex, 1);
-                        }
-
-                        // Find suitable location
-                        const locationIndex = locationQueue.findIndex(l => 
-                            l.subjects.some(s => s.subjectId === session.subjectId)
-                        );
-
-                        // Only assign if both lecturer and location are available
-                        if (lecturerIndex !== -1 && locationIndex !== -1) {
-                            const lecturer = lecturerQueue[lecturerIndex];
-                            const location = locationQueue[locationIndex];
-
-                            // Assign lecturer
-                            session.lecturerId = lecturer.id;
-                            await prisma.lecturer.update({
-                                where: { id: lecturer.id },
-                                data: { maxSessionsPerWeek: { decrement: 1 } }
+                            // Get subject information
+                            const subject = await prisma.subject.findUnique({
+                                where: { id: session.subjectId },
+                                select: { id: true, name: true, category: true }
                             });
+                            
+                            if (!subject) {
+                                console.log(`Subject with id ${session.subjectId} not found, skipping...`);
+                                continue;
+                            }
 
-                            // Assign location
-                            session.locationId = location.id;
-                            markLocationUsed(session, location.id);
+                            // 1. Duyệt toàn bộ queue, tìm giảng viên có specialization trùng
+                            let lecturerIndex = lecturerQueue.findIndex(l =>
+                                l.specializations.some(s => s.subjectId === session.subjectId)
+                            );
+                            // 2. Nếu không có, duyệt lại queue, tìm giảng viên có category CT hoặc QS trùng với subject.category
+                            if (lecturerIndex === -1 && (subject.category === 'CT' || subject.category === 'QS')) {
+                                lecturerIndex = lecturerQueue.findIndex(l =>
+                                    l.faculty === subject.category
+                                );
+                            }
 
-                            // Remove assigned resources from queues
-                            lecturerQueue.splice(lecturerIndex, 1);
-                            locationQueue.splice(locationIndex, 1);
+                            // Find suitable location
+                            const locationIndex = locationQueue.findIndex(l => 
+                                l.subjects.some(s => s.subjectId === session.subjectId)
+                            );
+
+                            // Only assign if both lecturer and location are available
+                            if (lecturerIndex !== -1 && locationIndex !== -1) {
+                                const lecturer = lecturerQueue[lecturerIndex];
+                                const location = locationQueue[locationIndex];
+
+                                if (!lecturer || !location) {
+                                    console.log('Missing lecturer or location, skipping...');
+                                    continue;
+                                }
+
+                                // Assign lecturer
+                                session.lecturerId = lecturer.id;
+                                await prisma.lecturer.update({
+                                    where: { id: lecturer.id },
+                                    data: { maxSessionsPerWeek: { decrement: 1 } }
+                                });
+
+                                // Assign location
+                                session.locationId = location.id;
+                                markLocationUsed(session, location.id);
+
+                                // Remove assigned resources from queues
+                                lecturerQueue.splice(lecturerIndex, 1);
+                                locationQueue.splice(locationIndex, 1);
+                            } else {
+                                console.log('No suitable lecturer or location found for session:', {
+                                    subjectId: session.subjectId,
+                                    date: session.date,
+                                    session: session.session
+                                });
+                            }
+                        } catch (error) {
+                            console.error('Error processing session:', error);
+                            continue;
                         }
                     }
 
