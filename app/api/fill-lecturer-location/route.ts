@@ -10,10 +10,10 @@ export async function GET() {
         
         // Read processed files content
         const fileContents: { [key: string]: any } = {};
-        const scheduledDir = path.join(process.cwd(), 'scheduled');
+        const doneDir = path.join(process.cwd(), 'schedules/done');
         
         for (const fileName of result.processedFiles) {
-            const filePath = path.join(scheduledDir, fileName);
+            const filePath = path.join(doneDir, fileName);
             if (fs.existsSync(filePath)) {
                 const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
                 fileContents[fileName] = content;

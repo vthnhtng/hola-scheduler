@@ -188,21 +188,49 @@ async function assignLecturersForTimeSlot(
         
         if (!subject) continue;
         
-        // 1. Duyệt toàn bộ queue, tìm giảng viên có specialization trùng
-        let lecturerIndex = lecturerQueue.findIndex(l =>
-            l.specializations.some(s => s.subjectId === session.subjectId)
-        );
-        // 2. Nếu không có, duyệt lại queue, tìm giảng viên có category CT hoặc QS trùng với subject.category
-        if (lecturerIndex === -1 && (subject.category === 'CT' || subject.category === 'QS')) {
-            lecturerIndex = lecturerQueue.findIndex(l =>
-                l.faculty === subject.category
-            );
-        }
-        // 3. Nếu tìm được, assign và pop khỏi queue
-        if (lecturerIndex !== -1) {
-            const lecturer = lecturerQueue[lecturerIndex];
-            session.lecturerId = lecturer.id;
-            lecturerQueue.splice(lecturerIndex, 1);
+        // Track usage
+        const lecturerUsageThisSlot = new Map<number, number>();
+
+        // Assign lecturer first
+        if (!session.lecturerId) {
+            // 1. Duyệt toàn bộ queue, tìm giảng viên có specialization trùng và chưa dùng quá mức
+            let lecturerIndex = lecturerQueue.findIndex(l => {
+                const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
+                return l.specializations.some(s => s.subjectId === session.subjectId) &&
+                       currentUsage < l.maxSessionsPerWeek;
+            });
+            
+            // 2. Nếu không có, duyệt lại queue, tìm giảng viên có category CT hoặc QS trùng với subject.category
+            if (lecturerIndex === -1 && (subject.category === 'CT' || subject.category === 'QS')) {
+                lecturerIndex = lecturerQueue.findIndex(l => {
+                    const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
+                    return l.faculty === subject.category && currentUsage < l.maxSessionsPerWeek;
+                });
+            }
+            
+            // 3. Nếu vẫn không có, assign lecturer đầu tiên available
+            if (lecturerIndex === -1) {
+                lecturerIndex = lecturerQueue.findIndex(l => {
+                    const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
+                    return currentUsage < l.maxSessionsPerWeek;
+                });
+            }
+
+            if (lecturerIndex !== -1) {
+                const lecturer = lecturerQueue[lecturerIndex];
+                session.lecturerId = lecturer.id;
+                
+                // Track usage
+                const currentUsage = lecturerUsageThisSlot.get(lecturer.id) || 0;
+                lecturerUsageThisSlot.set(lecturer.id, currentUsage + 1);
+                
+                // Remove lecturer if at capacity
+                if (lecturerUsageThisSlot.get(lecturer.id)! >= lecturer.maxSessionsPerWeek) {
+                    lecturerQueue.splice(lecturerIndex, 1);
+                }
+                
+                console.log(`Assigned lecturer ${lecturer.id} to subject ${session.subjectId}`);
+            }
         }
     }
 }
@@ -357,6 +385,9 @@ async function processScheduleFile(filePath: string): Promise<string> {
                     // Shuffle both queues
                     lecturerQueue = shuffleArray(lecturerQueue);
                     locationQueue = shuffleArray(locationQueue);
+                    
+                    // Track lecturer usage for this time slot
+                    const lecturerUsageThisSlot = new Map<number, number>();
 
                     // Process each session in this time slot
                     for (const session of timeSlotSessions) {
@@ -377,53 +408,76 @@ async function processScheduleFile(filePath: string): Promise<string> {
                                 continue;
                             }
 
-                            // 1. Duyệt toàn bộ queue, tìm giảng viên có specialization trùng
-                            let lecturerIndex = lecturerQueue.findIndex(l =>
-                                l.specializations.some(s => s.subjectId === session.subjectId)
-                            );
-                            // 2. Nếu không có, duyệt lại queue, tìm giảng viên có category CT hoặc QS trùng với subject.category
-                            if (lecturerIndex === -1 && (subject.category === 'CT' || subject.category === 'QS')) {
-                                lecturerIndex = lecturerQueue.findIndex(l =>
-                                    l.faculty === subject.category
-                                );
-                            }
-
-                            // Find suitable location
-                            const locationIndex = locationQueue.findIndex(l => 
-                                l.subjects.some(s => s.subjectId === session.subjectId)
-                            );
-
-                            // Only assign if both lecturer and location are available
-                            if (lecturerIndex !== -1 && locationIndex !== -1) {
-                                const lecturer = lecturerQueue[lecturerIndex];
-                                const location = locationQueue[locationIndex];
-
-                                if (!lecturer || !location) {
-                                    console.log('Missing lecturer or location, skipping...');
-                                    continue;
+                            // Assign lecturer first
+                            if (!session.lecturerId) {
+                                // 1. Duyệt toàn bộ queue, tìm giảng viên có specialization trùng và chưa dùng quá mức
+                                let lecturerIndex = lecturerQueue.findIndex(l => {
+                                    const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
+                                    return l.specializations.some(s => s.subjectId === session.subjectId) &&
+                                           currentUsage < l.maxSessionsPerWeek;
+                                });
+                                
+                                // 2. Nếu không có, duyệt lại queue, tìm giảng viên có category CT hoặc QS trùng với subject.category
+                                if (lecturerIndex === -1 && (subject.category === 'CT' || subject.category === 'QS')) {
+                                    lecturerIndex = lecturerQueue.findIndex(l => {
+                                        const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
+                                        return l.faculty === subject.category && currentUsage < l.maxSessionsPerWeek;
+                                    });
+                                }
+                                
+                                // 3. Nếu vẫn không có, assign lecturer đầu tiên available
+                                if (lecturerIndex === -1) {
+                                    lecturerIndex = lecturerQueue.findIndex(l => {
+                                        const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
+                                        return currentUsage < l.maxSessionsPerWeek;
+                                    });
                                 }
 
-                                // Assign lecturer
-                                session.lecturerId = lecturer.id;
-                                await prisma.lecturer.update({
-                                    where: { id: lecturer.id },
-                                    data: { maxSessionsPerWeek: { decrement: 1 } }
-                                });
-
-                                // Assign location
-                                session.locationId = location.id;
-                                markLocationUsed(session, location.id);
-
-                                // Remove assigned resources from queues
-                                lecturerQueue.splice(lecturerIndex, 1);
-                                locationQueue.splice(locationIndex, 1);
-                            } else {
-                                console.log('No suitable lecturer or location found for session:', {
-                                    subjectId: session.subjectId,
-                                    date: session.date,
-                                    session: session.session
-                                });
+                                if (lecturerIndex !== -1) {
+                                    const lecturer = lecturerQueue[lecturerIndex];
+                                    session.lecturerId = lecturer.id;
+                                    
+                                    // Track usage
+                                    const currentUsage = lecturerUsageThisSlot.get(lecturer.id) || 0;
+                                    lecturerUsageThisSlot.set(lecturer.id, currentUsage + 1);
+                                    
+                                    // Remove lecturer if at capacity
+                                    if (lecturerUsageThisSlot.get(lecturer.id)! >= lecturer.maxSessionsPerWeek) {
+                                        lecturerQueue.splice(lecturerIndex, 1);
+                                    }
+                                    
+                                    console.log(`Assigned lecturer ${lecturer.id} to subject ${session.subjectId}`);
+                                }
                             }
+
+                            // Assign location separately
+                            if (!session.locationId) {
+                                // Find suitable location
+                                let locationIndex = locationQueue.findIndex(l => 
+                                    l.subjects.some(s => s.subjectId === session.subjectId) &&
+                                    canAssignLocation(session, l.id, l.capacity)
+                                );
+                                
+                                // If no specific location found, use any available location
+                                if (locationIndex === -1 && locationQueue.length > 0) {
+                                    locationIndex = locationQueue.findIndex(l =>
+                                        canAssignLocation(session, l.id, l.capacity)
+                                    );
+                                }
+
+                                if (locationIndex !== -1) {
+                                    const location = locationQueue[locationIndex];
+                                    session.locationId = location.id;
+                                    markLocationUsed(session, location.id);
+                                    
+                                    // Check if location is at capacity for this time slot
+                                    if (!canAssignLocation(session, location.id, location.capacity)) {
+                                        locationQueue.splice(locationIndex, 1);
+                                    }
+                                    console.log(`Assigned location ${location.id} to subject ${session.subjectId}`);
+                                }
+                            }
+
                         } catch (error) {
                             console.error('Error processing session:', error);
                             continue;

@@ -28,7 +28,7 @@ interface Holiday {
 
 type DaySchedule = Partial<Record<DaySlot, Subject | 'BREAK'>>;
 type WeekSchedule = Record<number, Record<DayOfWeek, DaySchedule>>;
-type ClassSchedule = { classId: number; schedule: WeekSchedule };
+type ClassSchedule = { classId: number; schedule: Record<string, DaySchedule> };
 
 interface JobResult {
     processedFiles: string[];
@@ -158,6 +158,7 @@ function getDateOfWeekAndDay(startDate: Date, week: number, day: DayOfWeek): Dat
     if (week === 1) {
         const firstWeekDays = getFirstWeekDays(startDate);
         if (!firstWeekDays.includes(day)) {
+            console.error('firstWeekDays:', firstWeekDays, 'day:', day);
             throw new Error(`Invalid day for week 1: ${day}`);
         }
         const dayIndex = firstWeekDays.indexOf(day);
@@ -180,7 +181,7 @@ function getDateOfWeekAndDay(startDate: Date, week: number, day: DayOfWeek): Dat
 }
 
 /**
- * Generates schedules for a list of teams
+ * Main function to generate schedules for a list of teams
  * @param teams - Array of teams to generate schedules for
  * @param startDate - The start date for the schedule generation
  * @returns Array of class schedules with week schedules for each team
@@ -194,133 +195,87 @@ function getDateOfWeekAndDay(startDate: Date, week: number, day: DayOfWeek): Dat
  *    - Add breaks based on priority
  *    - Fill in subjects while respecting constraints
  */
-async function generateSchedulesForTeams(teams: Team[], startDate: Date): Promise<ClassSchedule[]> {
-    console.log('Starting generateSchedulesForTeams with teams:', teams);
+export async function generateSchedulesForTeams(teams: Team[], startDate: Date): Promise<ClassSchedule[]> {
     if (teams.length === 0) return [];
 
     const program = teams[0].program;
-    console.log('Program:', program);
     const subjectMap = await buildSubjectMap();
-    console.log('Subject map size:', subjectMap.size);
 
     // Get curriculum and subjects for the program
     const curriculum = await prisma.curriculum.findFirst({
         where: { program },
         include: { subjects: true },
     });
-    console.log('Found curriculum:', curriculum);
     if (!curriculum) throw new Error('No curriculum found for this program.');
 
     // Map and filter valid subjects
     const subjectRefs = curriculum.subjects
         .map(cs => subjectMap.get(cs.subjectId))
         .filter((s): s is Subject => !!s);
-    console.log('Valid subjects:', subjectRefs.length);
 
     // Sort subjects based on prerequisites
     const sortedSubjects = await topologicalSort(shuffleSubjects(subjectRefs), subjectMap);
-    console.log('Sorted subjects:', sortedSubjects.length);
 
-    // Calculate schedule parameters
-    const totalSubjects = sortedSubjects.length;
-    const slotsPerSubject = 2;
-    const totalSlots = totalSubjects * slotsPerSubject;
-    const slotsPerWeek = 15;
-    const weekCount = Math.ceil(totalSlots / slotsPerWeek);
-    console.log('Schedule parameters:', { totalSubjects, slotsPerSubject, totalSlots, slotsPerWeek, weekCount });
-
-    const holidays = await getHolidayDates(startDate, new Date(startDate.getFullYear(), 11, 31));
-    console.log('Holidays:', holidays.size);
-    const schedules: ClassSchedule[] = [];
     const breaksPerWeekOptions = [3, 4];
+    const holidays = await getHolidayDates(startDate, new Date(startDate.getFullYear(), 11, 31));
 
-    function getBreakPriority(day: DayOfWeek, slot: DaySlot): number {
-        if (day === 'Wed' && slot === 'evening') return 4;
-        if (day === 'Sat' && slot === 'afternoon') return 3;
-        if (day === 'Sat' && slot === 'morning') return 2;
-        if (slot === 'evening') return 1;
-        return 0;
-    }
+    // Prepare queues for each team
+    const teamQueues = teams.map(team => ({
+        team,
+        subjectQueue: [...sortedSubjects],
+        schedule: {} as Record<string, DaySchedule>, // key is dateString
+        globalSchedule: new Map<string, Subject>(),
+        breakCount: 0,
+        totalBreaks: breaksPerWeekOptions[Math.floor(Math.random() * breaksPerWeekOptions.length)],
+    }));
 
-    for (const team of teams) {
-        // Reset queue môn học cho từng lớp
-        const teamSubjectQueue = await topologicalSort(
-            shuffleSubjects(subjectRefs), subjectMap
-        );
-        const schedule = initEmptySchedule(weekCount, startDate);
-        const globalSchedule = new Map<string, Subject>();
+    let anyQueueHasSubject = true;
+    let currentDate = new Date(startDate);
 
-        for (let week = 1; week <= weekCount; week++) {
-            let breakCount = 0;
-            const totalBreaks = breaksPerWeekOptions[Math.floor(Math.random() * breaksPerWeekOptions.length)];
+    while (anyQueueHasSubject) {
+        const dateString = currentDate.toISOString().split('T')[0];
+        const dayOfWeek = currentDate.toLocaleDateString('en-US', { weekday: 'short' }) as DayOfWeek;
+        // Map JS short weekday to DayOfWeek
+        const dayMap: Record<string, DayOfWeek> = {
+            Sun: 'Sun', Mon: 'Mon', Tue: 'Tue', Wed: 'Wed', Thu: 'Thu', Fri: 'Fri', Sat: 'Sat'
+        };
+        const day = dayMap[dayOfWeek];
 
-            const orderedDays = week === 1
-                ? getFirstWeekDays(startDate)
-                : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as DayOfWeek[];
-
-            const allSlots: Array<{ day: DayOfWeek, slot: DaySlot }> = [];
-            for (const day of orderedDays) {
+        if (!holidays.has(dateString) && day !== 'Sun') {
+            for (const tq of teamQueues) {
+                if (tq.subjectQueue.length === 0) continue;
+                if (!tq.schedule[dateString]) tq.schedule[dateString] = {};
+                let previousSubject: Subject | null = null;
                 for (const slot of daySlotOrder) {
                     if (shouldSkipSlot(day, slot)) continue;
-                    allSlots.push({ day, slot });
-                }
-            }
-
-            allSlots.sort((a, b) => {
-                return getBreakPriority(b.day, b.slot) - getBreakPriority(a.day, a.slot);
-            });
-
-            for (const { day, slot } of allSlots) {
-                if (breakCount >= totalBreaks) break;
-
-                const currentDate = getDateOfWeekAndDay(startDate, week, day);
-                const dateString = currentDate.toISOString().split('T')[0];
-
-                if (holidays.has(dateString) || schedule[week][day][slot]) continue;
-
-                schedule[week][day][slot] = 'BREAK';
-                breakCount++;
-            }
-
-            let previousSubject: Subject | null = null;
-            for (const day of orderedDays) {
-                for (const slot of daySlotOrder) {
-                    if (shouldSkipSlot(day, slot)) continue;
-                    if (schedule[week][day][slot]) continue;
-
-                    const currentDate = getDateOfWeekAndDay(startDate, week, day);
-                    const dateString = currentDate.toISOString().split('T')[0];
-                    const key = `${team.id}-${dateString}-${slot}`;
-
-                    if (holidays.has(dateString) || schedule[week][day][slot] === 'BREAK') continue;
-
+                    if (tq.schedule[dateString][slot]) continue;
+                    // Assign subject if available
                     let inserted = false;
-                    for (let i = 0; i < teamSubjectQueue.length; i++) {
-                        const candidate = teamSubjectQueue[i];
-                        if (isValidSubjectForSlot(candidate, previousSubject, globalSchedule)) {
-                            schedule[week][day][slot] = candidate;
+                    for (let i = 0; i < tq.subjectQueue.length; i++) {
+                        const candidate = tq.subjectQueue[i];
+                        if (isValidSubjectForSlot(candidate, previousSubject, tq.globalSchedule)) {
+                            tq.schedule[dateString][slot] = candidate;
                             previousSubject = candidate;
-                            globalSchedule.set(key, candidate);
-                            teamSubjectQueue.splice(i, 1); // pop ra khỏi queue
+                            tq.globalSchedule.set(`${tq.team.id}-${dateString}-${slot}`, candidate);
+                            tq.subjectQueue.splice(i, 1);
                             inserted = true;
                             break;
                         }
                     }
-
-                    if (!inserted && breakCount < totalBreaks) {
-                        schedule[week][day][slot] = 'BREAK';
-                        breakCount++;
+                    if (!inserted) {
+                        tq.schedule[dateString][slot] = 'BREAK';
                     }
                 }
             }
         }
-        schedules.push({ classId: team.id, schedule });
+        // Check if any team still has subjects
+        anyQueueHasSubject = teamQueues.some(tq => tq.subjectQueue.length > 0);
+        // Move to next day
+        currentDate.setDate(currentDate.getDate() + 1);
     }
-
-    const endDate = getDateOfWeekAndDay(startDate, weekCount, 'Sat');
-    await writeSchedulesToFile(startDate, endDate, schedules);
-
-    return schedules;
+    // Convert schedule to expected format (by week if needed, or keep by date string)
+    // Here, we keep by date string for simplicity
+    return teamQueues.map(tq => ({ classId: tq.team.id, schedule: tq.schedule }));
 }
 
 /**
@@ -332,7 +287,6 @@ async function generateSchedulesForTeams(teams: Team[], startDate: Date): Promis
 export async function generateSchedulesForTeamsJob(startDate: Date, teams: Team[]): Promise<JobResult> {
     const processedFiles: string[] = [];
     const errors: string[] = [];
-
     try {
         if (teams.length === 0) {
             return {
@@ -340,32 +294,25 @@ export async function generateSchedulesForTeamsJob(startDate: Date, teams: Team[
                 errors: ['No teams provided for schedule generation']
             };
         }
-
-        // Set specific date range
-        const endDate = new Date('2025-05-24');
-        startDate = new Date('2025-05-19');
-
-        // Get unique university IDs from teams
-        const universityIds = [...new Set(teams.map(team => team.universityId))];
-
-        // Update university status to Processing
-        await prisma.$executeRaw`
-            UPDATE universities 
-            SET status = 'Done' 
-            WHERE id IN (${Prisma.join(universityIds)})
-        `;
-
         // Generate schedules
         const schedules = await generateSchedulesForTeams(teams, startDate);
+        
+        // Calculate end date from actual schedule data
+        let endDate = startDate;
+        if (schedules.length > 0) {
+            const allDates = schedules.flatMap(s => Object.keys(s.schedule));
+            if (allDates.length > 0) {
+                const latestDate = allDates.sort().pop();
+                endDate = latestDate ? new Date(latestDate) : startDate;
+            }
+        }
+        
         await writeSchedulesToFile(startDate, endDate, schedules);
-
         // Get all generated files
-        const scheduleDir = path.join(process.cwd(), 'schedules');
+        const scheduleDir = path.join(process.cwd(), 'schedules', 'scheduled');
         const files = fs.readdirSync(scheduleDir)
             .filter(f => f.startsWith('week_') && f.endsWith('.json'));
-
         processedFiles.push(...files);
-
         return { processedFiles, errors };
     } catch (error) {
         console.error('Error generating schedules:', error);
@@ -378,36 +325,68 @@ async function writeSchedulesToFile(startDate: Date, endDate: Date, schedules: C
     const baseDir = path.join(process.cwd(), 'schedules', 'scheduled');
     fs.mkdirSync(baseDir, { recursive: true });
 
-    // Group by week
+    // Group by week based on actual dates
     const weekMap: { [week: number]: any[] } = {};
 
     for (const { classId, schedule } of schedules) {
-        for (const [weekStr, weekSchedule] of Object.entries(schedule)) {
-            const week = Number(weekStr);
+        for (const [dateString, daySchedule] of Object.entries(schedule)) {
+            const currentDate = new Date(dateString);
+            
+            // Calculate week number based on the logic:
+            // Week 1: From startDate to end of that week (Saturday)
+            // Week 2+: Full weeks from Monday to Saturday
+            let week: number;
+            
+            // Get the Saturday of the first week (Saturday = 6 in JS)
+            const firstSaturday = new Date(startDate);
+            const startDay = startDate.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+            let daysToSaturday: number;
+            if (startDay === 0) { // Sunday
+                daysToSaturday = 6; // 6 days to Saturday
+            } else if (startDay === 6) { // Already Saturday
+                daysToSaturday = 0;
+            } else {
+                daysToSaturday = 6 - startDay; // Days until Saturday
+            }
+            firstSaturday.setDate(startDate.getDate() + daysToSaturday);
+            
+            if (currentDate <= firstSaturday) {
+                week = 1;
+            } else {
+                // Calculate weeks from the Monday after first Saturday
+                const firstMondayAfter = new Date(firstSaturday);
+                firstMondayAfter.setDate(firstSaturday.getDate() + 2); // Saturday + 2 = Monday (skip Sunday)
+                
+                const daysDiff = Math.floor((currentDate.getTime() - firstMondayAfter.getTime()) / (24 * 60 * 60 * 1000));
+                week = Math.floor(daysDiff / 7) + 2; // +2 because we start from week 2
+            }
+            
             if (!weekMap[week]) weekMap[week] = [];
             const seen = new Set<string>();
 
-            for (const [day, daySchedule] of Object.entries(weekSchedule)) {
-                for (const slot of daySlotOrder) {
-                    if (shouldSkipSlot(day as DayOfWeek, slot)) continue;
-                    const currentDate = getDateOfWeekAndDay(startDate, week, day as DayOfWeek);
-                    const dateString = currentDate.toISOString().split('T')[0];
-                    const sessionValue = daySchedule[slot];
-                    const key = `${classId}-${dateString}-${slot}`;
-                    if (seen.has(key)) continue;
-                    seen.add(key);
+            const dayOfWeek = currentDate.toLocaleDateString('en-US', { weekday: 'short' }) as DayOfWeek;
+            const dayMap: Record<string, DayOfWeek> = {
+                Sun: 'Sun', Mon: 'Mon', Tue: 'Tue', Wed: 'Wed', Thu: 'Thu', Fri: 'Fri', Sat: 'Sat'
+            };
+            const day = dayMap[dayOfWeek];
 
-                    weekMap[week].push({
-                        week,
-                        teamId: classId,
-                        subjectId: sessionValue === 'BREAK' || !sessionValue ? null : (sessionValue as Subject).id,
-                        date: dateString,
-                        dayOfWeek: day,
-                        session: slot,
-                        lecturerId: null,
-                        locationId: null
-                    });
-                }
+            for (const slot of daySlotOrder) {
+                if (shouldSkipSlot(day, slot)) continue;
+                const sessionValue = daySchedule[slot];
+                const key = `${classId}-${dateString}-${slot}`;
+                if (seen.has(key)) continue;
+                seen.add(key);
+
+                weekMap[week].push({
+                    week,
+                    teamId: classId,
+                    subjectId: sessionValue === 'BREAK' || !sessionValue ? null : (sessionValue as Subject).id,
+                    date: dateString,
+                    dayOfWeek: day,
+                    session: slot,
+                    lecturerId: null,
+                    locationId: null
+                });
             }
         }
     }
@@ -416,8 +395,34 @@ async function writeSchedulesToFile(startDate: Date, endDate: Date, schedules: C
     for (const [weekStr, data] of Object.entries(weekMap)) {
         if (!data.length) continue;
         const week = Number(weekStr);
-        const weekStart = getDateOfWeekAndDay(startDate, week, 'Mon');
-        const weekEnd = getDateOfWeekAndDay(startDate, week, 'Sat');
+        
+        // Calculate proper week start and end dates based on week number
+        let weekStart: Date, weekEnd: Date;
+        
+        if (week === 1) {
+            // Week 1: from startDate to first Saturday
+            weekStart = new Date(startDate);
+            weekEnd = new Date(startDate);
+            const startDay = startDate.getDay();
+            const daysToSaturday = startDay === 0 ? 6 : (startDay === 6 ? 0 : 6 - startDay);
+            weekEnd.setDate(startDate.getDate() + daysToSaturday);
+        } else {
+            // Week 2+: full weeks from Monday to Saturday
+            const firstSaturday = new Date(startDate);
+            const startDay = startDate.getDay();
+            const daysToSaturday = startDay === 0 ? 6 : (startDay === 6 ? 0 : 6 - startDay);
+            firstSaturday.setDate(startDate.getDate() + daysToSaturday);
+            
+            const firstMondayAfter = new Date(firstSaturday);
+            firstMondayAfter.setDate(firstSaturday.getDate() + 2);
+            
+            weekStart = new Date(firstMondayAfter);
+            weekStart.setDate(firstMondayAfter.getDate() + (week - 2) * 7);
+            
+            weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 5); // Monday + 5 = Saturday
+        }
+        
         const fileName = `week_${weekStart.toISOString().split('T')[0]}_${weekEnd.toISOString().split('T')[0]}.json`;
         const filePath = path.join(baseDir, fileName);
         fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');

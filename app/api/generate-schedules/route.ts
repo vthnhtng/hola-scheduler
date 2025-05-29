@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { generateSchedulesForTeamsJob } from '@/app/scheduler/generator';
 import { PrismaClient } from '@prisma/client';
+import path from 'path';
+import fs from 'fs';
 
 const prisma = new PrismaClient();
 
@@ -45,9 +47,25 @@ export async function POST(request: Request) {
       }, { status: 500 });
     }
 
+    // Read processed files content
+    const fileContents: { [key: string]: any } = {};
+    const scheduledDir = path.join(process.cwd(), 'schedules/scheduled');
+    
+    for (const fileName of result.processedFiles) {
+      const filePath = path.join(scheduledDir, fileName);
+      if (fs.existsSync(filePath)) {
+        const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        fileContents[fileName] = content;
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      processedFiles: result.processedFiles,
+      data: {
+        processedFiles: result.processedFiles,
+        errors: result.errors,
+        fileContents
+      },
       message: `Successfully generated schedules for ${result.processedFiles.length} file(s)`
     });
   } catch (error) {
