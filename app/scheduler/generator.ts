@@ -198,36 +198,38 @@ function getDateOfWeekAndDay(startDate: Date, week: number, day: DayOfWeek): Dat
 export async function generateSchedulesForTeams(teams: Team[], startDate: Date): Promise<ClassSchedule[]> {
     if (teams.length === 0) return [];
 
-    const program = teams[0].program;
     const subjectMap = await buildSubjectMap();
-
-    // Get curriculum and subjects for the program
-    const curriculum = await prisma.curriculum.findFirst({
-        where: { program },
-        include: { subjects: true },
-    });
-    if (!curriculum) throw new Error('No curriculum found for this program.');
-
-    // Map and filter valid subjects
-    const subjectRefs = curriculum.subjects
-        .map(cs => subjectMap.get(cs.subjectId))
-        .filter((s): s is Subject => !!s);
-
-    // Sort subjects based on prerequisites
-    const sortedSubjects = await topologicalSort(shuffleSubjects(subjectRefs), subjectMap);
-
     const breaksPerWeekOptions = [3, 4];
     const holidays = await getHolidayDates(startDate, new Date(startDate.getFullYear(), 11, 31));
 
-    // Prepare queues for each team
-    const teamQueues = teams.map(team => ({
-        team,
-        subjectQueue: [...sortedSubjects],
-        schedule: {} as Record<string, DaySchedule>, // key is dateString
-        globalSchedule: new Map<string, Subject>(),
-        breakCount: 0,
-        totalBreaks: breaksPerWeekOptions[Math.floor(Math.random() * breaksPerWeekOptions.length)],
-    }));
+    // Chuẩn bị queue riêng cho từng team
+    const teamQueues = [];
+    for (const team of teams) {
+        // Lấy curriculum cho từng team
+        const curriculum = await prisma.curriculum.findFirst({
+            where: { program: team.program },
+            include: { subjects: true },
+        });
+        if (!curriculum) throw new Error(`No curriculum found for program ${team.program}`);
+
+        // Map và filter valid subjects
+        const subjectRefs = curriculum.subjects
+            .map(cs => subjectMap.get(cs.subjectId))
+            .filter((s): s is Subject => !!s);
+
+        // Shuffle trước, sau đó topological sort
+        const shuffledSubjects = shuffleSubjects(subjectRefs);
+        const sortedSubjects = await topologicalSort(shuffledSubjects, subjectMap);
+
+        teamQueues.push({
+            team,
+            subjectQueue: [...sortedSubjects],
+            schedule: {} as Record<string, DaySchedule>, // key is dateString
+            globalSchedule: new Map<string, Subject>(),
+            breakCount: 0,
+            totalBreaks: breaksPerWeekOptions[Math.floor(Math.random() * breaksPerWeekOptions.length)],
+        });
+    }
 
     let anyQueueHasSubject = true;
     let currentDate = new Date(startDate);

@@ -25,7 +25,7 @@ function TimeTable() {
     useEffect(() => {
 
         const fetchData = async () => {
-            const response = await fetch('/sample-timetable-data.json');
+            const response = await fetch('api/generate-schedules');
             const data = await response.json();
             const dateRange = ApiResponseHandler.getDateRange(data);
             const timetableResult = ApiResponseHandler.getTimetableData(data);
