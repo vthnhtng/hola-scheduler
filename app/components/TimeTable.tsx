@@ -1,261 +1,147 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import TimeSlot from './TimeSlot';
-import TimeTableHeader from './TimeTableHeader';
-import DayTimeRow from './DayTimeRow';
-import TimeTableActions from './TimeTableActions';
-import ClassModal from './ClassModal';
-import ScrollableTable, { ScrollableTableRef } from './ScrollableTable';
-import TableNavigation from './TableNavigation';
+import React, { useState, useEffect } from 'react';
+import { ClassElementProps, DateRange, TimetableData } from '@/types/TimeTableTypes';
+import { ApiResponseHandler } from '@/model/time-table/ApiResponseHandler';
 
-interface ClassInfo {
-    subject: string;
-    lecturer: string;
-    room: string;
-}
 
-interface TimeTableData {
-    [key: string]: ClassInfo | null;
-}
+function TimeTable() {
+    const [dateRange, setDateRange] = useState<DateRange>();
+    const [teams, setTeams] = useState<string[]>([]);
+    const [timetableData, setTimetableData] = useState<TimetableData[]>([]);
+    const sessions = ['Morning', 'Afternoon', 'Evening'] as const;
+    const sessionKeys = ['morning', 'afternoon', 'evening'] as const;
 
-interface TimeTableProps {
-    days?: string[];
-    timeSlots?: string[];
-    classes?: string[];
-}
-
-interface ModalState {
-    isOpen: boolean;
-    day: string;
-    time: string;
-    className: string;
-    editMode: boolean;
-    initialData?: ClassInfo | null;
-}
-
-function TimeTable({ 
-    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-    timeSlots = ["Morning", "Afternoon", "Evening"],
-    classes = ["Class A", "Class B", "Class C", "Class D", "Class E", "Class F", "Class G", "Class H", "Class I", "Class J", "Class K", "Class L", "Class M", "Class N", "Class O", "Class P", "Class Q", "Class R", "Class S", "Class T", "Class U", "Class V", "Class W", "Class X", "Class Y", "Class Z"]
-}: TimeTableProps) {
-    const scrollableTableRef = useRef<ScrollableTableRef>(null);
-    const [visibleRange, setVisibleRange] = useState({ start: 0, end: 2 });
-
-    const [timetableData, setTimetableData] = useState<TimeTableData>({
-        'Monday-Morning-Class A': {
-            subject: 'Mathematics',
-            lecturer: 'Dr. Smith',
-            room: 'Room 101'
-        },
-        'Tuesday-Afternoon-Class B': {
-            subject: 'Physics',
-            lecturer: 'Prof. Johnson',
-            room: 'Lab 205'
-        },
-        'Wednesday-Evening-Class C': {
-            subject: 'Chemistry',
-            lecturer: 'Dr. Brown',
-            room: 'Lab 301'
-        }
-    });
-
-    const [modalState, setModalState] = useState<ModalState>({
-        isOpen: false,
-        day: '',
-        time: '',
-        className: '',
-        editMode: false,
-        initialData: null
-    });
-
-    const getKey = (day: string, time: string, className: string) => `${day}-${time}-${className}`;
-
-    const handleAddClass = (day: string, time: string, className: string) => {
-        setModalState({
-            isOpen: true,
-            day,
-            time,
-            className,
-            editMode: false,
-            initialData: null
-        });
-    };
-
-    const handleEditClass = (day: string, time: string, className: string) => {
-        const key = getKey(day, time, className);
-        const classInfo = timetableData[key];
-        
-        setModalState({
-            isOpen: true,
-            day,
-            time,
-            className,
-            editMode: true,
-            initialData: classInfo
-        });
-    };
-
-    const handleSaveClass = (classData: ClassInfo) => {
-        const key = getKey(modalState.day, modalState.time, modalState.className);
-        setTimetableData(prev => ({
-            ...prev,
-            [key]: classData
-        }));
-    };
-
-    const handleCloseModal = () => {
-        setModalState({
-            isOpen: false,
-            day: '',
-            time: '',
-            className: '',
-            editMode: false,
-            initialData: null
-        });
-    };
-
-    const handleActions = {
-        onAddClass: () => console.log('Global add new class'),
-        onExport: () => {
-            // Export timetable as JSON for demo
-            const dataStr = JSON.stringify(timetableData, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'timetable.json';
-            link.click();
-            URL.revokeObjectURL(url);
-        },
-        onSettings: () => console.log('Open settings'),
-        onRefresh: () => {
-            // Reset to initial sample data
-            setTimetableData({
-                'Monday-Morning-Class A': {
-                    subject: 'Mathematics',
-                    lecturer: 'Dr. Smith',
-                    room: 'Room 101'
-                },
-                'Tuesday-Afternoon-Class B': {
-                    subject: 'Physics',
-                    lecturer: 'Prof. Johnson',
-                    room: 'Lab 205'
-                },
-                'Wednesday-Evening-Class C': {
-                    subject: 'Chemistry',
-                    lecturer: 'Dr. Brown',
-                    room: 'Lab 301'
-                }
-            });
-        }
-    };
-
-    // Handle navigation to specific class column
-    const handleClassNavigation = (classIndex: number) => {
-        if (scrollableTableRef.current) {
-            scrollableTableRef.current.scrollToColumn(classIndex);
-        }
-    };
-
-    // Update visible range when scrolling
     useEffect(() => {
-        const updateVisibleRange = () => {
-            if (scrollableTableRef.current) {
-                const range = scrollableTableRef.current.getVisibleRange();
-                setVisibleRange(range);
-            }
+
+        const fetchData = async () => {
+            const response = await fetch('/sample-timetable-data.json');
+            const data = await response.json();
+            const dateRange = ApiResponseHandler.getDateRange(data);
+            const timetableResult = ApiResponseHandler.getTimetableData(data);
+            setDateRange(dateRange);
+            setTimetableData(timetableResult.timetableData);
+            setTeams(timetableResult.teams);
         };
 
-        // Update initially and on window resize
-        updateVisibleRange();
-        window.addEventListener('resize', updateVisibleRange);
-        
-        // Set up interval to check scroll position
-        const interval = setInterval(updateVisibleRange, 100);
-
-        return () => {
-            window.removeEventListener('resize', updateVisibleRange);
-            clearInterval(interval);
-        };
+        fetchData();
     }, []);
 
+    const renderTableRows = () => {
+        const rows: React.ReactElement[] = [];
+        
+        if (!dateRange) return rows;
+
+        // Get unique dates from timetable data
+        const uniqueDates = [...new Set(timetableData.map(item => item.date))].sort();
+
+        uniqueDates.forEach((date) => {
+            sessionKeys.forEach((sessionKey, sessionIndex) => {
+                const sessionName = sessions[sessionIndex];
+
+                rows.push(
+                    <tr key={`${date}-${sessionKey}`}>
+                        {sessionIndex === 0 && (
+                            <td 
+                                rowSpan={3} 
+                                className="w-20 h-16 px-2 py-2 border border-gray-300 text-center font-medium bg-gray-50 align-middle text-sm"
+                            >
+                                {new Date(date).toLocaleDateString('en-US', {
+                                    weekday: 'short',
+                                    month: 'short',
+                                    day: 'numeric'
+                                })}
+                            </td>
+                        )}
+                        <td className="w-20 h-16 px-2 py-2 border border-gray-300 text-center font-medium align-middle text-sm">
+                            {sessionName}
+                        </td>
+                        {teams.map((team) => {
+                            // Find if there's data for this team, date, and session
+                            const classData = timetableData.find(item => 
+                                item.date === date && 
+                                item.session === sessionKey &&
+                                item.teamId === team
+                            );
+
+                            return (
+                                <td 
+                                    key={`${date}-${sessionKey}-${team}`}
+                                    className="w-24 h-16 px-2 py-2 border border-gray-300 text-center align-middle"
+                                >
+                                    {classData ? (
+                                        <div className="space-y-1">
+                                            <div className="font-medium text-blue-600 text-sm">
+                                                Subject: {classData.class.subject}
+                                            </div>
+                                            <div className="text-xs text-gray-600">
+                                                Lecturer: {classData.class.lecturer || 'TBA'}
+                                            </div>
+                                            <div className="text-xs text-gray-600">
+                                                Location: {classData.class.location || 'TBA'}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <span className="text-gray-400">-</span>
+                                    )}
+                                </td>
+                            );
+                        })}
+                    </tr>
+                );
+            });
+        });
+        
+        return rows;
+    };
+
     return (
-        <div className="p-6 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
-            <div className="mx-auto">
-                <TimeTableActions {...handleActions} />
+        <div className="w-full overflow-x-auto bg-white rounded-lg shadow-lg">
+            <div className="p-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">Team Schedule</h2>
                 
-                <TableNavigation
-                    classes={classes}
-                    onClassClick={handleClassNavigation}
-                    visibleStartIndex={visibleRange.start}
-                    visibleEndIndex={visibleRange.end}
-                />
-                
-                <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-200">
-                    <ScrollableTable ref={scrollableTableRef}>
-                        <table className="w-full table-auto border-collapse min-w-max">
-                            <TimeTableHeader classes={classes} />
-                            <tbody>
-                                {days.map((day) => (
-                                    <React.Fragment key={day}>
-                                        {timeSlots.map((slot, idx) => (
-                                            <tr 
-                                                key={`${day}-${slot}`}
-                                                className={idx % 2 === 0 ? "bg-white hover:bg-gray-50" : "bg-gray-25 hover:bg-gray-50"}
-                                            >
-                                                <DayTimeRow 
-                                                    day={day}
-                                                    time={slot}
-                                                    isFirstTimeSlot={idx === 0}
-                                                    totalTimeSlots={timeSlots.length}
-                                                />
-                                                {classes.map((cls) => {
-                                                    const key = getKey(day, slot, cls);
-                                                    const classInfo = timetableData[key];
-                                                    
-                                                    return (
-                                                        <TimeSlot
-                                                            key={key}
-                                                            day={day}
-                                                            time={slot}
-                                                            className={cls}
-                                                            hasClass={!!classInfo}
-                                                            classInfo={classInfo || undefined}
-                                                            onAddClass={() => handleAddClass(day, slot, cls)}
-                                                            onEditClass={() => handleEditClass(day, slot, cls)}
-                                                        />
-                                                    );
-                                                })}
-                                            </tr>
-                                        ))}
-                                    </React.Fragment>
-                                ))}
-                            </tbody>
-                        </table>
-                    </ScrollableTable>
-                </div>
-                
-                <div className="mt-6 flex justify-center">
-                    <div className="bg-white rounded-lg shadow-md p-4">
-                        <p className="text-sm text-gray-600 text-center">
-                            📝 <strong>Tip:</strong> Drag the table horizontally to see more classes. Click class buttons above to jump to specific columns.
-                        </p>
+                {dateRange && (
+                    <div className="mb-4 text-sm text-gray-600">
+                        <strong>Schedule Period:</strong> {' '}
+                        {dateRange.from.toLocaleDateString()} - {dateRange.to.toLocaleDateString()}
                     </div>
+                )}
+                
+                <table className="w-full table-fixed border-collapse border border-gray-300">
+                    <thead>
+                        <tr className="bg-gray-100">
+                            <th className="w-20 h-12 px-2 py-2 border border-gray-300 text-center font-semibold text-gray-700 text-sm">
+                                Date
+                            </th>
+                            <th className="w-20 h-12 px-2 py-2 border border-gray-300 text-center font-semibold text-gray-700 text-sm">
+                                Session
+                            </th>
+                            {teams.map((team) => (
+                                <th 
+                                    key={team} 
+                                    className="w-24 h-12 px-2 py-2 border border-gray-300 text-center font-semibold text-gray-700 text-sm"
+                                >
+                                    Team {team}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {renderTableRows()}
+                    </tbody>
+                </table>
+                
+                <div className="mt-4 text-sm text-gray-600">
+                    <p className="mb-2"><strong>Sessions:</strong></p>
+                    <ul className="list-disc list-inside space-y-1">
+                        <li><strong>Morning:</strong> 9:00 AM - 12:00 PM</li>
+                        <li><strong>Afternoon:</strong> 1:00 PM - 5:00 PM</li>
+                        <li><strong>Evening:</strong> 6:00 PM - 9:00 PM</li>
+                    </ul>
                 </div>
             </div>
-
-            <ClassModal
-                isOpen={modalState.isOpen}
-                onClose={handleCloseModal}
-                onSave={handleSaveClass}
-                initialData={modalState.initialData}
-                day={modalState.day}
-                time={modalState.time}
-                className={modalState.className}
-            />
         </div>
     );
 }
 
-export default TimeTable; 
+export default TimeTable;
