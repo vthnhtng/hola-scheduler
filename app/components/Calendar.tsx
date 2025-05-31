@@ -1,16 +1,5 @@
-import { useState } from 'react';
-import {
-    format,
-    addMonths,
-    subMonths,
-    startOfMonth,
-    endOfMonth,
-    startOfWeek,
-    endOfWeek,
-    addDays,
-    isSameMonth,
-    isToday
-} from 'date-fns';
+import { useState, useEffect } from 'react';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isToday } from 'date-fns';
 
 interface CalendarProps {
     onDateSelect?: (date: Date) => void;
@@ -20,8 +9,10 @@ interface CalendarProps {
 
 export default function Calendar({ onDateSelect, selectedDates = new Set(), holidays = new Set() }: CalendarProps) {
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [hoveredDate, setHoveredDate] = useState<string | null>(null);
+    const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
+    const [isLoading, setIsLoading] = useState(false);
 
-    // Hàm chuyển tháng
     const nextMonth = () => {
         setCurrentMonth(addMonths(currentMonth, 1));
     };
@@ -30,32 +21,109 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
         setCurrentMonth(subMonths(currentMonth, 1));
     };
 
-    // Render header tháng + nút
+    useEffect(() => {
+        fetchHolidays();
+    }, [currentMonth]);
+
+    const fetchHolidays = () => {
+        fetch('/api/holiday')
+            .then(res => res.json())
+            .then(data => {
+                setHolidaySet(new Set(data.map((h: { date: string }) => h.date)));
+            });
+    };
+
+    const handleDateClick = async (dateObj: Date) => {
+        const dateStr = format(dateObj, 'yyyy-MM-dd');
+        setIsLoading(true);
+        try {
+            if (holidaySet.has(dateStr)) {
+                const res = await fetch(`/api/holiday?date=${dateStr}`, { method: 'DELETE' });
+                const resData = await res.text();
+            } else {
+                const res = await fetch('/api/holiday', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date: dateStr })
+                });
+                const resData = await res.json();
+            }
+            fetchHolidays();
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const renderHeader = () => (
-        <div className="flex items-center justify-between w-full bg-slate-800 rounded-t-xl px-4 py-3">
+        <div
+            style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                background: "#fff",
+                borderRadius: "18px 18px 0 0",
+                padding: "16px 0 8px 0",
+                borderBottom: "none"
+            }}
+        >
             <button
                 onClick={prevMonth}
-                className="text-white text-2xl font-bold px-2 hover:bg-slate-700 rounded transition-colors"
+                style={{
+                    background: "none",
+                    border: "none",
+                    outline: "none",
+                    fontSize: "clamp(1rem, 1.5vw, 1.4rem)",
+                    color: "#222",
+                    cursor: "pointer",
+                    padding: 0,
+                    marginRight: 18,
+                    transition: "color 0.2s"
+                }}
+                aria-label="Previous month"
             >
-                &#8592;
+                &#60;
             </button>
-            <div className="text-2xl font-bold text-white tracking-widest uppercase">{format(currentMonth, 'MMMM')}</div>
+
+            <div style={{ flex: 1, textAlign: "center" }}>
+                <span style={{
+                    fontSize: "clamp(1.05rem, 2vw, 1.5rem)",
+                    fontWeight: 700,
+                    color: "#222",
+                    letterSpacing: 1
+                }}>
+                    {format(currentMonth, 'MMMM yyyy')}
+                </span>
+            </div>
+
             <button
                 onClick={nextMonth}
-                className="text-white text-2xl font-bold px-2 hover:bg-slate-700 rounded transition-colors"
+                style={{
+                    background: "none",
+                    border: "none",
+                    outline: "none",
+                    fontSize: "clamp(1rem, 1.5vw, 1.4rem)",
+                    color: "#222",
+                    cursor: "pointer",
+                    padding: 0,
+                    marginLeft: 18,
+                    transition: "color 0.2s"
+                }}
+                aria-label="Next month"
             >
-                &#8594;
+                &#62;
             </button>
         </div>
     );
 
-    // Render tiêu đề ngày trong tuần
     const renderDays = () => {
-        const days = ['S', 'M', 'T', 'W', 'Th', 'F', 'S'];
+        const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
         return (
-            <div className="row g-0">
+            <div style={{ display: 'flex', background: 'transparent', borderRadius: 0, marginBottom: 2 }}>
                 {days.map((day, idx) => (
-                    <div key={idx} className="col text-center fw-bold text-white py-2 bg-warning border-bottom border-warning">
+                    <div
+                        key={idx}
+                        style={{ flex: 1, textAlign: 'center', fontWeight: 600, color: '#888', padding: '8px 0', fontSize: 'clamp(0.85rem, 1.1vw, 1.05rem)', letterSpacing: 1 }}
+                    >
                         {day}
                     </div>
                 ))}
@@ -63,7 +131,6 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
         );
     };
 
-    // Render các ngày trong tháng
     const renderCells = () => {
         const monthStart = startOfMonth(currentMonth);
         const monthEnd = endOfMonth(monthStart);
@@ -76,42 +143,110 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
         let idx = 0;
 
         while (day <= endDate) {
+            const thisDay = day;
             const formattedDate = format(day, 'd');
             const fullDateStr = format(day, 'yyyy-MM-dd');
             const isSelected = selectedDates.has(fullDateStr);
-            const isHoliday = holidays.has(fullDateStr);
+            const isHoliday = holidaySet.has(fullDateStr);
             const isCurrentDay = isToday(day);
             const isCurrentMonth = isSameMonth(day, monthStart);
+            const isHovered = hoveredDate === fullDateStr;
 
             days.push(
                 <div
                     key={fullDateStr}
-                    onClick={() => isCurrentMonth && onDateSelect?.(day)}
-                    className={`col text-center align-middle py-2 border bg-white ${isCurrentMonth ? '' : 'text-secondary'} ${isSelected ? 'bg-primary text-white fw-bold' : ''} ${isHoliday ? 'bg-warning text-danger fw-bold' : ''} ${isCurrentDay ? 'border border-primary border-2' : ''} ${!isCurrentMonth ? 'opacity-50' : ''} rounded-circle`}
-                    style={{ cursor: isCurrentMonth ? 'pointer' : 'default', minHeight: 40 }}
+                    onClick={() => isCurrentMonth && handleDateClick(thisDay)}
+                    onMouseEnter={() => isCurrentMonth && setHoveredDate(fullDateStr)}
+                    onMouseLeave={() => isCurrentMonth && setHoveredDate(null)}
+                    style={{
+                        flex: 1,
+                        textAlign: 'center',
+                        padding: '12px 0',
+                        fontWeight: isHoliday ? 700 : (isHovered && isCurrentMonth ? 700 : 500),
+                        color: isHoliday ? '#fff' : (isCurrentMonth ? '#222' : '#bbb'),
+                        background: isHoliday
+                            ? '#91cc6b'
+                            : (isHovered && isCurrentMonth ? '#dbdbdb' : 'transparent'),
+                        borderRadius: (isHoliday || isSelected || (isHovered && isCurrentMonth)) ? '50%' : 'none',
+                        cursor: isCurrentMonth ? 'pointer' : 'default',
+                        minHeight: 40,
+                        fontSize: 'clamp(0.95rem, 1.5vw, 1.15rem)',
+                        margin: '2.5px 0',
+                        transition: 'background 0.2s, color 0.2s, font-weight 0.2s',
+                        border: 'none',
+                        boxShadow: 'none',
+                        outline: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
                 >
                     {formattedDate}
                 </div>
             );
             if ((idx + 1) % 7 === 0) {
-                rows.push(<div className="row g-0" key={day.toISOString()}>{days}</div>);
+                rows.push(<div style={{ display: 'flex' }} key={day.toISOString()}>{days}</div>);
                 days = [];
             }
             day = addDays(day, 1);
             idx++;
         }
-        // Nếu còn ngày lẻ cuối tháng
         if (days.length > 0) {
             while (days.length < 7) {
-                days.push(<div className="col" key={`empty-${days.length}`}></div>);
+                days.push(<div style={{ flex: 1 }} key={`empty-${days.length}`}></div>);
             }
-            rows.push(<div className="row g-0" key="last-row">{days}</div>);
+            rows.push(<div style={{ display: 'flex' }} key="last-row">{days}</div>);
         }
-        return <div className="bg-white p-2">{rows}</div>;
+        return <div style={{ background: '#fff', padding: 2 }}>{rows}</div>;
     };
 
     return (
-        <div className="rounded shadow w-100 mx-auto bg-white p-3" style={{maxWidth: 500}}>
+        <div
+            className="mx-auto"
+            style={{
+                width: '100%',
+                maxWidth: 600,
+                minWidth: 380,
+                minHeight: 400,
+                borderRadius: 28,
+                boxShadow: "0 12px 32px 0 rgba(60,60,60,0.22), 0 2px 12px 0 rgba(60,60,60,0.16)",
+                background: '#fff',
+                padding: '40px 56px',
+                margin: '40px auto',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'flex-start',
+                position: 'relative',
+            }}
+        >
+            {isLoading && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    background: 'rgba(255,255,255,0.7)',
+                    zIndex: 10,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 28,
+                }}>
+                    <div style={{
+                        width: 36,
+                        height: 36,
+                        border: '4px solid #4CAF50',
+                        borderTop: '4px solid transparent',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        marginBottom: 12,
+                    }} />
+                    <span style={{ color: '#222', fontWeight: 600 }}>Loading...</span>
+                    <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
+                </div>
+            )}
             {renderHeader()}
             {renderDays()}
             {renderCells()}

@@ -1,120 +1,165 @@
 generator client {
-    provider = "prisma-client-js"
-    output   = "../node_modules/.prisma/client"
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
-    provider = "mysql"
-    url      = env("DATABASE_URL")
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model AppUser {
-    id       Int     @id @default(autoincrement())
-    username String  @unique @db.VarChar(50)
-    password String  @db.VarChar(255)
-    fullName String? @db.VarChar(100)
-    role     Role?
-    email    String? @db.VarChar(100)
+  id       Int     @id @default(autoincrement())
+  username String  @unique @db.VarChar(50)
+  password String  @db.VarChar(255)
+  fullName String? @db.VarChar(100)
+  role     Role?
+  email    String? @db.VarChar(100)
 
-    @@map("app_users")
+  @@map("app_users")
 }
 
 model Curriculum {
-    id       Int                 @id @default(autoincrement())
-    program  Program
-    subjects CurriculumSubject[] @relation("curriculum_id_fk")
+  id       Int                 @id @default(autoincrement())
+  program  Program
+  subjects CurriculumSubject[] @relation("curriculum_id_fk")
 
-    @@map("curriculums")
+  @@map("curriculums")
 }
 
 model Subject {
-    id                      Int                      @id @default(autoincrement())
-    name                    String                   @db.VarChar(100)
-    category                Category
-    prerequisiteId          Int?
-    curriculumSubjects      CurriculumSubject[]      @relation("subject_id_fk")
-    lecturerSpecializations LecturerSpecialization[] @relation("subject_id_fk")
-    locationSubjects        LocationSubject[]        @relation("subject_id_fk")
+  id                      Int                      @id @default(autoincrement())
+  name                    String                   @db.VarChar(100)
+  category                Category
+  prerequisiteId          Int?
+  curriculumSubjects      CurriculumSubject[]      @relation("subject_id_fk")
+  lecturerSpecializations LecturerSpecialization[] @relation("subject_id_fk")
+  locationSubjects        LocationSubject[]        @relation("subject_id_fk")
 
-    @@index([id], map: "subject_id_index")
-    @@map("subjects")
+  @@index([id], map: "subject_id_index")
+  @@map("subjects")
 }
 
 model Lecturer {
-    id                 Int                      @id @default(autoincrement())
-    fullName           String                   @db.VarChar(100)
-    faculty            Category
-    maxSessionsPerWeek Int                      @map("max_sessions_per_week")
-    specializations    LecturerSpecialization[] @relation("lecturer_id_fk")
+  id                 Int                      @id @default(autoincrement())
+  fullName           String                   @db.VarChar(100)
+  faculty            Category
+  maxSessionsPerWeek Int                      @map("max_sessions_per_week")
+  specializations    LecturerSpecialization[] @relation("lecturer_id_fk")
+  statistics         LecturerStatistic[]      @relation("lecturer_id_fk")
+  teams              Team[]                   @relation("team_leader_id_fk")
 
-    @@map("lecturers")
+  @@map("lecturers")
 }
 
 model Location {
-    id       Int               @id @default(autoincrement())
-    name     String            @db.VarChar(100)
-    capacity Int
-    subjects LocationSubject[] @relation("location_id_fk")
+  id       Int               @id @default(autoincrement())
+  name     String            @db.VarChar(100)
+  capacity Int
+  subjects LocationSubject[] @relation("location_id_fk")
 
-    @@map("locations")
+  @@map("locations")
 }
 
 model Team {
-    id      Int     @id @default(autoincrement())
-    name    String  @db.VarChar(50)
-    program Program
+  id                  Int        @id @default(autoincrement())
+  name                String     @db.VarChar(50)
+  program             Program
+  teamLeaderId        Int        @map("team_leader_id")
+  universityId        Int        @map("university_id")
+  teamLeaderReference Lecturer   @relation("team_leader_id_fk", fields: [teamLeaderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  universityReference University @relation("university_id_fk", fields: [universityId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-    @@map("teams")
+  @@index([teamLeaderId], map: "teams_team_leader_id_fkey")
+  @@index([universityId], map: "teams_university_id_fkey")
+  @@map("teams")
 }
 
 model CurriculumSubject {
-    curriculumId        Int        @map("curriculum_id")
-    subjectId           Int        @map("subject_id")
-    curriculumReference Curriculum @relation("curriculum_id_fk", fields: [curriculumId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-    SubjectReference    Subject    @relation("subject_id_fk", fields: [subjectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  curriculumId        Int        @map("curriculum_id")
+  subjectId           Int        @map("subject_id")
+  curriculumReference Curriculum @relation("curriculum_id_fk", fields: [curriculumId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  SubjectReference    Subject    @relation("subject_id_fk", fields: [subjectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-    @@id([curriculumId, subjectId])
-    @@map("curriculum_subject")
+  @@id([curriculumId, subjectId])
+  @@index([subjectId], map: "curriculum_subject_subject_id_fkey")
+  @@map("curriculum_subject")
 }
 
 model LecturerSpecialization {
-    lecturerId          Int      @map("lecturer_id")
-    subjectId           Int      @map("subject_id")
-    LecturerIdReference Lecturer @relation("lecturer_id_fk", fields: [lecturerId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-    SubjectIdReference  Subject  @relation("subject_id_fk", fields: [subjectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  lecturerId          Int      @map("lecturer_id")
+  subjectId           Int      @map("subject_id")
+  LecturerIdReference Lecturer @relation("lecturer_id_fk", fields: [lecturerId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  SubjectIdReference  Subject  @relation("subject_id_fk", fields: [subjectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-    @@id([lecturerId, subjectId])
-	@@map("lecturer_specialization")
+  @@id([lecturerId, subjectId])
+  @@index([subjectId], map: "lecturer_specialization_subject_id_fkey")
+  @@map("lecturer_specialization")
 }
 
 model LocationSubject {
-    locationId          Int      @map("location_id")
-    subjectId           Int      @map("subject_id")
-    LocationIdReference Location @relation("location_id_fk", fields: [locationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-    SubjectIdReference  Subject  @relation("subject_id_fk", fields: [subjectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  locationId          Int      @map("location_id")
+  subjectId           Int      @map("subject_id")
+  LocationIdReference Location @relation("location_id_fk", fields: [locationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  SubjectIdReference  Subject  @relation("subject_id_fk", fields: [subjectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-    @@id([locationId, subjectId])
-	@@map("location_subject")
+  @@id([locationId, subjectId])
+  @@index([subjectId], map: "location_subject_subject_id_fkey")
+  @@map("location_subject")
 }
 
 model ScheduleFile {
-    id       Int    @id @default(autoincrement())
-    filePath String @unique(map: "file_path") @db.VarChar(50)
+  id       Int    @id @default(autoincrement())
+  filePath String @unique(map: "file_path") @db.VarChar(50)
 
-    @@map("schedule_files")
+  @@map("schedule_files")
+}
+
+model Holiday {
+  id   Int    @id @default(autoincrement())
+  date String @unique(map: "date") @db.VarChar(50)
+
+  @@map("holidays")
+}
+
+model University {
+  id     Int                 @id @default(autoincrement())
+  name   String              @unique(map: "name") @db.VarChar(50)
+  status Status
+  teams  Team[]              @relation("university_id_fk")
+
+  @@map("universities")
+}
+
+model LecturerStatistic {
+  id                Int      @id @default(autoincrement())
+  fromDate          String   @db.VarChar(50)
+  toDate            String   @db.VarChar(50)
+  numberOfSessions  Int
+  lecturerId        Int      @map("lecturer_id")
+  lecturerReference Lecturer @relation("lecturer_id_fk", fields: [lecturerId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([lecturerId], map: "lecturer_statistics_lecturer_id_fkey")
+  @@map("lecturer_statistics")
 }
 
 enum Program {
-    DH
-    CD
+  DH
+  CD
 }
 
 enum Category {
-    CT
-    QS
+  CT
+  QS
 }
 
 enum Role {
-    scheduler
-    viewer
+  scheduler
+  viewer
+}
+
+enum Status {
+  Done
+  Processing
+  Undone
 }

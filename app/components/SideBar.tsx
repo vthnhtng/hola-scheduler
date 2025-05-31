@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from 'next/navigation';
-import { FaHome, FaUser, FaChalkboardTeacher, FaChartBar, FaBars } from "react-icons/fa";
+import { FaHome, FaUser, FaChalkboardTeacher, FaChartBar, FaBars, FaCalendarAlt } from "react-icons/fa";
 import Link from "next/link";
 
 function Sidebar() {
@@ -15,6 +15,7 @@ function Sidebar() {
         { name: "Trang chủ", icon: <FaHome />, link: "/" },
         { name: "Tài khoản", icon: <FaUser />, link: "/users" },
         { name: "Lịch giảng dạy", icon: <FaChalkboardTeacher />, link: "/schedule" },
+        { name: "Lịch nghỉ lễ", icon: <FaCalendarAlt />, link: "/holidays" },
     ];
 
     const subMenuItems = [
@@ -91,7 +92,7 @@ function Sidebar() {
                 `}
             </style>
 
-            <div className={`sidebar ${isOpen ? "open" : "collapsed"}`} style={{ height: '100vh' }}>
+            <div className={`sidebar ${isOpen ? "open" : "collapsed"}`} style={{ height: pathname === '/holidays' ? '680px' : '900px' }}>
                 <ul className="nav flex-column">
                     <li className="nav-item">
                         <button

@@ -54,6 +54,8 @@ CREATE TABLE `teams` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(50) NOT NULL,
     `program` ENUM('DH', 'CD') NOT NULL,
+    `team_leader_id` INTEGER NOT NULL,
+    `university_id` INTEGER NOT NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -91,6 +93,42 @@ CREATE TABLE `schedule_files` (
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- CreateTable
+CREATE TABLE `holidays` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `date` VARCHAR(50) NOT NULL,
+
+    UNIQUE INDEX `date`(`date`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `universities` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(50) NOT NULL,
+    `status` ENUM('Done', 'Undone') NOT NULL,
+
+    UNIQUE INDEX `name`(`name`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `lecturer_statistics` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `fromDate` VARCHAR(50) NOT NULL,
+    `toDate` VARCHAR(50) NOT NULL,
+    `numberOfSessions` INTEGER NOT NULL,
+    `lecturer_id` INTEGER NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `teams` ADD CONSTRAINT `teams_team_leader_id_fkey` FOREIGN KEY (`team_leader_id`) REFERENCES `lecturers`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION;
+
+-- AddForeignKey
+ALTER TABLE `teams` ADD CONSTRAINT `teams_university_id_fkey` FOREIGN KEY (`university_id`) REFERENCES `universities`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION;
+
 -- AddForeignKey
 ALTER TABLE `curriculum_subject` ADD CONSTRAINT `curriculum_subject_curriculum_id_fkey` FOREIGN KEY (`curriculum_id`) REFERENCES `curriculums`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION;
 
@@ -108,3 +146,6 @@ ALTER TABLE `location_subject` ADD CONSTRAINT `location_subject_location_id_fkey
 
 -- AddForeignKey
 ALTER TABLE `location_subject` ADD CONSTRAINT `location_subject_subject_id_fkey` FOREIGN KEY (`subject_id`) REFERENCES `subjects`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION;
+
+-- AddForeignKey
+ALTER TABLE `lecturer_statistics` ADD CONSTRAINT `lecturer_statistics_lecturer_id_fkey` FOREIGN KEY (`lecturer_id`) REFERENCES `lecturers`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION;

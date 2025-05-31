@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
 /**
- * @returns - Returns a list of teams from the database. 
+ * @returns - Returns a list of teams from the database with pagination. 
  */
 export async function GET(request: NextRequest) {
 	const { searchParams } = request.nextUrl;
@@ -43,12 +43,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, program } = body;
+        const { name, program, teamLeaderId, universityId } = body;
 
         const newTeam = await prisma.team.create({
             data: {
                 name,
                 program,
+                teamLeaderId: parseInt(teamLeaderId),
+                universityId: parseInt(universityId)
             },
         });
 
