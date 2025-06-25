@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { hashPassword } from '@/lib/auth';
 
 /**
  * @returns - Returns a list of users from the database.
@@ -15,6 +16,14 @@ export async function GET(request: Request) {
 		const appUsers = await prisma.appUser.findMany({
 			skip,
 			take,
+			select: {
+				id: true,
+				username: true,
+				fullName: true,
+				email: true,
+				role: true,
+				// Không trả về password
+			},
 		});
 
 		const totalCount = await prisma.appUser.count();
@@ -29,7 +38,7 @@ export async function GET(request: Request) {
 			},
 		});
 	} catch (error) {
-		return NextResponse.json({ error: 'Failed to fetch courses' }, { status: 500 });
+		return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
 	} finally {
 		await prisma.$disconnect();
 	}
@@ -64,18 +73,37 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { username, password, fullName, email, role } = body;
 
+        // Validate required fields
+        if (!username || !password) {
+            return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
+        }
+
+        // Hash password
+        const hashedPassword = hashPassword(password);
+
         const newUser = await prisma.appUser.create({
             data: {
                 username,
-                password,
+                password: hashedPassword,
                 fullName,
                 email,
                 role,
             },
+            select: {
+                id: true,
+                username: true,
+                fullName: true,
+                email: true,
+                role: true,
+                // Không trả về password
+            },
         });
 
         return NextResponse.json({ success: true, user: newUser }, { status: 201 });
-    } catch (error) {
+    } catch (error: any) {
+        if (error.code === 'P2002') {
+            return NextResponse.json({ error: 'Username already exists' }, { status: 400 });
+        }
         return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
     } finally {
         await prisma.$disconnect();
@@ -95,19 +123,36 @@ export async function PUT(request: Request) {
             return NextResponse.json({ error: 'Invalid or missing user id' }, { status: 400 });
         }
 
+        const updateData: any = {
+            username,
+            fullName,
+            email,
+            role,
+        };
+
+        // Chỉ hash password nếu được cung cấp
+        if (password) {
+            updateData.password = hashPassword(password);
+        }
+
         const updatedUser = await prisma.appUser.update({
             where: { id },
-            data: {
-                username,
-                password,
-                fullName,
-                email,
-                role,
+            data: updateData,
+            select: {
+                id: true,
+                username: true,
+                fullName: true,
+                email: true,
+                role: true,
+                // Không trả về password
             },
         });
 
         return NextResponse.json({ success: true, user: updatedUser }, { status: 200 });
-    } catch (error) {
+    } catch (error: any) {
+        if (error.code === 'P2002') {
+            return NextResponse.json({ error: 'Username already exists' }, { status: 400 });
+        }
         return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
     } finally {
         await prisma.$disconnect();
@@ -127,6 +172,14 @@ export async function DELETE(request: Request) {
 
         const deletedUser = await prisma.appUser.delete({
             where: { id },
+            select: {
+                id: true,
+                username: true,
+                fullName: true,
+                email: true,
+                role: true,
+                // Không trả về password
+            },
         });
 
         return NextResponse.json({ success: true, user: deletedUser }, { status: 200 });

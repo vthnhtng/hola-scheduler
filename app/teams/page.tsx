@@ -126,37 +126,49 @@ function TeamsPage() {
                                     </thead>
                                     <tbody>
                                         {teams.length > 0 ? (
-                                            teams.map((team, index) =>
-                                                team && (
+                                            <>
+                                                {teams.map((team, index) =>
+                                                    team && (
+                                                        <GridRow
+                                                            key={index + (pagination.currentPage - 1) * 10}
+                                                            attributes={teamAttributes}
+                                                            record={team}
+                                                            index={index + (pagination.currentPage - 1) * 10}
+                                                            actions={[
+                                                                <div key="edit">
+                                                                    <FormModal
+                                                                        title={'CHỈNH SỬA ĐẠI ĐỘI'}
+                                                                        button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}><FaEdit /></button>}
+                                                                        attributes={teamAttributes}
+                                                                        record={team}
+                                                                        formAction={'/api/teams'}
+                                                                        formMethod='PUT'
+                                                                    />
+                                                                </div>,
+                                                                <div key="delete">
+                                                                    <DeleteModal
+                                                                        title={'ĐẠI ĐỘI'}
+                                                                        button={<button className="btn btn-outline-danger" onClick={() => handleClickAction(index)}><FaTrashAlt /></button>}
+                                                                        record={team}
+                                                                        onClose={() => {}}
+                                                                        formAction={'/api/teams'}
+                                                                    />
+                                                                </div>
+                                                            ]}
+                                                        />
+                                                    )
+                                                )}
+                                                {/* Padding rows nếu chưa đủ 10 dòng */}
+                                                {Array.from({ length: 10 - teams.length }).map((_, padIdx) => (
                                                     <GridRow
-                                                        key={index + (pagination.currentPage - 1) * 10}
+                                                        key={`pad-${padIdx}`}
                                                         attributes={teamAttributes}
-                                                        record={team}
-                                                        index={index + (pagination.currentPage - 1) * 10}
-                                                        actions={[
-                                                        <div>
-                                                            <FormModal
-                                                                title={'CHỈNH SỬA ĐẠI ĐỘI'}
-                                                                button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}><FaEdit /></button>}
-                                                                attributes={teamAttributes}
-                                                                record={team}
-                                                                formAction={'/api/teams'}
-                                                                formMethod='PUT'
-                                                            />
-                                                        </div>,
-                                                        <div>
-                                                            <DeleteModal
-                                                                title={'ĐẠI ĐỘI'}
-                                                                button={<button className="btn btn-outline-danger" onClick={() => handleClickAction(index)}><FaTrashAlt /></button>}
-                                                                record={team}
-                                                                onClose={() => {}}
-                                                                formAction={'/api/teams'}
-                                                            />
-                                                        </div>
-                                                        ]}
+                                                        record={{}}
+                                                        index={teams.length + padIdx}
+                                                        actions={[]}
                                                     />
-                                                )
-                                            )
+                                                ))}
+                                            </>
                                         ) : (
                                             <tr>
                                                 <td colSpan={teamAttributes.length + 2} className="text-left">Chưa có dữ liệu</td>

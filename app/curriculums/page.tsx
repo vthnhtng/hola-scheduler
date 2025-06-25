@@ -125,19 +125,29 @@ function CurriculumsPage() {
                                     </thead>
                                     <tbody>
                                         {curriculums.length > 0 ? (
-                                            curriculums.map((curriculum, index) =>
-                                                curriculum && (
+                                            <>
+                                                {curriculums.map((curriculum, index) =>
+                                                    curriculum && (
+                                                        <GridRow
+                                                            key={index + (pagination.currentPage - 1) * 10}
+                                                            attributes={curriculumAttributes}
+                                                            record={curriculum}
+                                                            index={index + (pagination.currentPage - 1) * 10}
+                                                            actions={[]}
+                                                        />
+                                                    )
+                                                )}
+                                                {/* Padding rows nếu chưa đủ 10 dòng */}
+                                                {Array.from({ length: 10 - curriculums.length }).map((_, padIdx) => (
                                                     <GridRow
-                                                        key={index + (pagination.currentPage - 1) * 10}
+                                                        key={`pad-${padIdx}`}
                                                         attributes={curriculumAttributes}
-                                                        record={curriculum}
-                                                        index={index + (pagination.currentPage - 1) * 10}
-                                                        actions={[
-
-                                                        ]}
+                                                        record={{}}
+                                                        index={curriculums.length + padIdx}
+                                                        actions={[]}
                                                     />
-                                                )
-                                            )
+                                                ))}
+                                            </>
                                         ) : (
                                             <tr>
                                                 <td colSpan={curriculumAttributes.length + 2} className="text-left">Chưa có dữ liệu</td>

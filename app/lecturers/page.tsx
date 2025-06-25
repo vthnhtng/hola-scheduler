@@ -129,50 +129,60 @@ function LecturersPage() {
                                     </thead>
                                     <tbody>
                                         {lecturers.length > 0 ? (
-                                            lecturers.map((lecturer, index) =>
-                                                lecturer && (
+                                            <>
+                                                {lecturers.map((lecturer, index) =>
+                                                    lecturer && (
+                                                        <GridRow
+                                                            key={index + (pagination.currentPage - 1) * 10}
+                                                            attributes={lecturerAttributes}
+                                                            record={lecturer}
+                                                            index={index + (pagination.currentPage - 1) * 10}
+                                                            actions={[
+                                                                <div key="edit">
+                                                                    <FormModal
+                                                                        title={'CHỈNH SỬA GIẢNG VIÊN'}
+                                                                        button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}><FaEdit /></button>}
+                                                                        attributes={lecturerAttributes}
+                                                                        record={lecturer}
+                                                                        formAction={'/api/lecturers'}
+                                                                        formMethod='PUT'
+                                                                    />
+                                                                </div>,
+                                                                <div key="specialize">
+                                                                    <DynamicRows
+                                                                        title={'MÔN CHUYÊN SÂU'}
+                                                                        attribute={{ name: 'subject', label: 'MÔN'}}
+                                                                        button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}>MÔN CHUYÊN SÂU</button>}
+                                                                        getSelectionsUrl={'/api/getSubjectsByCategory?category=' + lecturer.faculty}
+                                                                        getRowsUrl={'/api/getSubjectsByLecturer?lecturerId=' + lecturer.id}
+                                                                        saveUrl={'/api/saveLecturerSpecializations'}
+                                                                        targetId={lecturer.id.toString()}
+                                                                    />
+                                                                </div>,
+                                                                <div key="delete">
+                                                                    <DeleteModal
+                                                                        title={'GIẢNG VIÊN'}
+                                                                        button={<button className="btn btn-outline-danger" onClick={() => handleClickAction(index)}><FaTrashAlt /></button>}
+                                                                        record={lecturer}
+                                                                        onClose={() => {}}
+                                                                        formAction={'/api/lecturers'}
+                                                                    />
+                                                                </div>
+                                                            ]}
+                                                        />
+                                                    )
+                                                )}
+                                                {/* Padding rows nếu chưa đủ 10 dòng */}
+                                                {Array.from({ length: 10 - lecturers.length }).map((_, padIdx) => (
                                                     <GridRow
-                                                        key={index + (pagination.currentPage - 1) * 10}
+                                                        key={`pad-${padIdx}`}
                                                         attributes={lecturerAttributes}
-                                                        record={lecturer}
-                                                        index={index + (pagination.currentPage - 1) * 10}
-                                                        actions={[
-                                                        <div>
-                                                            <DynamicRows
-                                                                title={'MÔN CHUYÊN SÂU'}
-                                                                attribute={ 
-                                                                    { name: 'subject', label: 'MÔN'}
-                                                                }
-                                                                button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}>MÔN CHUYÊN SÂU</button>}
-                                                                getSelectionsUrl={'/api/getSubjectsByCategory?category=' + lecturer.faculty}
-                                                                getRowsUrl={'/api/getSubjectsByLecturer?lecturerId=' + lecturer.id}
-                                                                saveUrl={'/api/saveLecturerSpecializations'}
-                                                                targetId={lecturer.id.toString()}
-                                                            />
-                                                        </div>,
-                                                        <div>
-                                                            <FormModal
-                                                                title={'CHỈNH SỬA GIẢNG VIÊN'}
-                                                                button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}><FaEdit /></button>}
-                                                                attributes={lecturerAttributes}
-                                                                record={lecturer}
-                                                                formAction={'/api/lecturers'}
-                                                                formMethod='PUT'
-                                                            />
-                                                        </div>,
-                                                        <div>
-                                                            <DeleteModal
-                                                                title={'GIẢNG VIÊN'}
-                                                                button={<button className="btn btn-outline-danger" onClick={() => handleClickAction(index)}><FaTrashAlt /></button>}
-                                                                record={lecturer}
-                                                                onClose={() => {}}
-                                                                formAction={'/api/lecturers'}
-                                                            />
-                                                        </div>
-                                                        ]}
+                                                        record={{}}
+                                                        index={lecturers.length + padIdx}
+                                                        actions={[]}
                                                     />
-                                                )
-                                            )
+                                                ))}
+                                            </>
                                         ) : (
                                             <tr>
                                                 <td colSpan={lecturerAttributes.length + 2} className="text-left">Chưa có dữ liệu</td>

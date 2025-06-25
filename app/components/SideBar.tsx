@@ -2,20 +2,26 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from 'next/navigation';
-import { FaHome, FaUser, FaChalkboardTeacher, FaChartBar, FaBars, FaCalendarAlt } from "react-icons/fa";
+import { FaHome, FaUser, FaChalkboardTeacher, FaChartBar, FaBars, FaCalendarAlt, FaCog } from "react-icons/fa";
 import Link from "next/link";
+import { usePermissions } from '../hooks/usePermissions';
 
 function Sidebar() {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(true);
     const [activeItem, setActiveItem] = useState("");
     const [openManage, setOpenManage] = useState(false);
+    const { canViewData, canManageUsers, isScheduler } = usePermissions();
 
     const menuItems = [
         { name: "Trang chủ", icon: <FaHome />, link: "/" },
-        { name: "Tài khoản", icon: <FaUser />, link: "/users" },
-        { name: "Lịch giảng dạy", icon: <FaChalkboardTeacher />, link: "/schedule" },
-        { name: "Lịch nghỉ lễ", icon: <FaCalendarAlt />, link: "/holidays" },
+        ...(canViewData ? [
+            { name: "Lịch giảng dạy", icon: <FaChalkboardTeacher />, link: "/timetable" },
+            { name: "Lịch nghỉ lễ", icon: <FaCalendarAlt />, link: "/holidays" },
+        ] : []),
+        ...(canManageUsers ? [
+            { name: "Tài khoản", icon: <FaUser />, link: "/users" },
+        ] : []),
     ];
 
     const subMenuItems = [
@@ -26,12 +32,15 @@ function Sidebar() {
         { name: "Đại đội", link: "/teams" },
     ];
 
+    // Chỉ hiển thị menu quản lý nếu user có quyền xem dữ liệu
+    const showManageMenu = canViewData;
+
     useEffect(() => {
         const matchedMain = menuItems.find(item => item.link === pathname);
         const matchedSub = subMenuItems.find(item => item.link === pathname);
         setActiveItem(matchedSub?.name || matchedMain?.name || "");
         setOpenManage(Boolean(matchedSub));
-    }, [pathname]);
+    }, [pathname, menuItems]);
 
     return (
         <>
@@ -89,6 +98,12 @@ function Sidebar() {
                 .submenu {
                     padding-left: 1rem;
                 }
+
+                .permission-badge {
+                    font-size: 0.7rem;
+                    padding: 0.1rem 0.3rem;
+                    margin-left: 0.5rem;
+                }
                 `}
             </style>
 
@@ -113,37 +128,69 @@ function Sidebar() {
                                 title={!isOpen ? item.name : ""}
                             >
                                 <span className="me-2">{item.icon}</span>
-                                {isOpen && <span>{item.name}</span>}
+                                {isOpen && (
+                                    <div className="d-flex align-items-center justify-content-between w-100">
+                                        <span>{item.name}</span>
+                                        {item.name === "Tài khoản" && isScheduler && (
+                                            <span className="badge bg-warning permission-badge">Admin</span>
+                                        )}
+                                    </div>
+                                )}
                             </Link>
                         </li>
                     ))}
 
-                    <li className="nav-item">
-                        <button
-                            className={`btn nav-link text-start w-100 ${openManage ? "active" : "text-dark"}`}
-                            onClick={() => setOpenManage(!openManage)}
-                            title={!isOpen ? "Quản lý" : ""}
-                        >
-                            <FaChartBar className="me-2" />
-                            {isOpen && <span className={openManage ? "" : "text-dark"}>Quản lý</span>}
-                        </button>
+                    {showManageMenu && (
+                        <li className="nav-item">
+                            <button
+                                className={`btn nav-link text-start w-100 ${openManage ? "active" : "text-dark"}`}
+                                onClick={() => setOpenManage(!openManage)}
+                                title={!isOpen ? "Quản lý" : ""}
+                            >
+                                <FaChartBar className="me-2" />
+                                {isOpen && (
+                                    <div className="d-flex align-items-center justify-content-between w-100">
+                                        <span className={openManage ? "" : "text-dark"}>Quản lý</span>
+                                        <span className="badge bg-info permission-badge">Data</span>
+                                    </div>
+                                )}
+                            </button>
 
-                        {openManage && isOpen && (
-                            <ul className="nav flex-column submenu">
-                                {subMenuItems.map((sub) => (
-                                    <li key={sub.name}>
-                                        <Link
-                                            href={sub.link}
-                                            className={`nav-link ${activeItem === sub.name ? "active" : "text-dark"}`}
-                                            onClick={() => setActiveItem(sub.name)}
-                                        >
-                                            {sub.name}
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </li>
+                            {openManage && isOpen && (
+                                <ul className="nav flex-column submenu">
+                                    {subMenuItems.map((sub) => (
+                                        <li key={sub.name}>
+                                            <Link
+                                                href={sub.link}
+                                                className={`nav-link ${activeItem === sub.name ? "active" : "text-dark"}`}
+                                                onClick={() => setActiveItem(sub.name)}
+                                            >
+                                                {sub.name}
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </li>
+                    )}
+
+                    {isScheduler && (
+                        <li className="nav-item">
+                            <Link
+                                href="/scheduler"
+                                className={`nav-link ${activeItem === "Scheduler" ? "active" : "text-dark"}`}
+                                title={!isOpen ? "Scheduler" : ""}
+                            >
+                                <FaCog className="me-2" />
+                                {isOpen && (
+                                    <div className="d-flex align-items-center justify-content-between w-100">
+                                        <span>Scheduler</span>
+                                        <span className="badge bg-success permission-badge">Scheduler</span>
+                                    </div>
+                                )}
+                            </Link>
+                        </li>
+                    )}
                 </ul>
             </div>
         </>

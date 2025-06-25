@@ -21,19 +21,20 @@ export default function GridRow({
 
     return (
         <tr
-            key={record.id}
+            key={record.id || index}
             className='align-middle' 
             style={{ cursor: 'pointer'}}
         >
-            <td>{index + 1}</td>
+            <td>{Object.keys(record).length === 0 ? '' : index + 1}</td>
             {attributes.map((attribute) => (
-                attribute.type === 'select' ?
-                <td key={attribute.name}>{getLabelByValue(record[attribute.name], attribute.selections)}</td>
-                :
-                <td key={attribute.name}>{record[attribute.name]}</td>
+                Object.keys(record).length === 0
+                    ? <td key={attribute.name}></td>
+                    : attribute.type === 'select'
+                        ? <td key={attribute.name}>{getLabelByValue(record[attribute.name], attribute.selections)}</td>
+                        : <td key={attribute.name}>{record[attribute.name]}</td>
             ))}
             <td className='d-flex w-auto' style={{ height: '70px'}}>
-                {actions.map((action) => (
+                {Object.keys(record).length === 0 ? null : actions.map((action) => (
                     action
                 ))}
             </td>

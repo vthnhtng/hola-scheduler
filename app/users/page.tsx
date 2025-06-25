@@ -6,6 +6,10 @@ import Grid from '../components/Grid';
 import Footer from '../components/Footer';
 import Pagination from '../components/Pagination';
 import { ObjectAttribute } from '../types/ObjectAttribute';
+import FormModal from '../components/FormModal';
+import DeleteModal from '../components/DeleteModal';
+import GridRow from '../components/GridRow';
+import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 
 interface User {
     id: number;
@@ -40,6 +44,7 @@ function UsersPage() {
         totalPages: 1,
         totalCount: 0
     });
+    const [selectedRow, setSelectedRow] = useState<number | null>(null);
 
     const fetchUsers = async (page: number = 1) => {
         try {
@@ -70,6 +75,10 @@ function UsersPage() {
         setShowPassword(!showPassword);
     };
 
+    const handleClickAction = (index: number) => {
+        setSelectedRow((prev) => (prev === index ? null : index));
+    };
+
     return (
         <>
             <Header />
@@ -85,20 +94,96 @@ function UsersPage() {
                     <p className="text-danger">Error: {error}</p>
                 ) : (
                     <div className="d-flex flex-column justify-content-center align-items-center" style={{ flex: 1 }}>
-                        <Grid
-                            objectName="NGƯỜI DÙNG"
-                            attributes={userAttributes}
-                            gridData={users}
-                            formAction="/api/users"
-                            showPassword={showPassword}
-                            togglePasswordVisibility={togglePasswordVisibility}
-                            page={pagination.currentPage}
-                        />
-                        <Pagination
-                            currentPage={pagination.currentPage}
-                            totalPages={pagination.totalPages}
-                            onPageChange={handlePageChange}
-                        />
+                        <div className="d-flex flex-column" style={{ width: 'calc(100% - 20px)', marginLeft: "20px" }}>
+                            <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
+                                <h2 className="fw-bold text-uppercase">DANH SÁCH NGƯỜI DÙNG</h2>
+                                <div className="d-flex gap-2" style={{ marginRight: "20px" }}>
+                                    <FormModal
+                                        title={'THÊM NGƯỜI DÙNG'}
+                                        button={
+                                            <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center">
+                                                THÊM NGƯỜI DÙNG
+                                            </button>
+                                        }
+                                        attributes={userAttributes}
+                                        record={null}
+                                        formAction={'/api/users'}
+                                        formMethod='POST'
+                                    />
+                                </div>
+                            </div>
+                            <div className="d-flex flex-column" style={{ width: 'calc(100% - 20px)', marginLeft: "20px" }}>
+                                <table className="table table-hover">
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th>STT</th>
+                                            {userAttributes.map((attribute, index) => (
+                                                <th key={index}>{attribute.label}</th>
+                                            ))}
+                                            <th>Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {users.length > 0 ? (
+                                            <>
+                                                {users.map((user, index) =>
+                                                    user && (
+                                                        <GridRow
+                                                            key={index + (pagination.currentPage - 1) * 10}
+                                                            attributes={userAttributes}
+                                                            record={user}
+                                                            index={index + (pagination.currentPage - 1) * 10}
+                                                            actions={[
+                                                                <div key="edit">
+                                                                    <FormModal
+                                                                        title={'CHỈNH SỬA NGƯỜI DÙNG'}
+                                                                        button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}><FaEdit /></button>}
+                                                                        attributes={userAttributes}
+                                                                        record={user}
+                                                                        formAction={'/api/users'}
+                                                                        formMethod='PUT'
+                                                                    />
+                                                                </div>,
+                                                                <div key="delete">
+                                                                    <DeleteModal
+                                                                        title={'NGƯỜI DÙNG'}
+                                                                        button={<button className="btn btn-outline-danger" onClick={() => handleClickAction(index)}><FaTrashAlt /></button>}
+                                                                        record={user}
+                                                                        onClose={() => {}}
+                                                                        formAction={'/api/users'}
+                                                                    />
+                                                                </div>
+                                                            ]}
+                                                        />
+                                                    )
+                                                )}
+                                                {/* Padding rows nếu chưa đủ 10 dòng */}
+                                                {Array.from({ length: 10 - users.length }).map((_, padIdx) => (
+                                                    <GridRow
+                                                        key={`pad-${padIdx}`}
+                                                        attributes={userAttributes}
+                                                        record={{}}
+                                                        index={users.length + padIdx}
+                                                        actions={[]}
+                                                    />
+                                                ))}
+                                            </>
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={userAttributes.length + 2} className="text-left">Chưa có dữ liệu</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div className="d-flex justify-content-center align-items-center">
+                            <Pagination
+                                currentPage={pagination.currentPage}
+                                totalPages={pagination.totalPages}
+                                onPageChange={handlePageChange}
+                            />
+                        </div>
                     </div>
                 )}
             </main>

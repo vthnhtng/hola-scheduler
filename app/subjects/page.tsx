@@ -138,37 +138,49 @@ function SubjectsPage() {
                                     </thead>
                                     <tbody>
                                         {subjects.length > 0 ? (
-                                            subjects.map((subject, index) =>
-                                                subject && (
+                                            <>
+                                                {subjects.map((subject, index) =>
+                                                    subject && (
+                                                        <GridRow
+                                                            key={index + (pagination.currentPage - 1) * 10}
+                                                            attributes={subjectAttributes}
+                                                            record={subject}
+                                                            index={index + (pagination.currentPage - 1) * 10}
+                                                            actions={[
+                                                                <div key="edit">
+                                                                    <FormModal
+                                                                        title={'CHỈNH SỬA MÔN HỌC'}
+                                                                        button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}><FaEdit /></button>}
+                                                                        attributes={subjectAttributes}
+                                                                        record={subject}
+                                                                        formAction={'/api/subjects'}
+                                                                        formMethod='PUT'
+                                                                    />
+                                                                </div>,
+                                                                <div key="delete">
+                                                                    <DeleteModal
+                                                                        title={'MÔN HỌC'}
+                                                                        button={<button className="btn btn-outline-danger" onClick={() => handleClickAction(index)}><FaTrashAlt /></button>}
+                                                                        record={subject}
+                                                                        onClose={() => {}}
+                                                                        formAction={'/api/subjects'}
+                                                                    />
+                                                                </div>
+                                                            ]}
+                                                        />
+                                                    )
+                                                )}
+                                                {/* Padding rows nếu chưa đủ 10 dòng */}
+                                                {Array.from({ length: 10 - subjects.length }).map((_, padIdx) => (
                                                     <GridRow
-                                                        key={index + (pagination.currentPage - 1) * 10}
+                                                        key={`pad-${padIdx}`}
                                                         attributes={subjectAttributes}
-                                                        record={subject}
-                                                        index={index + (pagination.currentPage - 1) * 10}
-                                                        actions={[
-                                                        <div>
-                                                            <FormModal
-                                                                title={'CHỈNH SỬA MÔN HỌC'}
-                                                                button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}><FaEdit /></button>}
-                                                                attributes={subjectAttributes}
-                                                                record={subject}
-                                                                formAction={'/api/subjects'}
-                                                                formMethod='PUT'
-                                                            />
-                                                        </div>,
-                                                        <div>
-                                                            <DeleteModal
-                                                                title={'MÔN HỌC'}
-                                                                button={<button className="btn btn-outline-danger" onClick={() => handleClickAction(index)}><FaTrashAlt /></button>}
-                                                                record={subject}
-                                                                onClose={() => {}}
-                                                                formAction={'/api/subjects'}
-                                                            />
-                                                        </div>
-                                                        ]}
+                                                        record={{}}
+                                                        index={subjects.length + padIdx}
+                                                        actions={[]}
                                                     />
-                                                )
-                                            )
+                                                ))}
+                                            </>
                                         ) : (
                                             <tr>
                                                 <td colSpan={subjectAttributes.length + 2} className="text-left">Chưa có dữ liệu</td>

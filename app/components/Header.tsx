@@ -1,8 +1,22 @@
 'use client';
 import logo from '../assets/logo/VNU_GDQPAN_Logo.png';
 import { FiLogOut } from 'react-icons/fi';
+import { useAuth } from '../contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 function Header() {
+	const { user, logout, isLoading } = useAuth();
+	const router = useRouter();
+
+	const handleLogout = async () => {
+		try {
+			await logout();
+			router.push('/login');
+		} catch (error) {
+			console.error('Logout error:', error);
+		}
+	};
+
 	return (
 		<header
 			className="d-flex justify-content-between align-items-center px-4"
@@ -29,11 +43,36 @@ function Header() {
 			</div>
 
 			<div className="d-flex align-items-center">
-				<span className="me-2">Lê Trần Trung Quân</span>
-				<span>|</span>
-				<button className="btn btn-link text-dark d-flex align-items-center gap-2 text-decoration-none">
-					Đăng xuất <FiLogOut />
-				</button>
+				{!isLoading && user ? (
+					<>
+						<span className="me-2">
+							{user.fullName || user.username}
+							{user.role && (
+								<span className="badge bg-secondary ms-2">
+									{user.role === 'scheduler' ? 'Scheduler' : 'Viewer'}
+								</span>
+							)}
+						</span>
+						<span>|</span>
+						<button 
+							className="btn btn-link text-dark d-flex align-items-center gap-2 text-decoration-none"
+							onClick={handleLogout}
+						>
+							Đăng xuất <FiLogOut />
+						</button>
+					</>
+				) : (
+					<>
+						<span className="me-2">Chưa đăng nhập</span>
+						<span>|</span>
+						<button 
+							className="btn btn-link text-dark d-flex align-items-center gap-2 text-decoration-none"
+							onClick={() => router.push('/login')}
+						>
+							Đăng nhập
+						</button>
+					</>
+				)}
 			</div>
 		</header>
 	);
