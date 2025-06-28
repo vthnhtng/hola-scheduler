@@ -6,9 +6,12 @@ import { AuthUser } from '@/lib/auth';
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
+  authToken: string | null;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  getAuthHeaders: () => { Authorization: string } | {};
+  createAuthenticatedRequest: (url: string, options?: RequestInit) => Promise<Response>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,23 +31,27 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
   const checkAuth = async () => {
     try {
       // Kiểm tra xem có auth token trong localStorage không
-      const authToken = localStorage.getItem('auth_token');
+      const storedToken = localStorage.getItem('auth_token');
       
-      if (!authToken) {
+      if (!storedToken) {
         setUser(null);
+        setAuthToken(null);
         setIsLoading(false);
         return;
       }
 
-      // Gọi API để verify token
-      const response = await fetch('/api/auth/login', {
+      setAuthToken(storedToken);
+
+      // Gọi API verify để kiểm tra token
+      const response = await fetch('/api/auth/verify', {
         method: 'GET',
         headers: {
-          'Authorization': authToken,
+          'Authorization': storedToken,
         },
       });
 
@@ -55,11 +62,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Token không hợp lệ, xóa khỏi localStorage
         localStorage.removeItem('auth_token');
         setUser(null);
+        setAuthToken(null);
       }
     } catch (error) {
       console.error('Auth check error:', error);
       localStorage.removeItem('auth_token');
       setUser(null);
+      setAuthToken(null);
     } finally {
       setIsLoading(false);
     }
@@ -85,8 +94,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const data = await response.json();
         setUser(data.user);
         
-        // Lưu auth token vào localStorage
+        // Lưu auth token vào localStorage và state
         localStorage.setItem('auth_token', authHeader);
+        setAuthToken(authHeader);
         
         return true;
       } else {
@@ -113,8 +123,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       // Xóa thông tin user và token
       setUser(null);
+      setAuthToken(null);
       localStorage.removeItem('auth_token');
     }
+  };
+
+  // Utility function để lấy auth headers
+  const getAuthHeaders = () => {
+    if (authToken) {
+      return { Authorization: authToken };
+    }
+    return {};
+  };
+
+  // Utility function để tạo authenticated request
+  const createAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+      ...options.headers,
+    };
+
+    return fetch(url, {
+      ...options,
+      headers,
+    });
   };
 
   useEffect(() => {
@@ -124,9 +157,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value: AuthContextType = {
     user,
     isLoading,
+    authToken,
     login,
     logout,
     checkAuth,
+    getAuthHeaders,
+    createAuthenticatedRequest,
   };
 
   return (

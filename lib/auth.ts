@@ -1,4 +1,3 @@
-import { createHash } from 'crypto';
 import prisma from './prisma';
 
 export interface AuthUser {
@@ -10,17 +9,15 @@ export interface AuthUser {
 }
 
 /**
- * Hash password sử dụng SHA-256
- */
-export function hashPassword(password: string): string {
-  return createHash('sha256').update(password).digest('hex');
-}
-
-/**
  * Verify Basic Authentication header
  */
 export async function verifyBasicAuth(authHeader: string): Promise<AuthUser | null> {
   try {
+    // Validate auth header format
+    if (!authHeader || !authHeader.startsWith('Basic ')) {
+      return null;
+    }
+
     // Lấy credentials từ Basic Auth header
     const base64Credentials = authHeader.replace('Basic ', '');
     const credentials = Buffer.from(base64Credentials, 'base64').toString('ascii');
@@ -30,10 +27,11 @@ export async function verifyBasicAuth(authHeader: string): Promise<AuthUser | nu
       return null;
     }
 
-    // Hash password để so sánh
-    const hashedPassword = hashPassword(password);
+    console.log('Credentials from UI');
+    console.log('Username: ', username);
+    console.log('Password: ', password);
 
-    // Tìm user trong database
+    // Tìm user trong database theo schema Prisma
     const user = await prisma.appUser.findUnique({
       where: {
         username: username,
@@ -48,7 +46,11 @@ export async function verifyBasicAuth(authHeader: string): Promise<AuthUser | nu
       },
     });
 
-    if (!user || user.password !== hashedPassword) {
+    console.log('User from prisma');
+    console.log(user);
+
+    // So sánh plain password trực tiếp
+    if (!user || user.password !== password) {
       return null;
     }
 
@@ -107,4 +109,59 @@ export function getUserFromHeaders(headers: Headers): AuthUser | null {
     email: null,    // Có thể lấy từ database nếu cần
     role: userRole,
   };
+}
+
+/**
+ * Tạo user mới trong database
+ * DISABLED: User registration is not allowed. Users can only be created by administrators.
+ */
+/*
+export async function createUser(userData: {
+  username: string;
+  password: string;
+  fullName?: string;
+  email?: string;
+  role?: 'scheduler' | 'viewer';
+}): Promise<AuthUser | null> {
+  try {
+    const user = await prisma.appUser.create({
+      data: {
+        username: userData.username,
+        password: userData.password, // Lưu plain password
+        fullName: userData.fullName || null,
+        email: userData.email || null,
+        role: userData.role || null,
+      },
+      select: {
+        id: true,
+        username: true,
+        fullName: true,
+        email: true,
+        role: true,
+      },
+    });
+
+    return user;
+  } catch (error) {
+    console.error('Error creating user:', error);
+    return null;
+  }
+}
+*/
+
+/**
+ * Cập nhật password của user
+ */
+export async function updateUserPassword(username: string, newPassword: string): Promise<boolean> {
+  try {
+    await prisma.appUser.update({
+      where: { username },
+      data: { password: newPassword }, // Lưu plain password
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Error updating user password:', error);
+    return false;
+  }
 } 

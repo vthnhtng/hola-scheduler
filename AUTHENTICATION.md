@@ -2,7 +2,7 @@
 
 ## Tổng quan
 
-Hệ thống sử dụng **Basic Authentication** với **NextJS Middleware** để bảo vệ các route và API endpoints. Hệ thống hỗ trợ 2 loại quyền:
+Hệ thống sử dụng **Basic Authentication** với **NextJS Middleware** để bảo vệ các route và API endpoints. Hệ thống hỗ trợ 2 loại quyền có sẵn trong database:
 
 - **Scheduler**: Có quyền truy cập đầy đủ, bao gồm cả việc tạo lịch học
 - **Viewer**: Chỉ có quyền xem dữ liệu
@@ -38,16 +38,16 @@ Hệ thống sử dụng **Basic Authentication** với **NextJS Middleware** đ
 
 ## Cài đặt và sử dụng
 
-### 1. Tạo users mặc định
+### 1. Kiểm tra users hiện có
 
 ```bash
-npm run create-users
+npm run check-users
 ```
 
-Sẽ tạo 3 users mặc định:
-- **scheduler** / scheduler123 (Scheduler role)
-- **viewer** / viewer123 (Viewer role)  
-- **admin** / admin123 (Scheduler role)
+Script này sẽ:
+- Kiểm tra users hiện có trong database
+- Hiển thị thông tin chi tiết về từng user
+- Chỉ tạo users mặc định nếu database trống
 
 ### 2. Chạy ứng dụng
 
@@ -57,7 +57,7 @@ npm run dev
 
 ### 3. Đăng nhập
 
-Truy cập `/login` và sử dụng credentials đã tạo.
+Truy cập `/login` và sử dụng credentials có sẵn trong database.
 
 ## Phân quyền
 
@@ -188,7 +188,7 @@ const response = await fetch('/api/protected-endpoint', {
 - Cần quyền Scheduler cho một số tính năng
 
 ### 3. Không thể đăng nhập
-- Chạy script tạo users: `npm run create-users`
+- Chạy script kiểm tra users: `npm run check-users`
 - Kiểm tra database connection
 - Xem logs trong console
 
@@ -196,6 +196,25 @@ const response = await fetch('/api/protected-endpoint', {
 - Kiểm tra role của user trong database
 - Refresh trang để cập nhật context
 - Kiểm tra localStorage có token không
+
+## Quản lý Users
+
+### 1. Xem users hiện có
+```bash
+npm run check-users
+```
+
+### 2. Thêm user mới
+- Sử dụng trang `/users` (chỉ scheduler)
+- Hoặc thêm trực tiếp vào database
+
+### 3. Cập nhật password
+- Sử dụng trang `/users` để cập nhật
+- Hoặc cập nhật trực tiếp trong database (nhớ hash password)
+
+### 4. Phân quyền
+- Role `scheduler`: Toàn quyền
+- Role `viewer`: Chỉ xem dữ liệu
 
 ## Mở rộng
 

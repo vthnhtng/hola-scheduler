@@ -26,7 +26,8 @@ const publicRoutes = [
   '/',
   '/login',
   '/api/auth/login',
-  '/api/auth/logout'
+  '/api/auth/logout',
+  '/api/auth/verify'
 ];
 
 export async function middleware(request: NextRequest) {
@@ -51,16 +52,16 @@ export async function middleware(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   
   if (!authHeader || !authHeader.startsWith('Basic ')) {
-    // Redirect đến trang login nếu không có thông tin xác thực
+    // Chỉ redirect cho API routes, không redirect cho page navigation
+    // vì client-side sẽ tự handle authentication
     if (pathname.startsWith('/api/')) {
       return NextResponse.json(
         { error: 'Unauthorized' },
-        { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Secure Area"' } }
+        { status: 401 }
       );
     } else {
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
+      // Cho page navigation, cho phép tiếp tục và để client-side handle
+      return NextResponse.next();
     }
   }
 
@@ -72,13 +73,11 @@ export async function middleware(request: NextRequest) {
       if (pathname.startsWith('/api/')) {
         return NextResponse.json(
           { error: 'Invalid credentials' },
-          { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Secure Area"' } }
+          { status: 401 }
         );
       } else {
-        const loginUrl = new URL('/login', request.url);
-        loginUrl.searchParams.set('redirect', pathname);
-        loginUrl.searchParams.set('error', 'invalid_credentials');
-        return NextResponse.redirect(loginUrl);
+        // Cho page navigation, cho phép tiếp tục và để client-side handle
+        return NextResponse.next();
       }
     }
 
@@ -117,10 +116,8 @@ export async function middleware(request: NextRequest) {
         { status: 500 }
       );
     } else {
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      loginUrl.searchParams.set('error', 'server_error');
-      return NextResponse.redirect(loginUrl);
+      // Cho page navigation, cho phép tiếp tục và để client-side handle
+      return NextResponse.next();
     }
   }
 }

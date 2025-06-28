@@ -9,7 +9,7 @@
 		"lint": "next lint",
 		"seed": "prisma db seed.ts",
 		"test": "node --loader ts-node/esm test/subjectScheduler.test.ts",
-		"create-users": "ts-node scripts/create-default-users.ts"
+		"check-users": "ts-node scripts/create-default-users.ts"
 	},
 	"dependencies": {
 		"@prisma/client": "^6.5.0",

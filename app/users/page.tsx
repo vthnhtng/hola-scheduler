@@ -10,6 +10,7 @@ import FormModal from '../components/FormModal';
 import DeleteModal from '../components/DeleteModal';
 import GridRow from '../components/GridRow';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import ProtectedRoute from '../components/ProtectedRoute';
 
 interface User {
     id: number;
@@ -80,7 +81,7 @@ function UsersPage() {
     };
 
     return (
-        <>
+        <ProtectedRoute>
             <Header />
             <main className="d-flex justify-content-between align-items-start" style={{ minHeight: '70vh' }}>
                 <SideBar />
@@ -98,18 +99,7 @@ function UsersPage() {
                             <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
                                 <h2 className="fw-bold text-uppercase">DANH SÁCH NGƯỜI DÙNG</h2>
                                 <div className="d-flex gap-2" style={{ marginRight: "20px" }}>
-                                    <FormModal
-                                        title={'THÊM NGƯỜI DÙNG'}
-                                        button={
-                                            <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center">
-                                                THÊM NGƯỜI DÙNG
-                                            </button>
-                                        }
-                                        attributes={userAttributes}
-                                        record={null}
-                                        formAction={'/api/users'}
-                                        formMethod='POST'
-                                    />
+                                    {/* User creation disabled - only administrators can create users */}
                                 </div>
                             </div>
                             <div className="d-flex flex-column" style={{ width: 'calc(100% - 20px)', marginLeft: "20px" }}>
@@ -188,7 +178,7 @@ function UsersPage() {
                 )}
             </main>
             <Footer />
-        </>
+        </ProtectedRoute>
     );
 }
 

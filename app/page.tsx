@@ -2,6 +2,7 @@
 import Header from './components/Header';
 import SideBar from './components/SideBar';
 import Footer from './components/Footer';
+import AuthErrorHandler from './components/AuthErrorHandler';
 import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
@@ -14,6 +15,7 @@ export default function HomePage() {
 				<SideBar />
 				<section className="flex-grow-1 p-4">
 					<div className="container">
+						<AuthErrorHandler />
 						<h2 className="fw-bold text-uppercase">HỆ THỐNG SẮP XẾP LỊCH GIẢNG DẠY TỰ ĐỘNG</h2>
 						<p className="lead">
 							Nền tảng hỗ trợ sắp xếp lịch học thông minh cho các trường học, trung tâm đào tạo và tổ chức giáo dục.

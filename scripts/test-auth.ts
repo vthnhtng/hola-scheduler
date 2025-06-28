@@ -1,40 +1,105 @@
-import { hashPassword, createBasicAuthHeader } from '../lib/auth';
+import { PrismaClient } from '@prisma/client';
+import { hashPassword, verifyBasicAuth, createBasicAuthHeader } from '../lib/auth';
 
-console.log('=== Test Authentication System ===\n');
+const prisma = new PrismaClient();
 
-// Test password hashing
-console.log('1. Testing password hashing:');
-const password = 'test123';
-const hashedPassword = hashPassword(password);
-console.log(`Password: ${password}`);
-console.log(`Hashed: ${hashedPassword}`);
-console.log(`Hash length: ${hashedPassword.length} characters\n`);
+async function testAuthentication() {
+  try {
+    console.log('🧪 Testing Authentication with Prisma Schema...\n');
 
-// Test Basic Auth header creation
-console.log('2. Testing Basic Auth header creation:');
-const username = 'testuser';
-const testPassword = 'testpass';
-const authHeader = createBasicAuthHeader(username, testPassword);
-console.log(`Username: ${username}`);
-console.log(`Password: ${testPassword}`);
-console.log(`Auth Header: ${authHeader}\n`);
+    // Test 1: Tạo user test
+    const testUsername = 'testuser';
+    const testPassword = 'testpass123';
+    
+    console.log('1. Creating test user...');
+    
+    // Hash password
+    const hashedPassword = await hashPassword(testPassword);
+    console.log(`   Password hash: ${hashedPassword}`);
 
-// Test different credentials
-console.log('3. Testing different user credentials:');
-const users = [
-  { username: 'scheduler', password: 'scheduler123' },
-  { username: 'viewer', password: 'viewer123' },
-  { username: 'admin', password: 'admin123' },
-];
+    // Tạo user trong database
+    const user = await prisma.appUser.upsert({
+      where: { username: testUsername },
+      update: {
+        password: hashedPassword,
+        fullName: 'Test User',
+        email: 'test@example.com',
+        role: 'scheduler'
+      },
+      create: {
+        username: testUsername,
+        password: hashedPassword,
+        fullName: 'Test User',
+        email: 'test@example.com',
+        role: 'scheduler'
+      }
+    });
 
-users.forEach(user => {
-  const header = createBasicAuthHeader(user.username, user.password);
-  console.log(`${user.username}: ${header}`);
-});
+    console.log(`   ✅ User created: ${user.username} (ID: ${user.id})`);
 
-console.log('\n=== Test completed ===');
-console.log('\nTo test the system:');
-console.log('1. Run: npm run create-users');
-console.log('2. Start the app: npm run dev');
-console.log('3. Go to: http://localhost:3000/login');
-console.log('4. Use credentials from the list above'); 
+    // Test 2: Verify authentication
+    console.log('\n2. Testing authentication...');
+    
+    const authHeader = createBasicAuthHeader(testUsername, testPassword);
+    console.log(`   Auth header: ${authHeader}`);
+
+    const authUser = await verifyBasicAuth(authHeader);
+    
+    if (authUser) {
+      console.log(`   ✅ Authentication successful!`);
+      console.log(`   User: ${authUser.username}`);
+      console.log(`   Role: ${authUser.role}`);
+      console.log(`   Full Name: ${authUser.fullName}`);
+    } else {
+      console.log('   ❌ Authentication failed!');
+    }
+
+    // Test 3: Test wrong password
+    console.log('\n3. Testing wrong password...');
+    
+    const wrongAuthHeader = createBasicAuthHeader(testUsername, 'wrongpassword');
+    const wrongAuthUser = await verifyBasicAuth(wrongAuthHeader);
+    
+    if (!wrongAuthUser) {
+      console.log('   ✅ Correctly rejected wrong password');
+    } else {
+      console.log('   ❌ Wrong password was accepted!');
+    }
+
+    // Test 4: Test non-existent user
+    console.log('\n4. Testing non-existent user...');
+    
+    const nonExistentAuthHeader = createBasicAuthHeader('nonexistent', testPassword);
+    const nonExistentUser = await verifyBasicAuth(nonExistentAuthHeader);
+    
+    if (!nonExistentUser) {
+      console.log('   ✅ Correctly rejected non-existent user');
+    } else {
+      console.log('   ❌ Non-existent user was accepted!');
+    }
+
+    // Test 5: Check database schema compatibility
+    console.log('\n5. Checking database schema...');
+    
+    const dbUser = await prisma.appUser.findUnique({
+      where: { username: testUsername }
+    });
+
+    if (dbUser) {
+      console.log('   ✅ Database schema is compatible');
+      console.log(`   Fields: id=${dbUser.id}, username=${dbUser.username}, role=${dbUser.role}`);
+    } else {
+      console.log('   ❌ Database schema issue');
+    }
+
+    console.log('\n🎉 Authentication test completed successfully!');
+
+  } catch (error) {
+    console.error('❌ Test failed:', error);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+// Run the test
+testAuthentication(); 

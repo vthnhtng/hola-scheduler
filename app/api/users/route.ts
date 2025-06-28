@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { hashPassword } from '@/lib/auth';
 
 /**
  * @returns - Returns a list of users from the database.
@@ -67,47 +66,12 @@ export async function GET(request: Request) {
 /**
  * @param request - Request object containing user data.
  * @returns - Create new user in the database.
+ * DISABLED: User registration is not allowed. Users can only be created by administrators.
  */
 export async function POST(request: Request) {
-    try {
-        const body = await request.json();
-        const { username, password, fullName, email, role } = body;
-
-        // Validate required fields
-        if (!username || !password) {
-            return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
-        }
-
-        // Hash password
-        const hashedPassword = hashPassword(password);
-
-        const newUser = await prisma.appUser.create({
-            data: {
-                username,
-                password: hashedPassword,
-                fullName,
-                email,
-                role,
-            },
-            select: {
-                id: true,
-                username: true,
-                fullName: true,
-                email: true,
-                role: true,
-                // Không trả về password
-            },
-        });
-
-        return NextResponse.json({ success: true, user: newUser }, { status: 201 });
-    } catch (error: any) {
-        if (error.code === 'P2002') {
-            return NextResponse.json({ error: 'Username already exists' }, { status: 400 });
-        }
-        return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
-    } finally {
-        await prisma.$disconnect();
-    }
+	return NextResponse.json({ 
+		error: 'User registration is disabled. Users can only be created by administrators.' 
+	}, { status: 403 });
 }
 
 /**
@@ -130,9 +94,9 @@ export async function PUT(request: Request) {
             role,
         };
 
-        // Chỉ hash password nếu được cung cấp
+        // Chỉ cập nhật password nếu được cung cấp (plain password)
         if (password) {
-            updateData.password = hashPassword(password);
+            updateData.password = password;
         }
 
         const updatedUser = await prisma.appUser.update({

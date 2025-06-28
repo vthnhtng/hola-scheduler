@@ -146,9 +146,7 @@ function Login() {
                   )}
                 </button>
                 
-                <div className="text-center mt-3">
-                  <a href="#" className="text-success">Chưa có tài khoản? Đăng ký</a>
-                </div>
+                {/* Registration disabled - users can only be created by administrators */}
               </form>
             </div>
           </div>

@@ -1,33 +1,46 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '../contexts/AuthContext';
+import { useRouter, usePathname } from 'next/navigation';
+import { useAuth } from '@/app/contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: 'scheduler' | 'viewer';
-  fallback?: React.ReactNode;
 }
 
-export default function ProtectedRoute({ 
-  children, 
-  requiredRole = 'viewer',
-  fallback 
-}: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth();
+export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+  const { user, isLoading, authToken } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/login');
+    // Chờ cho đến khi authentication check hoàn thành
+    if (isLoading) {
+      return;
     }
-  }, [user, isLoading, router]);
+
+    // Nếu không có user hoặc token, redirect đến login
+    if (!user || !authToken) {
+      const loginUrl = `/login?redirect=${encodeURIComponent(pathname)}`;
+      router.push(loginUrl);
+      return;
+    }
+
+    // Kiểm tra quyền truy cập nếu có yêu cầu role cụ thể
+    if (requiredRole) {
+      if (requiredRole === 'scheduler' && user.role !== 'scheduler') {
+        // Redirect về trang chủ với thông báo lỗi
+        router.push('/?error=insufficient_permissions');
+        return;
+      }
+    }
+  }, [user, authToken, isLoading, router, pathname, requiredRole]);
 
   // Hiển thị loading khi đang kiểm tra authentication
   if (isLoading) {
     return (
-      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '50vh' }}>
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh' }}>
         <div className="spinner-border text-primary" role="status">
           <span className="visually-hidden">Loading...</span>
         </div>
@@ -35,40 +48,16 @@ export default function ProtectedRoute({
     );
   }
 
-  // Redirect nếu chưa đăng nhập
-  if (!user) {
+  // Nếu không có user, không render gì (sẽ redirect)
+  if (!user || !authToken) {
     return null;
   }
 
   // Kiểm tra quyền truy cập
-  if (requiredRole === 'scheduler' && user.role !== 'scheduler') {
-    if (fallback) {
-      return <>{fallback}</>;
-    }
-    
-    return (
-      <div className="container mt-5">
-        <div className="row justify-content-center">
-          <div className="col-md-6">
-            <div className="alert alert-danger" role="alert">
-              <h4 className="alert-heading">Không có quyền truy cập!</h4>
-              <p>
-                Bạn cần quyền <strong>Scheduler</strong> để truy cập trang này.
-                Vui lòng liên hệ quản trị viên để được cấp quyền.
-              </p>
-              <hr />
-              <button 
-                className="btn btn-outline-danger"
-                onClick={() => router.push('/')}
-              >
-                Quay về trang chủ
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  if (requiredRole && requiredRole === 'scheduler' && user.role !== 'scheduler') {
+    return null;
   }
 
+  // Render children nếu đã xác thực và có quyền truy cập
   return <>{children}</>;
 } 

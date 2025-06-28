@@ -4,11 +4,11 @@ import { verifyBasicAuth } from '@/lib/auth';
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
-    
+    console.log(authHeader);
     if (!authHeader || !authHeader.startsWith('Basic ')) {
       return NextResponse.json(
         { error: 'Authorization header required' },
-        { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Secure Area"' } }
+        { status: 401 }
       );
     }
 
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
-        { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Secure Area"' } }
+        { status: 401 }
       );
     }
 
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     if (!authHeader || !authHeader.startsWith('Basic ')) {
       return NextResponse.json(
         { error: 'Authorization header required' },
-        { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Secure Area"' } }
+        { status: 401 }
       );
     }
 
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
-        { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Secure Area"' } }
+        { status: 401 }
       );
     }
 
