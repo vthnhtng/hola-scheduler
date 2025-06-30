@@ -12,7 +12,7 @@
 		"create-users": "ts-node scripts/create-default-users.ts"
 	},
 	"dependencies": {
-		"@prisma/client": "^6.5.0",
+		"@prisma/client": "^6.10.1",
 		"@types/xlsx": "^0.0.35",
 		"bootstrap": "^5.3.3",
 		"date-fns": "^4.1.0",
@@ -36,7 +36,7 @@
 		"eslint-config-next": "15.1.7",
 		"jest": "^29.7.0",
 		"postcss": "^8",
-		"prisma": "^6.8.2",
+		"prisma": "^6.10.1",
 		"tailwindcss": "^3.4.1",
 		"ts-jest": "^29.3.2",
 		"ts-node": "^10.9.2",

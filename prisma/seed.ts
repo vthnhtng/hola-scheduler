@@ -124,12 +124,12 @@ async function main() {
   // Holidays
   await prisma.holiday.createMany({
     data: [
-      { id: 1, date: '2025-01-01' }, // Tết Dương lịch
-      { id: 2, date: '2025-02-10' }, // Tết Nguyên đán
-      { id: 3, date: '2025-04-18' }, // Giỗ tổ Hùng Vương
-      { id: 4, date: '2025-04-30' }, // Ngày Giải phóng
-      { id: 5, date: '2025-05-01' }, // Quốc tế Lao động
-      { id: 6, date: '2025-09-02' }, // Quốc khánh
+      { id: 1, date: '2025-01-01' }, // New Year's Day
+      { id: 2, date: '2025-02-10' }, // Lunar New Year
+      { id: 3, date: '2025-04-18' }, // Hung Kings Commemoration Day
+      { id: 4, date: '2025-04-30' }, // Liberation Day
+      { id: 5, date: '2025-05-01' }, // International Labor Day
+      { id: 6, date: '2025-09-02' }, // National Day
     ],
     skipDuplicates: true,
   });

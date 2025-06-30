@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyBasicAuth } from '@/lib/auth';
+import { verifyBasicAuth, createSessionToken, logUserActivity } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +21,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Tạo response với thông tin user
+    // Log successful login
+    await logUserActivity(user.id, 'login', 'auth', {
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+      userAgent: request.headers.get('user-agent')
+    });
+
+    // Create access token - Basic Auth
+    const sessionToken = createSessionToken(user);
+
+    // Create response with user information
     const response = NextResponse.json({
       success: true,
       user: {
@@ -33,7 +42,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Set cookie để lưu trạng thái đăng nhập (optional)
+    // Set session cookie
+    response.cookies.set('session_token', sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24,
+    });
+
+    // Set auth token cookie (for backward compatibility)
     response.cookies.set('auth_token', authHeader, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

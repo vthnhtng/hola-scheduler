@@ -1,132 +1,153 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { withAuth, logApiActivity, createErrorResponse, createSuccessResponse, validateRequestBody, parsePaginationParams, createPaginationResponse } from '@/lib/api-helpers';
 
 /**
  * @returns - Returns a list of subjects from the database. 
  */
 export async function GET(request: NextRequest) {
-    const { searchParams } = request.nextUrl;
-    if (request.method !== 'GET') {
-        return NextResponse.json({ message: 'Phương thức không hợp lệ' }, { status: 405 })
-    }
+    return withAuth(request, async (req, user) => {
+        try {
+            const { page, limit, skip } = parsePaginationParams(req);
+            
+            const subjects = await prisma.subject.findMany({
+                skip,
+                take: limit,
+            });
 
-	try {
-        const page = parseInt(searchParams.get('page') || '1', 10);
-        const limit = parseInt(searchParams.get('limit') || '10', 10);
-        const subjects = await prisma.subject.findMany({
-            skip: (page - 1) * limit,
-            take: limit,
-        });
+            const totalCount = await prisma.subject.count();
 
-        const totalCount = await prisma.subject.count();
-        const totalPages = Math.ceil(totalCount / limit);
+            // Log activity
+            await logApiActivity(user.id, 'GET', '/api/subjects', { page, limit });
 
-        return NextResponse.json({
-            data: subjects,
-            pagination: {
-                currentPage: page,
-                totalPages: totalPages,
-                totalCount: totalCount,
-            },
-        });
-	} catch (error) {
-		return NextResponse.json({ error: 'Có lỗi xảy ra khi lấy danh sách môn học' }, { status: 500 });
-	} finally {
-		await prisma.$disconnect();
-	}
+            return NextResponse.json(createPaginationResponse(subjects, page, limit, totalCount));
+        } catch (error) {
+            console.error('Error fetching subjects:', error);
+            return createErrorResponse('Có lỗi xảy ra khi lấy danh sách môn học', 500);
+        } finally {
+            await prisma.$disconnect();
+        }
+    }, { resource: 'subjects', action: 'read' });
 }
 
 /**
  * @param request - Request object containing the subject data.
  * @returns - Create new subject in the database.
  */
-export async function POST(request: Request) {
-    try {
-        const body = await request.json();
+export async function POST(request: NextRequest) {
+    return withAuth(request, async (req, user) => {
+        try {
+            const body = await req.json();
 
-        const newSubject = await prisma.subject.create({
-            data: {
-                name: body.name,
-                category: body.category,
-                prerequisiteId: parseInt(body.prerequisiteId),
-            },
-        });
+            // Validate required fields
+            const validationError = validateRequestBody(body, ['name', 'category']);
+            if (validationError) {
+                return createErrorResponse(validationError, 400);
+            }
 
-        return NextResponse.json(
-            { success: true, subject: newSubject },
-            { status: 201 }
-        );
-    } catch (e) {
-        return NextResponse.json(
-            { error: 'Failed to create subject' },
-            { status: 500 }
-        );
-    } finally {
-        await prisma.$disconnect();
-    }
+            const newSubject = await prisma.subject.create({
+                data: {
+                    name: body.name,
+                    category: body.category,
+                    prerequisiteId: body.prerequisiteId ? parseInt(body.prerequisiteId) : null,
+                },
+            });
+
+            // Log activity
+            await logApiActivity(user.id, 'POST', '/api/subjects', { 
+                subjectId: newSubject.id,
+                subjectName: newSubject.name 
+            });
+
+            return createSuccessResponse(newSubject, 201);
+        } catch (error) {
+            console.error('Error creating subject:', error);
+            return createErrorResponse('Failed to create subject', 500);
+        } finally {
+            await prisma.$disconnect();
+        }
+    }, { resource: 'subjects', action: 'create' });
 }
 
 /**
  * @param request - Request object containing the subject ID to delete.
  * @returns - Delete subject from the database.
  */
-export async function DELETE(request: Request) {
-    try {
-        const body = await request.json();
-        const subjectId = parseInt(body.id);
+export async function DELETE(request: NextRequest) {
+    return withAuth(request, async (req, user) => {
+        try {
+            const body = await req.json();
 
-        await prisma.subject.updateMany({
-            where: { prerequisiteId: subjectId },
-            data: { prerequisiteId: null }
-        });
-        
-        const deletedSubject = await prisma.subject.delete({
-            where: { id: subjectId }
-        });
+            // Validate required fields
+            const validationError = validateRequestBody(body, ['id']);
+            if (validationError) {
+                return createErrorResponse(validationError, 400);
+            }
 
-        return NextResponse.json(
-            { success: true, subject: deletedSubject },
-            { status: 200 }
-        );
-    } catch (e) {
-        console.log(e);
-        return NextResponse.json(
-            { error: 'Có lỗi xảy ra khi xóa môn học' },
-            { status: 500 }
-        );
-    } finally {
-        await prisma.$disconnect();
-    }
+            const subjectId = parseInt(body.id);
+
+            // Update subjects that have this as prerequisite
+            await prisma.subject.updateMany({
+                where: { prerequisiteId: subjectId },
+                data: { prerequisiteId: null }
+            });
+            
+            const deletedSubject = await prisma.subject.delete({
+                where: { id: subjectId }
+            });
+
+            // Log activity
+            await logApiActivity(user.id, 'DELETE', '/api/subjects', { 
+                subjectId: deletedSubject.id,
+                subjectName: deletedSubject.name 
+            });
+
+            return createSuccessResponse(deletedSubject);
+        } catch (error) {
+            console.error('Error deleting subject:', error);
+            return createErrorResponse('Có lỗi xảy ra khi xóa môn học', 500);
+        } finally {
+            await prisma.$disconnect();
+        }
+    }, { resource: 'subjects', action: 'delete' });
 }
-
 
 /**
  * @param request - Request object containing the subject data to update.
  * @returns - Change subject information in the database.
  */
-export async function PUT(request: Request) {
-    try {
-        const body = await request.json();
+export async function PUT(request: NextRequest) {
+    return withAuth(request, async (req, user) => {
+        try {
+            const body = await req.json();
 
-        const updatedSubject = await prisma.subject.update({
-            where: { id: parseInt(body.id) },
-            data: {
-                name: body.name,
-                category: body.category,
-                prerequisiteId: parseInt(body.prerequisiteId),
-            },
-        });
+            // Validate required fields
+            const validationError = validateRequestBody(body, ['id', 'name', 'category']);
+            if (validationError) {
+                return createErrorResponse(validationError, 400);
+            }
 
-        return NextResponse.json(
-            { success: true, subject: updatedSubject },
-            { status: 200 }
-        );
-    } catch (error) {
-        return NextResponse.json(
-            { error: 'Failed to update subject' },
-            { status: 500 }
-        );
-    } finally {
-        await prisma.$disconnect();
-    }
+            const updatedSubject = await prisma.subject.update({
+                where: { id: parseInt(body.id) },
+                data: {
+                    name: body.name,
+                    category: body.category,
+                    prerequisiteId: body.prerequisiteId ? parseInt(body.prerequisiteId) : null,
+                },
+            });
+
+            // Log activity
+            await logApiActivity(user.id, 'PUT', '/api/subjects', { 
+                subjectId: updatedSubject.id,
+                subjectName: updatedSubject.name 
+            });
+
+            return createSuccessResponse(updatedSubject);
+        } catch (error) {
+            console.error('Error updating subject:', error);
+            return createErrorResponse('Failed to update subject', 500);
+        } finally {
+            await prisma.$disconnect();
+        }
+    }, { resource: 'subjects', action: 'update' });
 }

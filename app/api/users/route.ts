@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { hashPassword } from '@/lib/auth';
 
 /**
  * @returns - Returns a list of users from the database.
@@ -22,7 +21,7 @@ export async function GET(request: Request) {
 				fullName: true,
 				email: true,
 				role: true,
-				// Không trả về password
+				// Don't return password
 			},
 		});
 
@@ -78,13 +77,11 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
         }
 
-        // Hash password
-        const hashedPassword = hashPassword(password);
-
+        // Store password directly (no hashing)
         const newUser = await prisma.appUser.create({
             data: {
                 username,
-                password: hashedPassword,
+                password: password,
                 fullName,
                 email,
                 role,
@@ -95,7 +92,7 @@ export async function POST(request: Request) {
                 fullName: true,
                 email: true,
                 role: true,
-                // Không trả về password
+                // Don't return password
             },
         });
 
@@ -130,9 +127,9 @@ export async function PUT(request: Request) {
             role,
         };
 
-        // Chỉ hash password nếu được cung cấp
+        // Only update password if provided (no hashing)
         if (password) {
-            updateData.password = hashPassword(password);
+            updateData.password = password;
         }
 
         const updatedUser = await prisma.appUser.update({
@@ -144,7 +141,7 @@ export async function PUT(request: Request) {
                 fullName: true,
                 email: true,
                 role: true,
-                // Không trả về password
+                // Don't return password
             },
         });
 
@@ -178,7 +175,7 @@ export async function DELETE(request: Request) {
                 fullName: true,
                 email: true,
                 role: true,
-                // Không trả về password
+                // Don't return password
             },
         });
 

@@ -17,7 +17,7 @@ function Login() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Kiểm tra nếu user đã đăng nhập thì redirect
+  // Check if user is already logged in, then redirect
   useEffect(() => {
     if (user) {
       const redirectTo = searchParams.get('redirect') || '/';
@@ -25,7 +25,7 @@ function Login() {
     }
   }, [user, router, searchParams]);
 
-  // Hiển thị error từ URL params
+  // Display error from URL params
   useEffect(() => {
     const errorParam = searchParams.get('error');
     if (errorParam) {
@@ -51,13 +51,12 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const success = await login(username, password);
-      
-      if (success) {
+      const result = await login(username, password);
+      if (result.success) {
         const redirectTo = searchParams.get('redirect') || '/';
         router.push(redirectTo);
       } else {
-        setError('Tên đăng nhập hoặc mật khẩu không đúng');
+        setError(result.error || 'Tên đăng nhập hoặc mật khẩu không đúng');
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -70,11 +69,11 @@ function Login() {
   return (
     <>
       <Header />
-      <main className="container-fluid bg-light content">
-        <div className="row justify-content-center mt-5">
+      <main className="container-fluid bg-light content d-flex align-items-center justify-content-center" style={{ minHeight: 'calc(100vh - 200px)', paddingTop: 40, paddingBottom: 40 }}>
+        <div className="row justify-content-center w-100">
           <div className="col-md-4">
-            <div className="card p-4 card-container shadow-sm">
-              <h4 className="text-center mb-4">Đăng nhập</h4>
+            <div className="card p-4 card-container shadow-sm" style={{ minWidth: 350, maxWidth: 400, width: '100%' }}>
+              <h4 className="text-center mb-4 fw-bold fs-3">Đăng nhập</h4>
               
               {error && (
                 <div className="alert alert-danger" role="alert">
@@ -113,24 +112,7 @@ function Login() {
                     Mật khẩu phải bao gồm tối thiểu 8 ký tự bao gồm chữ cái, số và ký hiệu.
                   </small>
                 </div>
-                
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <div className="form-check">
-                    <input 
-                      type="checkbox" 
-                      className="form-check-input" 
-                      id="rememberMe"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      disabled={isLoading}
-                    />
-                    <label className="form-check-label" htmlFor="rememberMe">
-                      Ghi nhớ tôi
-                    </label>
-                  </div>
-                  <a href="#" className="text-success">Quên mật khẩu?</a>
-                </div>
-                
+
                 <button 
                   type="submit" 
                   className="btn btn-dark w-100 mb-2"
@@ -145,10 +127,6 @@ function Login() {
                     'Đăng nhập'
                   )}
                 </button>
-                
-                <div className="text-center mt-3">
-                  <a href="#" className="text-success">Chưa có tài khoản? Đăng ký</a>
-                </div>
               </form>
             </div>
           </div>

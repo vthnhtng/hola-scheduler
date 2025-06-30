@@ -4,43 +4,53 @@ import { useState, useEffect } from "react";
 import { usePathname } from 'next/navigation';
 import { FaHome, FaUser, FaChalkboardTeacher, FaChartBar, FaBars, FaCalendarAlt, FaCog } from "react-icons/fa";
 import Link from "next/link";
-import { usePermissions } from '../hooks/usePermissions';
 
 function Sidebar() {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(true);
     const [activeItem, setActiveItem] = useState("");
+    // Trạng thái mở/đóng cho từng submenu
+    type SubMenuKey = 'lecturers' | 'subjects' | 'locations' | 'curriculums' | 'teams';
+    type SubMenuOpenState = { [key in SubMenuKey]: boolean };
+    const [subMenuOpen, setSubMenuOpen] = useState<SubMenuOpenState>({
+        lecturers: false,
+        subjects: false,
+        locations: false,
+        curriculums: false,
+        teams: false,
+    });
+
     const [openManage, setOpenManage] = useState(false);
-    const { canViewData, canManageUsers, isScheduler } = usePermissions();
 
     const menuItems = [
         { name: "Trang chủ", icon: <FaHome />, link: "/" },
-        ...(canViewData ? [
-            { name: "Lịch giảng dạy", icon: <FaChalkboardTeacher />, link: "/timetable" },
-            { name: "Lịch nghỉ lễ", icon: <FaCalendarAlt />, link: "/holidays" },
-        ] : []),
-        ...(canManageUsers ? [
-            { name: "Tài khoản", icon: <FaUser />, link: "/users" },
-        ] : []),
+        { name: "Lịch giảng dạy", icon: <FaChalkboardTeacher />, link: "/timetable" },
+        { name: "Lịch nghỉ lễ", icon: <FaCalendarAlt />, link: "/holidays" },
+        { name: "Tài khoản", icon: <FaUser />, link: "/users" },
     ];
 
     const subMenuItems = [
-        { name: "Giảng viên", link: "/lecturers" },
-        { name: "Học phần", link: "/subjects" },
-        { name: "Địa điểm học", link: "/locations" },
-        { name: "Chương trình học", link: "/curriculums" },
-        { name: "Đại đội", link: "/teams" },
+        { name: "Giảng viên", link: "/lecturers", key: "lecturers" },
+        { name: "Học phần", link: "/subjects", key: "subjects" },
+        { name: "Địa điểm học", link: "/locations", key: "locations" },
+        { name: "Chương trình học", link: "/curriculums", key: "curriculums" },
+        { name: "Đại đội", link: "/teams", key: "teams" },
     ];
 
-    // Chỉ hiển thị menu quản lý nếu user có quyền xem dữ liệu
-    const showManageMenu = canViewData;
+    // Tất cả role đều thấy menu quản lý
+    const showManageMenu = true;
 
     useEffect(() => {
         const matchedMain = menuItems.find(item => item.link === pathname);
         const matchedSub = subMenuItems.find(item => item.link === pathname);
         setActiveItem(matchedSub?.name || matchedMain?.name || "");
-        setOpenManage(Boolean(matchedSub));
-    }, [pathname, menuItems]);
+        // Nếu đang ở endpoint thuộc submenu thì luôn mở menu quản lý
+        if (matchedSub) {
+            setOpenManage(true);
+        } else {
+            setOpenManage(false);
+        }
+    }, [pathname]);
 
     return (
         <>
@@ -131,9 +141,6 @@ function Sidebar() {
                                 {isOpen && (
                                     <div className="d-flex align-items-center justify-content-between w-100">
                                         <span>{item.name}</span>
-                                        {item.name === "Tài khoản" && isScheduler && (
-                                            <span className="badge bg-warning permission-badge">Admin</span>
-                                        )}
                                     </div>
                                 )}
                             </Link>
@@ -143,20 +150,18 @@ function Sidebar() {
                     {showManageMenu && (
                         <li className="nav-item">
                             <button
-                                className={`btn nav-link text-start w-100 ${openManage ? "active" : "text-dark"}`}
+                                className={`btn nav-link text-start w-100 ${(openManage || subMenuItems.some(sub => sub.link === pathname)) ? "active" : "text-dark"}`}
                                 onClick={() => setOpenManage(!openManage)}
                                 title={!isOpen ? "Quản lý" : ""}
                             >
                                 <FaChartBar className="me-2" />
                                 {isOpen && (
                                     <div className="d-flex align-items-center justify-content-between w-100">
-                                        <span className={openManage ? "" : "text-dark"}>Quản lý</span>
-                                        <span className="badge bg-info permission-badge">Data</span>
+                                        <span className={(openManage || subMenuItems.some(sub => sub.link === pathname)) ? "" : "text-dark"}>Quản lý</span>
                                     </div>
                                 )}
                             </button>
-
-                            {openManage && isOpen && (
+                            {(openManage || subMenuItems.some(sub => sub.link === pathname)) && isOpen && (
                                 <ul className="nav flex-column submenu">
                                     {subMenuItems.map((sub) => (
                                         <li key={sub.name}>
@@ -171,24 +176,6 @@ function Sidebar() {
                                     ))}
                                 </ul>
                             )}
-                        </li>
-                    )}
-
-                    {isScheduler && (
-                        <li className="nav-item">
-                            <Link
-                                href="/scheduler"
-                                className={`nav-link ${activeItem === "Scheduler" ? "active" : "text-dark"}`}
-                                title={!isOpen ? "Scheduler" : ""}
-                            >
-                                <FaCog className="me-2" />
-                                {isOpen && (
-                                    <div className="d-flex align-items-center justify-content-between w-100">
-                                        <span>Scheduler</span>
-                                        <span className="badge bg-success permission-badge">Scheduler</span>
-                                    </div>
-                                )}
-                            </Link>
                         </li>
                     )}
                 </ul>

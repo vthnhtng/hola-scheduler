@@ -5,17 +5,20 @@ export function usePermissions() {
 
   const isScheduler = user?.role === 'scheduler';
   const isViewer = user?.role === 'viewer';
+  const isAdmin = user?.role === 'admin';
+  const isData = user?.role === 'data';
   const isAuthenticated = !!user;
 
-  const canAccessSchedulerFeatures = isScheduler;
-  const canViewData = isViewer || isScheduler;
-  const canManageUsers = isScheduler;
+  // Cho phép tất cả các role đã đăng nhập đều xem menu quản lý
+  const canViewData = isAuthenticated;
+  const canManageUsers = isAdmin || isScheduler;
 
   return {
     isScheduler,
     isViewer,
+    isAdmin,
+    isData,
     isAuthenticated,
-    canAccessSchedulerFeatures,
     canViewData,
     canManageUsers,
     userRole: user?.role,

@@ -19,7 +19,7 @@ interface ScheduleItem {
 
 export async function GET(request: NextRequest) {
     try {
-        // Lấy dữ liệu từ file hoặc database
+        // Get data from file or database
         const doneDir = path.join(process.cwd(), 'schedules/done');
         
         if (!fs.existsSync(doneDir)) {
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'No schedule files found' }, { status: 404 });
         }
 
-        // Đọc tất cả dữ liệu từ các file
+        // Read all data from files
         let allScheduleData: ScheduleItem[] = [];
         
         for (const file of files) {
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
             allScheduleData = allScheduleData.concat(fileData);
         }
 
-        // Lấy thông tin subject names
+        // Get subject names information
         const subjectIds = [...new Set(allScheduleData.map(item => item.subjectId).filter(id => id !== null))];
         const subjects = await prisma.subject.findMany({
             where: { id: { in: subjectIds as number[] } },
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
         
         const subjectMap = new Map(subjects.map(s => [s.id, s.name]));
 
-        // Lấy thông tin team names
+        // Get team names information
         const teamIds = [...new Set(allScheduleData.map(item => item.teamId))];
         const teams = await prisma.team.findMany({
             where: { id: { in: teamIds } },
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
         
         const teamMap = new Map(teams.map(t => [t.id, t.name]));
 
-        // Lấy thông tin lecturer names
+        // Get lecturer names information
         const lecturerIds = [...new Set(allScheduleData.map(item => item.lecturerId).filter(id => id !== null))];
         const lecturers = await prisma.lecturer.findMany({
             where: { id: { in: lecturerIds as number[] } },
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
         
         const lecturerMap = new Map(lecturers.map(l => [l.id, l.fullName]));
 
-        // Lấy thông tin location names
+        // Get location names information
         const locationIds = [...new Set(allScheduleData.map(item => item.locationId).filter(id => id !== null))];
         const locations = await prisma.location.findMany({
             where: { id: { in: locationIds as number[] } },
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
         
         const locationMap = new Map(locations.map(l => [l.id, l.name]));
 
-        // Tạo object để nhóm dữ liệu theo teamId
+        // Create object to group data by teamId
         const groupedData: Record<string, Record<string, {
             subjectId: number | null;
             subjectName: string;
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
             locationName: string;
         }>> = {};
 
-        // Tạo danh sách các buổi học duy nhất (date + session)
+        // Create list of unique sessions (date + session)
         const uniqueSessions: Set<string> = new Set();
 
         allScheduleData.forEach(item => {
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
             };
         });
 
-        // Chuẩn bị dữ liệu cho Excel
+        // Prepare data for Excel
         const excelData: any[] = [];
 
         // Header row
@@ -119,18 +119,18 @@ export async function GET(request: NextRequest) {
         });
         excelData.push(headerRow);
 
-        // Data rows - sắp xếp theo ngày và session
+        // Data rows - sort by date and session
         const sessionOrder = ['morning', 'afternoon', 'evening'];
         const sortedSessions = Array.from(uniqueSessions).sort((a, b) => {
             const [dateA, sessionA] = a.split('-');
             const [dateB, sessionB] = b.split('-');
             
-            // So sánh ngày trước
+            // Compare date first
             if (dateA !== dateB) {
                 return dateA.localeCompare(dateB);
             }
             
-            // Nếu cùng ngày, so sánh session
+            // If same date, compare session
             return sessionOrder.indexOf(sessionA) - sessionOrder.indexOf(sessionB);
         });
 
@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
             const [date, session] = sessionKey.split('-');
             const formattedDate = new Date(date).toLocaleDateString('vi-VN');
             
-            // Dịch session sang tiếng Việt
+            // Translate session to Vietnamese
             const sessionNames: Record<string, string> = {
                 morning: 'Sáng',
                 afternoon: 'Chiều', 
@@ -168,15 +168,15 @@ export async function GET(request: NextRequest) {
             excelData.push(rowData);
         });
 
-        // Tạo workbook và worksheet
+        // Create workbook and worksheet
         const workbook = XLSX.utils.book_new();
         const worksheet = XLSX.utils.aoa_to_sheet(excelData);
 
-        // Cải thiện định dạng Excel
+        // Improve Excel formatting
         const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
         
         // Set column widths
-        const colWidths = [{ wch: 25 }]; // Cột đầu rộng hơn
+        const colWidths = [{ wch: 25 }]; // First column wider
         for (let i = 1; i <= teamIds_sorted.length; i++) {
             colWidths.push({ wch: 30 });
         }
@@ -189,17 +189,17 @@ export async function GET(request: NextRequest) {
         }
         worksheet['!rows'] = rowHeights;
 
-        // Thêm worksheet vào workbook
+        // Add worksheet to workbook
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Lịch học');
 
-        // Tạo buffer từ workbook
+        // Create buffer from workbook
         const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
 
-        // Tạo tên file với timestamp
+        // Create filename with timestamp
         const timestamp = new Date().toISOString().split('T')[0];
         const filename = `lich_hoc_${timestamp}.xlsx`;
 
-        // Thiết lập headers và gửi file
+        // Set headers and send file
         const response = new NextResponse(excelBuffer);
         response.headers.set('Content-Disposition', `attachment; filename="${filename}"`);
         response.headers.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid week files provided' }, { status: 400 });
         }
 
-        // Logic tương tự nhưng chỉ export các file được chọn
+        // Similar logic but only export selected files
         const doneDir = path.join(process.cwd(), 'schedules/done');
         let allScheduleData: ScheduleItem[] = [];
         
@@ -241,8 +241,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'No data found in selected files' }, { status: 404 });
         }
 
-        // Sử dụng logic tương tự như GET để tạo Excel
-        // ... (có thể tái sử dụng code từ phần GET)
+        // Use similar logic as GET to create Excel
+        // ... (can reuse code from GET section)
         
         return NextResponse.json({ message: 'Custom export completed' });
 

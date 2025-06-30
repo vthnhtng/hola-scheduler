@@ -6,9 +6,10 @@ import { AuthUser } from '@/lib/auth';
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<{ success: boolean, error?: string }>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,7 +32,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const checkAuth = async () => {
     try {
-      // Kiểm tra xem có auth token trong localStorage không
+      // Check if there's auth token in localStorage
       const authToken = localStorage.getItem('auth_token');
       
       if (!authToken) {
@@ -40,7 +41,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return;
       }
 
-      // Gọi API để verify token
+      // Call API to verify token
       const response = await fetch('/api/auth/login', {
         method: 'GET',
         headers: {
@@ -52,7 +53,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const data = await response.json();
         setUser(data.user);
       } else {
-        // Token không hợp lệ, xóa khỏi localStorage
+        // Token is invalid, remove from localStorage
         localStorage.removeItem('auth_token');
         setUser(null);
       }
@@ -65,11 +66,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const refreshSession = async () => {
+    try {
+      const authToken = localStorage.getItem('auth_token');
+      
+      if (!authToken) {
+        return;
+      }
+
+      const response = await fetch('/api/auth/login', {
+        method: 'GET',
+        headers: {
+          'Authorization': authToken,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+      } else {
+        // Session expired, logout
+        await logout();
+      }
+    } catch (error) {
+      console.error('Session refresh error:', error);
+      await logout();
+    }
+  };
+
+  const login = async (username: string, password: string): Promise<{ success: boolean, error?: string }> => {
     try {
       setIsLoading(true);
-      
-      // Tạo Basic Auth header
       const credentials = `${username}:${password}`;
       const base64Credentials = btoa(credentials);
       const authHeader = `Basic ${base64Credentials}`;
@@ -81,22 +108,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
         },
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
+
+      if (response.ok && data.user) {
         setUser(data.user);
-        
-        // Lưu auth token vào localStorage
         localStorage.setItem('auth_token', authHeader);
-        
-        return true;
+        return { success: true };
       } else {
-        const errorData = await response.json();
-        console.error('Login failed:', errorData);
-        return false;
+        // Return error from API if any
+        return { success: false, error: data?.error || 'Tên đăng nhập hoặc mật khẩu không đúng' };
       }
     } catch (error) {
       console.error('Login error:', error);
-      return false;
+      return { success: false, error: 'Có lỗi xảy ra, vui lòng thử lại' };
     } finally {
       setIsLoading(false);
     }
@@ -104,21 +128,46 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = async (): Promise<void> => {
     try {
-      // Gọi API logout
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-      });
+      // Không gọi API logout nữa, chỉ xóa token ở client
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      // Xóa thông tin user và token
+      // Remove user info and token
       setUser(null);
       localStorage.removeItem('auth_token');
     }
   };
 
+  // Auto-refresh session every 30 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (user) {
+        refreshSession();
+      }
+    }, 30 * 60 * 1000); // 30 minutes
+
+    return () => clearInterval(interval);
+  }, [user]);
+
+  // Check auth on mount
   useEffect(() => {
     checkAuth();
+  }, []);
+
+  // Listen for storage changes (for multi-tab support)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'auth_token') {
+        if (e.newValue) {
+          checkAuth();
+        } else {
+          setUser(null);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const value: AuthContextType = {
@@ -127,6 +176,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     logout,
     checkAuth,
+    refreshSession,
   };
 
   return (

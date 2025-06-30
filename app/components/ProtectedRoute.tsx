@@ -24,7 +24,7 @@ export default function ProtectedRoute({
     }
   }, [user, isLoading, router]);
 
-  // Hiển thị loading khi đang kiểm tra authentication
+  // Show loading while checking authentication
   if (isLoading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '50vh' }}>
@@ -35,12 +35,12 @@ export default function ProtectedRoute({
     );
   }
 
-  // Redirect nếu chưa đăng nhập
+  // Redirect if not logged in
   if (!user) {
     return null;
   }
 
-  // Kiểm tra quyền truy cập
+  // Check access permissions
   if (requiredRole === 'scheduler' && user.role !== 'scheduler') {
     if (fallback) {
       return <>{fallback}</>;
@@ -51,17 +51,17 @@ export default function ProtectedRoute({
         <div className="row justify-content-center">
           <div className="col-md-6">
             <div className="alert alert-danger" role="alert">
-              <h4 className="alert-heading">Không có quyền truy cập!</h4>
+              <h4 className="alert-heading">No access permission!</h4>
               <p>
-                Bạn cần quyền <strong>Scheduler</strong> để truy cập trang này.
-                Vui lòng liên hệ quản trị viên để được cấp quyền.
+                You need <strong>Scheduler</strong> permission to access this page.
+                Please contact the administrator to get permission.
               </p>
               <hr />
               <button 
                 className="btn btn-outline-danger"
                 onClick={() => router.push('/')}
               >
-                Quay về trang chủ
+                Back to home page
               </button>
             </div>
           </div>

@@ -7,7 +7,7 @@ async function createDefaultUsers() {
   try {
     console.log('Creating default users...');
 
-    // Tạo user scheduler
+    // Create scheduler user
     const schedulerUser = await prisma.appUser.upsert({
       where: { username: 'scheduler' },
       update: {},
@@ -22,7 +22,7 @@ async function createDefaultUsers() {
 
     console.log('Created scheduler user:', schedulerUser.username);
 
-    // Tạo user viewer
+    // Create viewer user
     const viewerUser = await prisma.appUser.upsert({
       where: { username: 'viewer' },
       update: {},
@@ -37,7 +37,7 @@ async function createDefaultUsers() {
 
     console.log('Created viewer user:', viewerUser.username);
 
-    // Tạo admin user
+    // Create admin user
     const adminUser = await prisma.appUser.upsert({
       where: { username: 'admin' },
       update: {},

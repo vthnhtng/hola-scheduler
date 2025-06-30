@@ -193,14 +193,14 @@ async function assignLecturersForTimeSlot(
 
         // Assign lecturer first
         if (!session.lecturerId) {
-            // 1. Duyệt toàn bộ queue, tìm giảng viên có specialization trùng và chưa dùng quá mức
+            // 1. Iterate through entire queue, find lecturer with matching specialization and not exceeding limit
             let lecturerIndex = lecturerQueue.findIndex(l => {
                 const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
                 return l.specializations.some(s => s.subjectId === session.subjectId) &&
                        currentUsage < l.maxSessionsPerWeek;
             });
             
-            // 2. Nếu không có, duyệt lại queue, tìm giảng viên có category CT hoặc QS trùng với subject.category
+            // 2. If not found, iterate through queue again, find lecturer with CT or QS category matching subject.category
             if (lecturerIndex === -1 && (subject.category === 'CT' || subject.category === 'QS')) {
                 lecturerIndex = lecturerQueue.findIndex(l => {
                     const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
@@ -208,7 +208,7 @@ async function assignLecturersForTimeSlot(
                 });
             }
             
-            // 3. Nếu vẫn không có, assign lecturer đầu tiên available
+            // 3. If still not found, assign first available lecturer
             if (lecturerIndex === -1) {
                 lecturerIndex = lecturerQueue.findIndex(l => {
                     const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
@@ -410,14 +410,14 @@ async function processScheduleFile(filePath: string): Promise<string> {
 
                             // Assign lecturer first
                             if (!session.lecturerId) {
-                                // 1. Duyệt toàn bộ queue, tìm giảng viên có specialization trùng và chưa dùng quá mức
+                                // 1. Iterate through entire queue, find lecturer with matching specialization and not exceeding limit
                                 let lecturerIndex = lecturerQueue.findIndex(l => {
                                     const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
                                     return l.specializations.some(s => s.subjectId === session.subjectId) &&
                                            currentUsage < l.maxSessionsPerWeek;
                                 });
                                 
-                                // 2. Nếu không có, duyệt lại queue, tìm giảng viên có category CT hoặc QS trùng với subject.category
+                                // 2. If not found, iterate through queue again, find lecturer with CT or QS category matching subject.category
                                 if (lecturerIndex === -1 && (subject.category === 'CT' || subject.category === 'QS')) {
                                     lecturerIndex = lecturerQueue.findIndex(l => {
                                         const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
@@ -425,7 +425,7 @@ async function processScheduleFile(filePath: string): Promise<string> {
                                     });
                                 }
                                 
-                                // 3. Nếu vẫn không có, assign lecturer đầu tiên available
+                                // 3. If still not found, assign first available lecturer
                                 if (lecturerIndex === -1) {
                                     lecturerIndex = lecturerQueue.findIndex(l => {
                                         const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;

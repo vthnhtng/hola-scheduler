@@ -202,22 +202,22 @@ export async function generateSchedulesForTeams(teams: Team[], startDate: Date):
     const breaksPerWeekOptions = [3, 4];
     const holidays = await getHolidayDates(startDate, new Date(startDate.getFullYear(), 11, 31));
 
-    // Chuẩn bị queue riêng cho từng team
+    // Prepare separate queue for each team
     const teamQueues = [];
     for (const team of teams) {
-        // Lấy curriculum cho từng team
+        // Get curriculum for each team
         const curriculum = await prisma.curriculum.findFirst({
             where: { program: team.program },
             include: { subjects: true },
         });
         if (!curriculum) throw new Error(`No curriculum found for program ${team.program}`);
 
-        // Map và filter valid subjects
+        // Map and filter valid subjects
         const subjectRefs = curriculum.subjects
             .map(cs => subjectMap.get(cs.subjectId))
             .filter((s): s is Subject => !!s);
 
-        // Shuffle trước, sau đó topological sort
+        // Shuffle first, then topological sort
         const shuffledSubjects = shuffleSubjects(subjectRefs);
         const sortedSubjects = await topologicalSort(shuffledSubjects, subjectMap);
 
