@@ -43,16 +43,11 @@ function Header() {
 			</div>
 
 			<div className="d-flex align-items-center">
-				{!isLoading && user ? (
+				{isLoading ? (
+					<span className="me-2">Đang kiểm tra...</span>
+				) : user ? (
 					<>
-						<span className="me-2">
-							{user.fullName || user.username}
-							{user.role && (
-								<span className="badge bg-secondary ms-2">
-									{user.role === 'scheduler' ? 'Scheduler' : 'Viewer'}
-								</span>
-							)}
-						</span>
+						<span className="me-2">{user.fullName}</span>
 						<span>|</span>
 						<button 
 							className="btn btn-link text-dark d-flex align-items-center gap-2 text-decoration-none"

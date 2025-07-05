@@ -8,8 +8,10 @@ import Pagination from '../components/Pagination';
 import FormModal from '../components/FormModal';
 import DeleteModal from '../components/DeleteModal';
 import GridRow from '../components/GridRow';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { FaEdit, FaTrashAlt, FaLink } from 'react-icons/fa';
 import DynamicRows from '../components/DynamicRows';
+import { usePermissions } from '../hooks/usePermissions';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 interface Lecturer {
     id: number;
@@ -28,6 +30,7 @@ function LecturersPage() {
     const [page, setPage] = useState<number>(1);
     const [limit, setLimit] = useState<number>(10);
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     const faculties = [
         { value: 'CT', label: 'Chính trị' },
@@ -48,6 +51,8 @@ function LecturersPage() {
         totalPages: 1,
         totalCount: 0
     });
+
+    const { isScheduler } = usePermissions();
 
     const fetchLecturers = async (page: number, limit: number) => {
         try {
@@ -83,30 +88,26 @@ function LecturersPage() {
             <Header />
             <main className="d-flex justify-content-start align-items-start" style={{ minHeight: '100vh' }}>
                 <SideBar />
-                {loading ? (
-                    <div className="d-flex justify-content-center align-items-center" style={{ flex: 1 }}>
-                        <div className="spinner-border" style={{ width: '3rem', height: '3rem' }} role="status">
-                            <span className="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                ) : error ? (
+                <LoadingOverlay show={loading} text="Đang tải dữ liệu..." />
+                {(!loading && error) ? (
                     <p className="text-danger">Error: {error}</p>
-                ) : (
+                ) : (!loading && (
                     <div className="d-flex flex-column justify-content-center align-items-center" style={{ flex: 1 }}>
                         <div className="d-flex flex-column" style={{ width: 'calc(100% - 20px)', marginLeft: "20px" }}>
                             <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
-                                <h2 className="fw-bold text-uppercase">DANH SÁCH GIẢNG VIÊN</h2>
+                                <h2 className="page-title" style={{ fontSize: '2rem' }}>DANH SÁCH GIẢNG VIÊN</h2>
                                 <div className="d-flex gap-2" style={{ marginRight: "20px" }}>
                                     <FormModal
                                         title={'THÊM GIẢNG VIÊN'}
                                         button={
-                                        <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center">
+                                        <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center" disabled={!isScheduler}>
                                             THÊM GIẢNG VIÊN
                                         </button>}
                                         attributes={lecturerAttributes}
                                         record={null}
                                         formAction={'/api/lecturers'}
                                         formMethod='POST'
+                                        onLoadingChange={setIsLoading}
                                     />
                                 </div>
                             </div>
@@ -141,28 +142,30 @@ function LecturersPage() {
                                                                 <div key="edit">
                                                                     <FormModal
                                                                         title={'CHỈNH SỬA GIẢNG VIÊN'}
-                                                                        button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}><FaEdit /></button>}
+                                                                        button={<button className="btn btn-outline-success me-2 action-btn" onClick={() => handleClickAction(index)} disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaEdit /></button>}
                                                                         attributes={lecturerAttributes}
                                                                         record={lecturer}
                                                                         formAction={'/api/lecturers'}
                                                                         formMethod='PUT'
+                                                                        onLoadingChange={setIsLoading}
                                                                     />
                                                                 </div>,
                                                                 <div key="specialize">
                                                                     <DynamicRows
                                                                         title={'MÔN CHUYÊN SÂU'}
                                                                         attribute={{ name: 'subject', label: 'MÔN'}}
-                                                                        button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}>MÔN CHUYÊN SÂU</button>}
+                                                                        button={<button className="btn btn-outline-primary me-2 action-btn" onClick={() => handleClickAction(index)} disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaLink /></button>}
                                                                         getSelectionsUrl={'/api/getSubjectsByCategory?category=' + lecturer.faculty}
                                                                         getRowsUrl={'/api/getSubjectsByLecturer?lecturerId=' + lecturer.id}
                                                                         saveUrl={'/api/saveLecturerSpecializations'}
                                                                         targetId={lecturer.id.toString()}
+                                                                        onLoadingChange={setIsLoading}
                                                                     />
                                                                 </div>,
                                                                 <div key="delete">
                                                                     <DeleteModal
                                                                         title={'GIẢNG VIÊN'}
-                                                                        button={<button className="btn btn-outline-danger" onClick={() => handleClickAction(index)}><FaTrashAlt /></button>}
+                                                                        button={<button className="btn btn-outline-danger action-btn" onClick={() => handleClickAction(index)} disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaTrashAlt /></button>}
                                                                         record={lecturer}
                                                                         onClose={() => {}}
                                                                         formAction={'/api/lecturers'}
@@ -200,7 +203,7 @@ function LecturersPage() {
                             />
                         </div>
                     </div>
-                )}
+                ))}
             </main>
             <Footer />
         </>

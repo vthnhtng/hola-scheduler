@@ -15,12 +15,15 @@ interface DynamicRowsProps {
     getRowsUrl: string;
     saveUrl: string;
     targetId: string;
+    onLoadingChange?: (loading: boolean) => void;
+    onSaved?: () => void;
 }
 
-function DynamicRows({ title, attribute, button, getRowsUrl, saveUrl, getSelectionsUrl, targetId }: DynamicRowsProps) {
+function DynamicRows({ title, attribute, button, getRowsUrl, saveUrl, getSelectionsUrl, targetId, onLoadingChange, onSaved }: DynamicRowsProps) {
     const [selections, setSelections] = useState<{ value: string; label: string }[]>([]);
     const [rows, setRows] = useState<{ value: string; label: string }[]>([]);
     const [show, setShow] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const handleRemoveSpecificRow = (idx: number) => {
         setRows(rows.filter((_, i) => i !== idx));
@@ -31,22 +34,34 @@ function DynamicRows({ title, attribute, button, getRowsUrl, saveUrl, getSelecti
     }
 
     const handleSave = async () => {
-        const tableData = getTableData();
-        const response = await fetch(saveUrl, {
-            method: 'POST',
-            body: JSON.stringify({
-                "targetId": targetId,
-                "data": tableData
-            })
-        });
+        if (onLoadingChange) onLoadingChange(true);
+        setError(null);
+        try {
+            const tableData = rows
+                .filter(row => row.value && !isNaN(Number(row.value)))
+                .map(row => ({ [attribute.name]: String(Number(row.value)) }));
+            console.log('TableData gửi lên:', tableData);
+            const response = await fetch(saveUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    "targetId": targetId,
+                    "data": tableData
+                })
+            });
 
-        if (!response.ok) {
-            alert('Lỗi khi lưu dữ liệu');
-        } else {
-            alert('Lưu dữ liệu thành công');
+            if (response.ok) {
+                handleClose();
+                if (onSaved) onSaved();
+            } else {
+                const res = await response.json();
+                setError(res?.error || 'Lưu thất bại');
+            }
+        } catch (err) {
+            setError('Lỗi khi lưu dữ liệu');
+        } finally {
+            if (onLoadingChange) onLoadingChange(false);
         }
-
-        handleClose();
     }
 
     const handleClose = () => {
@@ -65,7 +80,7 @@ function DynamicRows({ title, attribute, button, getRowsUrl, saveUrl, getSelecti
             }
         ];
 
-        data.data.map((item: { id: string; name: string }) => {
+        (Array.isArray(data.data) ? data.data : []).map((item: { id: string; name: string }) => {
             selections.push({
                 value: item.id,
                 label: item.name
@@ -87,12 +102,16 @@ function DynamicRows({ title, attribute, button, getRowsUrl, saveUrl, getSelecti
         setShow(true);
     }
 
+    const handleSelectChange = (idx: number, value: string) => {
+        setRows(prevRows => prevRows.map((row, i) => i === idx ? { ...row, value } : row));
+    };
+
     const renderRow = (attribute: { name: string; label: string }, item: { value: string; label: string }) => {
         return (
             <Form.Group className="mb-3" controlId={attribute.name}>
                 <Form.Select name={attribute.name} defaultValue={item.value ? item.value : ''}>
                     {selections.map((item) => (
-                        <option value={item.value}>{item.label}</option>
+                        <option key={item.value} value={item.value}>{item.label}</option>
                     ))}
                 </Form.Select>
             </Form.Group>
@@ -108,9 +127,9 @@ function DynamicRows({ title, attribute, button, getRowsUrl, saveUrl, getSelecti
 
         for (let i = 0; i < rows.length; i++) {
             const select = rows[i].querySelector(`select[name="${attribute.name}"]`) as HTMLSelectElement;
-            if (select) {
+            if (select && select.value && !isNaN(Number(select.value))) {
                 data.push({
-                    [attribute.name]: select.value
+                    [attribute.name]: String(Number(select.value))
                 });
             }
         }
@@ -126,60 +145,77 @@ function DynamicRows({ title, attribute, button, getRowsUrl, saveUrl, getSelecti
                 </div>
             </div>
             <Modal show={show} onHide={handleClose} centered>
-                <div className="row clearfix"
-                    style={{
-                        padding: '20px',
-                    }}
-                >
-                    <h1>{title}</h1>
-                    <div className="col-md-12 column">
-                        <div
-                            style={{
-                                maxHeight: '80vh',
-                                overflowY: 'auto'
-                            }}
-                        >
-                            <table className="table table-bordered table-hover" id={'dynamic-table-' + targetId}>
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>{attribute.label}</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {rows.map((item, idx) => (
-                                        <tr key={idx}>
-                                            <td>{idx + 1}</td>
-                                            <td>
-                                                {renderRow(attribute, item)}
-                                            </td>
-                                            <td>
-                                                <button
-                                                    className="btn btn-outline-danger btn-sm"
-                                                    onClick={() => handleRemoveSpecificRow(idx)}
-                                                >
-                                                    Xóa
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table> 
-                        </div>
-                        <div className="d-flex justify-content-between">
-                            <button onClick={handleAddRow} className="btn btn-primary">
-                                Thêm
-                            </button>
-                            <button
-                                onClick={() => handleSave()}
-                                className="btn btn-success"
-                            >
-                                Lưu
-                            </button>
+                <Modal.Header closeButton style={{ backgroundColor: '#28a745' }}>
+                    <Modal.Title>{title}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                    {error && <div style={{color: 'red', marginBottom: 8}}>{error}</div>}
+                    <div className="row clearfix" style={{ padding: '0' }}>
+                        <div className="col-md-12 column">
+                            <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                                <div style={{ fontWeight: 600, display: 'flex', gap: 12, marginBottom: 8 }}>
+                                    <div style={{ width: 32, textAlign: 'center' }}>#</div>
+                                    <div style={{ flex: 1 }}>MÔN</div>
+                                    <div style={{ width: 90, textAlign: 'center' }}>THAO TÁC</div>
+                                </div>
+                                {rows.map((item, idx) => (
+                                    <div key={idx} className="d-flex align-items-center mb-2" style={{ gap: 12 }}>
+                                        <div style={{ width: 32, textAlign: 'center' }}>{idx + 1}</div>
+                                        <select
+                                            name={attribute.name}
+                                            value={item.value ? item.value : ''}
+                                            onChange={e => handleSelectChange(idx, e.target.value)}
+                                            style={{
+                                                flex: 1,
+                                                height: 44,
+                                                fontSize: 16,
+                                                padding: '2px 16px',
+                                                borderRadius: 8,
+                                                border: '1px solid #ced4da',
+                                                background: '#fff',
+                                                boxSizing: 'border-box',
+                                                marginRight: 0
+                                            }}
+                                        >
+                                            {selections.map((item) => (
+                                                <option key={item.value} value={item.value}>{item.label}</option>
+                                            ))}
+                                        </select>
+                                        <button
+                                            className="btn btn-outline-danger btn-sm"
+                                            style={{
+                                                minWidth: 80,
+                                                height: 44,
+                                                fontSize: 16,
+                                                padding: 0,
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                borderRadius: 8
+                                            }}
+                                            onClick={() => handleRemoveSpecificRow(idx)}
+                                        >
+                                            Xóa
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="d-flex justify-content-between">
+                                <button onClick={handleAddRow} className="btn btn-primary">
+                                    Thêm
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </Modal.Body>
+                <Modal.Footer>
+                    <button className="btn btn-secondary" onClick={handleClose} style={{ backgroundColor: '#28a745', borderColor: '#28a745', color: '#fff' }}>
+                        Đóng
+                    </button>
+                    <button onClick={handleSave} className="btn btn-success">
+                        Lưu
+                    </button>
+                </Modal.Footer>
             </Modal>
         </>
     );

@@ -8,8 +8,10 @@ import Pagination from '../components/Pagination';
 import FormModal from '../components/FormModal';
 import DeleteModal from '../components/DeleteModal';
 import GridRow from '../components/GridRow';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { FaEdit, FaTrashAlt, FaLink } from 'react-icons/fa';
 import DynamicRows from '../components/DynamicRows';
+import { usePermissions } from '../hooks/usePermissions';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 interface Curriculum {
     id: number;
@@ -26,6 +28,7 @@ function CurriculumsPage() {
     const [page, setPage] = useState<number>(1);
     const [limit, setLimit] = useState<number>(10);
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     const programMappings = [
         { value: 'DH', label: 'Đại học' },
@@ -44,6 +47,8 @@ function CurriculumsPage() {
         totalPages: 1,
         totalCount: 0
     });
+
+    const { isScheduler } = usePermissions();
 
     const fetchCurriculums = async (page: number, limit: number) => {
         try {
@@ -64,10 +69,10 @@ function CurriculumsPage() {
 
     useEffect(() => {
         fetchCurriculums(page, limit);
-    }, []);
+    }, [page, limit]);
 
-    const changePage = (page: number) => {
-        fetchCurriculums(page, limit);
+    const changePage = (newPage: number) => {
+        setPage(newPage);
     };
 
     const handleClickAction = (index: number) => {
@@ -79,24 +84,19 @@ function CurriculumsPage() {
             <Header />
             <main className="d-flex justify-content-start align-items-start" style={{ minHeight: '100vh' }}>
                 <SideBar />
-                {loading ? (
-                    <div className="d-flex justify-content-center align-items-center" style={{ flex: 1 }}>
-                        <div className="spinner-border" style={{ width: '3rem', height: '3rem' }} role="status">
-                            <span className="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                ) : error ? (
+                <LoadingOverlay show={loading} text="Đang tải dữ liệu..." />
+                {(!loading && error) ? (
                     <p className="text-danger">Error: {error}</p>
-                ) : (
+                ) : (!loading && (
                     <div className="d-flex flex-column justify-content-center align-items-center" style={{ flex: 1 }}>
                         <div className="d-flex flex-column" style={{ width: 'calc(100% - 20px)', marginLeft: "20px" }}>
                             <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
-                                <h2 className="fw-bold text-uppercase">DANH SÁCH CHƯƠNG TRÌNH</h2>
-                                {/* <div className="d-flex gap-2" style={{ marginRight: "20px" }}>
+                                <h2 className="page-title" style={{ fontSize: '2rem' }}>DANH SÁCH CHƯƠNG TRÌNH ĐÀO TẠO</h2>
+                                <div className="d-flex gap-2" style={{ marginRight: "20px" }}>
                                     <FormModal
                                         title={'THÊM CHƯƠNG TRÌNH'}
                                         button={
-                                        <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center">
+                                        <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center" disabled={!isScheduler}>
                                             THÊM CHƯƠNG TRÌNH
                                         </button>}
                                         attributes={curriculumAttributes}
@@ -104,7 +104,7 @@ function CurriculumsPage() {
                                         formAction={'/api/curriculums'}
                                         formMethod='POST'
                                     />
-                                </div> */}
+                                </div>
                             </div>
                             <div
                                 className="d-flex flex-column"
@@ -133,7 +133,35 @@ function CurriculumsPage() {
                                                             attributes={curriculumAttributes}
                                                             record={curriculum}
                                                             index={index + (pagination.currentPage - 1) * 10}
-                                                            actions={[]}
+                                                            actions={[
+                                                                <FormModal
+                                                                    key="edit"
+                                                                    title={'SỬA CHƯƠNG TRÌNH'}
+                                                                    button={<button className="btn btn-outline-success me-2 action-btn" title="Sửa" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaEdit /></button>}
+                                                                    attributes={curriculumAttributes}
+                                                                    record={curriculum}
+                                                                    formAction={'/api/curriculums'}
+                                                                    formMethod='PUT'
+                                                                />,
+                                                                <DynamicRows
+                                                                    key="link"
+                                                                    title={'LIÊN KẾT MÔN HỌC'}
+                                                                    attribute={{ name: 'subject', label: 'MÔN HỌC'}}
+                                                                    button={<button className="btn btn-outline-primary me-2 action-btn" title="Liên kết môn học" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaLink /></button>}
+                                                                    getSelectionsUrl={'/api/getSubjectsByCategory?category=all'}
+                                                                    getRowsUrl={'/api/curriculumSubjects?curriculumId=' + curriculum.id}
+                                                                    saveUrl={'/api/saveCurriculumSubjects'}
+                                                                    targetId={curriculum.id.toString()}
+                                                                />,
+                                                                <DeleteModal
+                                                                    key="delete"
+                                                                    title={'CHƯƠNG TRÌNH'}
+                                                                    button={<button className="btn btn-outline-danger action-btn" title="Xóa" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaTrashAlt /></button>}
+                                                                    record={curriculum}
+                                                                    onClose={() => fetchCurriculums(page, limit)}
+                                                                    formAction={'/api/curriculums'}
+                                                                />
+                                                            ]}
                                                         />
                                                     )
                                                 )}
@@ -150,7 +178,7 @@ function CurriculumsPage() {
                                             </>
                                         ) : (
                                             <tr>
-                                                <td colSpan={curriculumAttributes.length + 2} className="text-left">Chưa có dữ liệu</td>
+                                                <td colSpan={curriculumAttributes.length + 2} className="text-center">Chưa có dữ liệu</td>
                                             </tr>
                                         )}
                                     </tbody>
@@ -165,7 +193,7 @@ function CurriculumsPage() {
                             />
                         </div>
                     </div>
-                )}
+                ))}
             </main>
             <Footer />
         </>

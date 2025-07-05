@@ -1,0 +1,32 @@
+[
+  {
+    "week": 3,
+    "teamId": 7,
+    "subjectId": 11,
+    "date": "2025-07-15",
+    "dayOfWeek": "Tue",
+    "session": "morning",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 3,
+    "teamId": 7,
+    "subjectId": null,
+    "date": "2025-07-15",
+    "dayOfWeek": "Tue",
+    "session": "afternoon",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 3,
+    "teamId": 7,
+    "subjectId": null,
+    "date": "2025-07-15",
+    "dayOfWeek": "Tue",
+    "session": "evening",
+    "lecturerId": null,
+    "locationId": null
+  }
+]

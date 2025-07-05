@@ -270,7 +270,7 @@ function TimeTable() {
     return (
         <div className="w-full bg-white rounded-lg shadow-lg" ref={tableRef}>
             <div className="p-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">Team Schedule</h2>
+                <h2 className="page-title" style={{ fontSize: '2rem' }}>LỊCH GIẢNG DẠY</h2>
                 
                 {dateRange && (
                     <div className="mb-4 text-sm text-gray-600">

@@ -10,6 +10,8 @@ import FormModal from '../components/FormModal';
 import DeleteModal from '../components/DeleteModal';
 import GridRow from '../components/GridRow';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { usePermissions } from '../hooks/usePermissions';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 interface User {
     id: number;
@@ -45,6 +47,10 @@ function UsersPage() {
         totalCount: 0
     });
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
+    const [editUser, setEditUser] = useState<User | null>(null);
+    const [deleteUser, setDeleteUser] = useState<User | null>(null);
+    const { isScheduler, userRole } = usePermissions();
+    const [isLoading, setIsLoading] = useState(false);
 
     const fetchUsers = async (page: number = 1) => {
         try {
@@ -65,7 +71,8 @@ function UsersPage() {
 
     useEffect(() => {
         fetchUsers();
-    }, []);
+        console.log('User role:', userRole, 'isScheduler:', isScheduler);
+    }, [userRole, isScheduler]);
 
     const handlePageChange = (page: number) => {
         fetchUsers(page);
@@ -82,26 +89,21 @@ function UsersPage() {
     return (
         <>
             <Header />
-            <main className="d-flex justify-content-between align-items-start" style={{ minHeight: '70vh' }}>
+            <main className="d-flex justify-content-start align-items-start" style={{ minHeight: '100vh' }}>
                 <SideBar />
-                {loading ? (
-                    <div className="d-flex justify-content-center align-items-center" style={{ flex: 1 }}>
-                        <div className="spinner-border" style={{ width: '3rem', height: '3rem' }} role="status">
-                            <span className="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                ) : error ? (
+                <LoadingOverlay show={loading} text="Đang tải dữ liệu..." />
+                {(!loading && error) ? (
                     <p className="text-danger">Error: {error}</p>
-                ) : (
+                ) : (!loading && (
                     <div className="d-flex flex-column justify-content-center align-items-center" style={{ flex: 1 }}>
                         <div className="d-flex flex-column" style={{ width: 'calc(100% - 20px)', marginLeft: "20px" }}>
                             <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
-                                <h2 className="fw-bold text-uppercase">DANH SÁCH NGƯỜI DÙNG</h2>
+                                <h2 className="page-title" style={{ fontSize: '2rem' }}>DANH SÁCH NGƯỜI DÙNG</h2>
                                 <div className="d-flex gap-2" style={{ marginRight: "20px" }}>
                                     <FormModal
                                         title={'THÊM NGƯỜI DÙNG'}
                                         button={
-                                            <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center">
+                                            <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}>
                                                 THÊM NGƯỜI DÙNG
                                             </button>
                                         }
@@ -109,6 +111,7 @@ function UsersPage() {
                                         record={null}
                                         formAction={'/api/users'}
                                         formMethod='POST'
+                                        onLoadingChange={setIsLoading}
                                     />
                                 </div>
                             </div>
@@ -131,28 +134,27 @@ function UsersPage() {
                                                         <GridRow
                                                             key={index + (pagination.currentPage - 1) * 10}
                                                             attributes={userAttributes}
-                                                            record={user}
+                                                            record={{ ...user, _showPlainPassword: true }}
                                                             index={index + (pagination.currentPage - 1) * 10}
                                                             actions={[
-                                                                <div key="edit">
-                                                                    <FormModal
-                                                                        title={'CHỈNH SỬA NGƯỜI DÙNG'}
-                                                                        button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}><FaEdit /></button>}
-                                                                        attributes={userAttributes}
-                                                                        record={user}
-                                                                        formAction={'/api/users'}
-                                                                        formMethod='PUT'
-                                                                    />
-                                                                </div>,
-                                                                <div key="delete">
-                                                                    <DeleteModal
-                                                                        title={'NGƯỜI DÙNG'}
-                                                                        button={<button className="btn btn-outline-danger" onClick={() => handleClickAction(index)}><FaTrashAlt /></button>}
-                                                                        record={user}
-                                                                        onClose={() => {}}
-                                                                        formAction={'/api/users'}
-                                                                    />
-                                                                </div>
+                                                                <button
+                                                                    key="edit"
+                                                                    className="btn btn-outline-success me-2 d-flex align-items-center justify-content-center"
+                                                                    style={{ minWidth: 40, height: 40, borderRadius: 8, fontSize: 18, padding: 0, pointerEvents: !isScheduler ? 'none' : 'auto' }}
+                                                                    onClick={() => setEditUser(user)}
+                                                                    disabled={!isScheduler}
+                                                                >
+                                                                    <FaEdit />
+                                                                </button>,
+                                                                <button
+                                                                    key="delete"
+                                                                    className="btn btn-outline-danger d-flex align-items-center justify-content-center"
+                                                                    style={{ minWidth: 40, height: 40, borderRadius: 8, fontSize: 18, padding: 0, pointerEvents: !isScheduler ? 'none' : 'auto' }}
+                                                                    onClick={() => setDeleteUser(user)}
+                                                                    disabled={!isScheduler}
+                                                                >
+                                                                    <FaTrashAlt />
+                                                                </button>
                                                             ]}
                                                         />
                                                     )
@@ -184,8 +186,34 @@ function UsersPage() {
                                 onPageChange={handlePageChange}
                             />
                         </div>
+                        {/* Modal sửa user */}
+                        {editUser && (
+                            <FormModal
+                                title={'SỬA NGƯỜI DÙNG'}
+                                button={<></>}
+                                attributes={userAttributes}
+                                record={editUser}
+                                formAction={'/api/users'}
+                                formMethod='PUT'
+                                onLoadingChange={setIsLoading}
+                                show={!!editUser}
+                                onClose={() => setEditUser(null)}
+                            />
+                        )}
+                        {/* Modal xóa user */}
+                        {deleteUser && (
+                            <DeleteModal
+                                title={'NGƯỜI DÙNG'}
+                                button={<></>}
+                                record={deleteUser}
+                                onClose={() => setDeleteUser(null)}
+                                formAction={'/api/users'}
+                                show={Boolean(deleteUser)}
+                            />
+                        )}
+                        <LoadingOverlay show={isLoading} text="Đang cập nhật dữ liệu..." />
                     </div>
-                )}
+                ))}
             </main>
             <Footer />
         </>

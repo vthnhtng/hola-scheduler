@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 				fullName: true,
 				email: true,
 				role: true,
-				// Don't return password
+				password: true,
 			},
 		});
 
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
                 fullName: true,
                 email: true,
                 role: true,
-                // Don't return password
+                password: true,
             },
         });
 
@@ -141,7 +141,7 @@ export async function PUT(request: Request) {
                 fullName: true,
                 email: true,
                 role: true,
-                // Don't return password
+                password: true,
             },
         });
 
@@ -175,7 +175,7 @@ export async function DELETE(request: Request) {
                 fullName: true,
                 email: true,
                 role: true,
-                // Don't return password
+                password: true,
             },
         });
 

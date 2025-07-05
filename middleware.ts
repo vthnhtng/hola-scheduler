@@ -112,7 +112,7 @@ export async function middleware(request: NextRequest) {
       console.log(`[MIDDLEWARE] Auth route detected: ${pathname}`);
       
       // For login API, allow access without authentication
-      if (pathname === '/api/auth/login' && method === 'POST') {
+      if (pathname === '/api/auth' && method === 'POST') {
         console.log(`[MIDDLEWARE] Login API - allowing access without authentication`);
         return addSecurityHeaders(NextResponse.next());
       }

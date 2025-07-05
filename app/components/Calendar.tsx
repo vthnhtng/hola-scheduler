@@ -10,7 +10,6 @@ interface CalendarProps {
 export default function Calendar({ onDateSelect, selectedDates = new Set(), holidays = new Set() }: CalendarProps) {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [hoveredDate, setHoveredDate] = useState<string | null>(null);
-    const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(false);
 
     const nextMonth = () => {
@@ -21,23 +20,11 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
         setCurrentMonth(subMonths(currentMonth, 1));
     };
 
-    useEffect(() => {
-        fetchHolidays();
-    }, [currentMonth]);
-
-    const fetchHolidays = () => {
-        fetch('/api/holiday')
-            .then(res => res.json())
-            .then(data => {
-                setHolidaySet(new Set(data.map((h: { date: string }) => h.date)));
-            });
-    };
-
     const handleDateClick = async (dateObj: Date) => {
         const dateStr = format(dateObj, 'yyyy-MM-dd');
         setIsLoading(true);
         try {
-            if (holidaySet.has(dateStr)) {
+            if (holidays.has(dateStr)) {
                 const res = await fetch(`/api/holiday?date=${dateStr}`, { method: 'DELETE' });
                 const resData = await res.text();
             } else {
@@ -48,7 +35,6 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
                 });
                 const resData = await res.json();
             }
-            fetchHolidays();
         } finally {
             setIsLoading(false);
         }
@@ -147,7 +133,7 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
             const formattedDate = format(day, 'd');
             const fullDateStr = format(day, 'yyyy-MM-dd');
             const isSelected = selectedDates.has(fullDateStr);
-            const isHoliday = holidaySet.has(fullDateStr);
+            const isHoliday = holidays.has(fullDateStr);
             const isCurrentDay = isToday(day);
             const isCurrentMonth = isSameMonth(day, monthStart);
             const isHovered = hoveredDate === fullDateStr;
@@ -155,7 +141,7 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
             days.push(
                 <div
                     key={fullDateStr}
-                    onClick={() => isCurrentMonth && handleDateClick(thisDay)}
+                    onClick={() => isCurrentMonth && onDateSelect && onDateSelect(thisDay)}
                     onMouseEnter={() => isCurrentMonth && setHoveredDate(fullDateStr)}
                     onMouseLeave={() => isCurrentMonth && setHoveredDate(null)}
                     style={{
@@ -168,7 +154,7 @@ export default function Calendar({ onDateSelect, selectedDates = new Set(), holi
                             ? '#91cc6b'
                             : (isHovered && isCurrentMonth ? '#dbdbdb' : 'transparent'),
                         borderRadius: (isHoliday || isSelected || (isHovered && isCurrentMonth)) ? '50%' : 'none',
-                        cursor: isCurrentMonth ? 'pointer' : 'default',
+                        cursor: isCurrentMonth && onDateSelect ? 'pointer' : 'default',
                         minHeight: 40,
                         fontSize: 'clamp(0.95rem, 1.5vw, 1.15rem)',
                         margin: '2.5px 0',

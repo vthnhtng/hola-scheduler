@@ -5,6 +5,8 @@ import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Modal from 'react-bootstrap/Modal';
 import { FormValidator } from '@/model/form/form-validator';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import React from 'react';
 
 interface FormModalProps {
     title: string;
@@ -13,6 +15,9 @@ interface FormModalProps {
     record: Record<string, any> | null;
     formAction: string;
     formMethod: 'POST' | 'PUT';
+    show?: boolean;
+    onClose?: () => void;
+    onLoadingChange?: (loading: boolean) => void;
 }
 
 function FormModal({
@@ -22,11 +27,16 @@ function FormModal({
     record,
     formAction,
     formMethod,
+    show: showProp,
+    onClose,
+    onLoadingChange,
 }: FormModalProps) {
-    const [show, setShow] = useState(false);
+    const [internalShow, setInternalShow] = useState(false);
+    const show = typeof showProp === 'boolean' ? showProp : internalShow;
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const formRef = useRef<HTMLFormElement>(null);
+    const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
         if (show) {
@@ -35,15 +45,17 @@ function FormModal({
     }, [show]);
 
     const handleClose = () => {
-        setShow(false);
+        if (onClose) onClose();
+        else setInternalShow(false);
     };
 
     const handleShow = () => {
-        setShow(true);
+        setInternalShow(true);
     };
 
     const handleSave = async () => {
         setSaving(true);
+        if (onLoadingChange) onLoadingChange(true);
         setMessage(null);
 
         try {
@@ -90,6 +102,7 @@ function FormModal({
             setMessage('Không thể lưu: ' + err);
         } finally {
             setSaving(false);
+            if (onLoadingChange) onLoadingChange(false);
         }
     };
 
@@ -167,12 +180,28 @@ function FormModal({
                 return (
                     <Form.Group key={index} className="mb-3" controlId={name}>
                         <Form.Label>{label}</Form.Label>
-                        <Form.Control
-                            name={name}
-                            type="text"
-                            placeholder={`Nhập ${label}`}
-                            defaultValue={record?.[name] || ''}
-                        />
+                        <div style={{ position: 'relative' }}>
+                            <Form.Control
+                                name={name}
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder={`Nhập ${label}`}
+                                defaultValue={record?.[name] || ''}
+                                autoComplete="new-password"
+                            />
+                            <span
+                                onClick={() => setShowPassword((prev) => !prev)}
+                                style={{
+                                    position: 'absolute',
+                                    right: 10,
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    cursor: 'pointer',
+                                    zIndex: 2
+                                }}
+                            >
+                                {showPassword ? <FaEyeSlash /> : <FaEye />}
+                            </span>
+                        </div>
                     </Form.Group>
                 );
 
@@ -182,12 +211,23 @@ function FormModal({
     };
 
     return (
-        <>  
-            <div className="d-flex align-items-center" style={{ marginBottom: '10px' }}>       
-                <div onClick={() => setShow(true)}>
+        <>
+            {typeof showProp !== 'boolean' && (
+                <div
+                    onClick={e => {
+                        if (
+                            React.isValidElement(button) &&
+                            (button.props.disabled || button.props['aria-disabled'])
+                        ) {
+                            e.preventDefault();
+                            return;
+                        }
+                        setInternalShow(true);
+                    }}
+                >
                     {button}
                 </div>
-            </div>
+            )}
             <Modal show={show} onHide={handleClose} centered>
                 <Modal.Header closeButton style={{ backgroundColor: '#28a745' }}>
                     <Modal.Title>{title}</Modal.Title>

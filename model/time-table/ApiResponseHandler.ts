@@ -29,16 +29,17 @@ export class ApiResponseHandler {
     }
 
     static getDateRange(response: any): DateRange {
-        const fileNames = response.data.processedFiles;
-
+        const fileNames = response?.data?.processedFiles;
+        if (!Array.isArray(fileNames) || fileNames.length === 0) {
+            const now = new Date();
+            return { from: now, to: now };
+        }
         const dateRanges = fileNames.map((fileName: string) => {
             const dateRange = fileName.replace('.json', '').split('_');
             const from = new Date(dateRange[1]);
             const to = new Date(dateRange[2]);
-            
-            return {from, to};
+            return { from, to };
         });
-
-        return {from: dateRanges[0].from, to: dateRanges[dateRanges.length - 1].to}
+        return { from: dateRanges[0].from, to: dateRanges[dateRanges.length - 1].to };
     }    
 }

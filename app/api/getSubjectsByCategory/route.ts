@@ -11,11 +11,16 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ message: 'Phương thức không hợp lệ' }, { status: 405 })
     }
 
-	try {
+    try {
         const category = searchParams.get('category') || '';
 
+        if (category === 'all') {
+            const subjects = await prisma.subject.findMany();
+            return NextResponse.json({ data: subjects });
+        }
+
         if (category !== 'CT' && category !== 'QS') {
-            return NextResponse.json({ error: 'Loại không hợp lệ' }, { status: 400 });
+            return NextResponse.json({ data: [] });
         }
 
         const subjects = await prisma.subject.findMany({
@@ -27,10 +32,10 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             data: subjects
         });
-	} catch (error) {
-		return NextResponse.json({ error: 'Có lỗi xảy ra khi lấy danh sách môn học theo loại' }, { status: 500 });
-	} finally {
-		await prisma.$disconnect();
-	}
+    } catch (error) {
+        return NextResponse.json({ data: [] });
+    } finally {
+        await prisma.$disconnect();
+    }
 }
 

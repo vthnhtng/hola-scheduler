@@ -31,12 +31,35 @@ export default function GridRow({
                     ? <td key={attribute.name}></td>
                     : attribute.type === 'select'
                         ? <td key={attribute.name}>{getLabelByValue(record[attribute.name], attribute.selections)}</td>
-                        : <td key={attribute.name}>{record[attribute.name]}</td>
+                        : attribute.type === 'password'
+                            ? <td key={attribute.name} style={{ width: 100, textAlign: 'center' }}>
+                                <input
+                                    type="password"
+                                    value={record[attribute.name] || ''}
+                                    readOnly
+                                    style={{
+                                        fontSize: 20,
+                                        padding: '2px 0',
+                                        border: 'none',
+                                        background: 'transparent',
+                                        width: 70,
+                                        letterSpacing: 2,
+                                        outline: 'none',
+                                        fontFamily: 'inherit',
+                                        pointerEvents: 'none',
+                                        textAlign: 'center',
+                                        display: 'inline-block',
+                                    }}
+                                />
+                              </td>
+                            : <td key={attribute.name}>{record[attribute.name]}</td>
             ))}
-            <td className='d-flex w-auto' style={{ height: '70px'}}>
-                {Object.keys(record).length === 0 ? null : actions.map((action) => (
-                    action
-                ))}
+            <td className='w-auto' style={{ height: '70px'}}>
+                {Object.keys(record).length === 0 ? null : (
+                    <div className="action-group">
+                        {actions.map((action) => action)}
+                    </div>
+                )}
             </td>
         </tr>
     )

@@ -9,6 +9,7 @@ import FormModal from '../components/FormModal';
 import DeleteModal from '../components/DeleteModal';
 import GridRow from '../components/GridRow';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 interface Team {
     id: number;
@@ -26,6 +27,7 @@ function TeamsPage() {
     const [page, setPage] = useState<number>(1);
     const [limit, setLimit] = useState<number>(10);
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     const programs = [
         { value: 'CD', label: 'Cao đẳng' },
@@ -80,19 +82,14 @@ function TeamsPage() {
             <Header />
             <main className="d-flex justify-content-start align-items-start" style={{ minHeight: '100vh' }}>
                 <SideBar />
-                {loading ? (
-                    <div className="d-flex justify-content-center align-items-center" style={{ flex: 1 }}>
-                        <div className="spinner-border" style={{ width: '3rem', height: '3rem' }} role="status">
-                            <span className="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                ) : error ? (
+                <LoadingOverlay show={loading} text="Đang tải dữ liệu..." />
+                {(!loading && error) ? (
                     <p className="text-danger">Error: {error}</p>
-                ) : (
+                ) : (!loading && (
                     <div className="d-flex flex-column justify-content-center align-items-center" style={{ flex: 1 }}>
                         <div className="d-flex flex-column" style={{ width: 'calc(100% - 20px)', marginLeft: "20px" }}>
                             <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
-                                <h2 className="fw-bold text-uppercase">DANH SÁCH GIẢNG VIÊN</h2>
+                                <h2 className="fw-bold text-uppercase" style={{ fontSize: '2.2rem' }}>DANH SÁCH ĐẠI ĐỘI</h2>
                                 <div className="d-flex gap-2" style={{ marginRight: "20px" }}>
                                     <FormModal
                                         title={'THÊM ĐẠI ĐỘI'}
@@ -135,25 +132,23 @@ function TeamsPage() {
                                                             record={team}
                                                             index={index + (pagination.currentPage - 1) * 10}
                                                             actions={[
-                                                                <div key="edit">
-                                                                    <FormModal
-                                                                        title={'CHỈNH SỬA ĐẠI ĐỘI'}
-                                                                        button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}><FaEdit /></button>}
-                                                                        attributes={teamAttributes}
-                                                                        record={team}
-                                                                        formAction={'/api/teams'}
-                                                                        formMethod='PUT'
-                                                                    />
-                                                                </div>,
-                                                                <div key="delete">
-                                                                    <DeleteModal
-                                                                        title={'ĐẠI ĐỘI'}
-                                                                        button={<button className="btn btn-outline-danger" onClick={() => handleClickAction(index)}><FaTrashAlt /></button>}
-                                                                        record={team}
-                                                                        onClose={() => {}}
-                                                                        formAction={'/api/teams'}
-                                                                    />
-                                                                </div>
+                                                                <FormModal
+                                                                    key="edit"
+                                                                    title={'SỬA ĐỘI'}
+                                                                    button={<button className="btn btn-outline-success me-2 action-btn" onClick={() => handleClickAction(index)} title="Sửa"><FaEdit /></button>}
+                                                                    attributes={teamAttributes}
+                                                                    record={team}
+                                                                    formAction={'/api/teams'}
+                                                                    formMethod='PUT'
+                                                                />,
+                                                                <DeleteModal
+                                                                    key="delete"
+                                                                    title={'ĐỘI'}
+                                                                    button={<button className="btn btn-outline-danger action-btn" onClick={() => handleClickAction(index)} title="Xóa"><FaTrashAlt /></button>}
+                                                                    record={team}
+                                                                    onClose={() => fetchTeams(page, limit)}
+                                                                    formAction={'/api/teams'}
+                                                                />
                                                             ]}
                                                         />
                                                     )
@@ -186,7 +181,7 @@ function TeamsPage() {
                             />
                         </div>
                     </div>
-                )}
+                ))}
             </main>
             <Footer />
         </>

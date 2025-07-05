@@ -76,4 +76,142 @@
     min-height: 44px;
     min-width: 44px;
   }
+}
+
+/* Đảm bảo cell chứa action luôn căn giữa và các nút nằm ngang đều nhau */
+.table td:last-child, .table th:last-child {
+  vertical-align: middle !important;
+  text-align: center;
+  gap: 0;
+}
+
+/* Thêm flex cho group chứa các action */
+.action-group {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 12px;
+  height: 100%;
+}
+
+.action-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  max-width: 44px;
+  max-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  padding: 0;
+  font-size: 1.4rem;
+  box-sizing: border-box;
+  line-height: 1;
+}
+
+.action-btn svg {
+  display: block;
+  margin: 0 auto;
+  line-height: 1;
+}
+
+/* Loại bỏ border bảng trong modal CRUD link */
+.modal .table, .modal .table th, .modal .table td {
+  border: none !important;
+  background: transparent !important;
+}
+
+/* Căn thẳng hàng select và nút Xóa trong bảng modal CRUD link */
+.modal .table td {
+  vertical-align: middle !important;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* Flex cho cell chứa select và button */
+.modal .table tr > td:nth-child(2),
+.modal .table tr > td:nth-child(3) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+}
+
+.modal .table select {
+  height: 44px;
+  padding: 8px 12px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  margin: 0;
+  display: block;
+}
+
+.modal .table .btn {
+  height: 44px;
+  min-width: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.row-flex {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.row-flex select {
+  height: 44px;
+  padding: 8px 12px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  margin: 0;
+}
+.row-flex .btn {
+  height: 44px;
+  min-width: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.cell-select, .cell-btn {
+  vertical-align: middle !important;
+}
+.cell-select select {
+  height: 44px;
+  padding: 8px 12px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  margin: 0;
+}
+.cell-btn .btn {
+  height: 44px;
+  min-width: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.page-title {
+  font-family: inherit;
+  font-size: 2rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 1.5rem;
+  color: #222;
 } 

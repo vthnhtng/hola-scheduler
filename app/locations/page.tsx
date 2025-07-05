@@ -8,8 +8,10 @@ import Pagination from '../components/Pagination';
 import FormModal from '../components/FormModal';
 import DeleteModal from '../components/DeleteModal';
 import GridRow from '../components/GridRow';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { FaEdit, FaTrashAlt, FaLink } from 'react-icons/fa';
 import DynamicRows from '../components/DynamicRows';
+import { usePermissions } from '../hooks/usePermissions';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 interface Location {
     id: number;
@@ -27,6 +29,7 @@ function LocationsPage() {
     const [page, setPage] = useState<number>(1);
     const [limit, setLimit] = useState<number>(10);
     const [selectedRow, setSelectedRow] = useState<number | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     const faculties = [
         { value: 'CT', label: 'Chính trị' },
@@ -46,6 +49,8 @@ function LocationsPage() {
         totalPages: 1,
         totalCount: 0
     });
+
+    const { isScheduler } = usePermissions();
 
     const fetchLocations = async (page: number, limit: number) => {
         try {
@@ -81,24 +86,19 @@ function LocationsPage() {
             <Header />
             <main className="d-flex justify-content-start align-items-start" style={{ minHeight: '100vh' }}>
                 <SideBar />
-                {loading ? (
-                    <div className="d-flex justify-content-center align-items-center" style={{ flex: 1 }}>
-                        <div className="spinner-border" style={{ width: '3rem', height: '3rem' }} role="status">
-                            <span className="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                ) : error ? (
+                <LoadingOverlay show={loading} text="Đang tải dữ liệu..." />
+                {(!loading && error) ? (
                     <p className="text-danger">Error: {error}</p>
-                ) : (
+                ) : (!loading && (
                     <div className="d-flex flex-column justify-content-center align-items-center" style={{ flex: 1 }}>
                         <div className="d-flex flex-column" style={{ width: 'calc(100% - 20px)', marginLeft: "20px" }}>
                             <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
-                                <h2 className="fw-bold text-uppercase">DANH SÁCH ĐỊA ĐIỂM</h2>
+                                <h2 className="page-title" style={{ fontSize: '2rem' }}>DANH SÁCH ĐỊA ĐIỂM HỌC</h2>
                                 <div className="d-flex gap-2" style={{ marginRight: "20px" }}>
                                     <FormModal
                                         title={'THÊM ĐỊA ĐIỂM'}
                                         button={
-                                        <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center">
+                                        <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}>
                                             THÊM ĐỊA ĐIỂM
                                         </button>}
                                         attributes={locationAttributes}
@@ -127,37 +127,57 @@ function LocationsPage() {
                                     </thead>
                                     <tbody>
                                         {locations.length > 0 ? (
-                                            locations.map((location, index) =>
-                                                location && (
-                                                    <GridRow
-                                                        key={index + (pagination.currentPage - 1) * 10}
-                                                        attributes={locationAttributes}
-                                                        record={location}
-                                                        index={index + (pagination.currentPage - 1) * 10}
-                                                        actions={[
-                                                        <div>
+                                            <>
+                                                {locations.map((location, index) =>
+                                                    location && (
+                                                        <GridRow
+                                                            key={index + (pagination.currentPage - 1) * 10}
+                                                            attributes={locationAttributes}
+                                                            record={location}
+                                                            index={index + (pagination.currentPage - 1) * 10}
+                                                            actions={[
                                                             <FormModal
+                                                                key="edit"
                                                                 title={'CHỈNH SỬA ĐỊA ĐIỂM'}
-                                                                button={<button className="btn btn-outline-success me-2" onClick={() => handleClickAction(index)}><FaEdit /></button>}
+                                                                button={<button className="btn btn-outline-success me-2 action-btn" title="Sửa" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaEdit /></button>}
                                                                 attributes={locationAttributes}
                                                                 record={location}
                                                                 formAction={'/api/locations'}
                                                                 formMethod='PUT'
-                                                            />
-                                                        </div>,
-                                                        <div>
+                                                            />,
+                                                            <DynamicRows
+                                                                key="link"
+                                                                title={'LIÊN KẾT MÔN HỌC'}
+                                                                attribute={{ name: 'subject', label: 'MÔN HỌC'}}
+                                                                button={<button className="btn btn-outline-primary me-2 action-btn" title="Liên kết môn học" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaLink /></button>}
+                                                                getSelectionsUrl={'/api/getSubjectsByCategory?category=all'}
+                                                                getRowsUrl={'/api/locationSubjects?locationId=' + location.id}
+                                                                saveUrl={'/api/saveLocationSubjects'}
+                                                                targetId={location.id.toString()}
+                                                            />,
                                                             <DeleteModal
+                                                                key="delete"
                                                                 title={'ĐỊA ĐIỂM'}
-                                                                button={<button className="btn btn-outline-danger" onClick={() => handleClickAction(index)}><FaTrashAlt /></button>}
+                                                                button={<button className="btn btn-outline-danger action-btn" title="Xóa" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaTrashAlt /></button>}
                                                                 record={location}
-                                                                onClose={() => {}}
+                                                                onClose={() => fetchLocations(page, limit)}
                                                                 formAction={'/api/locations'}
                                                             />
-                                                        </div>
-                                                        ]}
+                                                            ]}
+                                                        />
+                                                    )
+                                                )}
+                                                {/* Padding rows nếu chưa đủ 10 dòng */}
+                                                {Array.from({ length: 10 - locations.length }).map((_, padIdx) => (
+                                                    <GridRow
+                                                        key={`pad-${padIdx}`}
+                                                        attributes={locationAttributes}
+                                                        record={{}}
+                                                        index={locations.length + padIdx}
+                                                        actions={[]}
                                                     />
-                                                )
-                                            )
+                                                ))}
+                                            </>
                                         ) : (
                                             <tr>
                                                 <td colSpan={locationAttributes.length + 2} className="text-left">Chưa có dữ liệu</td>
@@ -175,7 +195,7 @@ function LocationsPage() {
                             />
                         </div>
                     </div>
-                )}
+                ))}
             </main>
             <Footer />
         </>

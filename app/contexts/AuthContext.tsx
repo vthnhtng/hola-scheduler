@@ -32,34 +32,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const checkAuth = async () => {
     try {
-      // Check if there's auth token in localStorage
-      const authToken = localStorage.getItem('auth_token');
-      
-      if (!authToken) {
-        setUser(null);
-        setIsLoading(false);
-        return;
-      }
-
-      // Call API to verify token
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth', {
         method: 'GET',
-        headers: {
-          'Authorization': authToken,
-        },
+        credentials: 'include',
       });
 
       if (response.ok) {
         const data = await response.json();
-        setUser(data.user);
+        if (data.user) setUser(data.user);
+        else setUser(null);
       } else {
-        // Token is invalid, remove from localStorage
-        localStorage.removeItem('auth_token');
         setUser(null);
       }
     } catch (error) {
       console.error('Auth check error:', error);
-      localStorage.removeItem('auth_token');
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -68,24 +54,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const refreshSession = async () => {
     try {
-      const authToken = localStorage.getItem('auth_token');
-      
-      if (!authToken) {
-        return;
-      }
-
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth', {
         method: 'GET',
-        headers: {
-          'Authorization': authToken,
-        },
+        credentials: 'include',
       });
-
       if (response.ok) {
         const data = await response.json();
-        setUser(data.user);
+        if (data.user) setUser(data.user);
+        else await logout();
       } else {
-        // Session expired, logout
         await logout();
       }
     } catch (error) {
@@ -97,25 +74,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = async (username: string, password: string): Promise<{ success: boolean, error?: string }> => {
     try {
       setIsLoading(true);
-      const credentials = `${username}:${password}`;
-      const base64Credentials = btoa(credentials);
-      const authHeader = `Basic ${base64Credentials}`;
-
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth', {
         method: 'POST',
         headers: {
-          'Authorization': authHeader,
+          'Content-Type': 'application/json',
         },
+        credentials: 'include',
+        body: JSON.stringify({ username, password }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.user) {
         setUser(data.user);
-        localStorage.setItem('auth_token', authHeader);
         return { success: true };
       } else {
-        // Return error from API if any
         return { success: false, error: data?.error || 'Tên đăng nhập hoặc mật khẩu không đúng' };
       }
     } catch (error) {

@@ -208,6 +208,8 @@ export function createSessionToken(user: AuthUser): string {
   const payload = {
     id: user.id,
     username: user.username,
+    fullName: user.fullName,
+    email: user.email,
     role: user.role,
     exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
   };
@@ -230,8 +232,8 @@ export function validateSessionToken(token: string): AuthUser | null {
     return {
       id: payload.id,
       username: payload.username,
-      fullName: null,
-      email: null,
+      fullName: payload.fullName,
+      email: payload.email,
       role: payload.role,
     };
   } catch (error) {

@@ -4,12 +4,17 @@ import prisma from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[AUTH API] Login request received');
+    
     // Parse JSON body from request
     const body = await request.json();
     const { username, password } = body;
+    
+    console.log('[AUTH API] Request body:', { username, password: password ? '***' : 'undefined' });
 
     // Validate input
     if (!username || !password) {
+      console.log('[AUTH API] Missing username or password');
       return NextResponse.json(
         { 
           success: false,
@@ -19,6 +24,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('[AUTH API] Searching for user in database...');
+    
     // Find user in database
     const user = await prisma.appUser.findUnique({
       where: {
@@ -33,18 +40,34 @@ export async function POST(request: NextRequest) {
         role: true,
       },
     });
+    
+    console.log('[AUTH API] Database query result:', user ? { id: user.id, username: user.username, role: user.role } : 'User not found');
 
     // Check user and password (compare directly, no hashing)
-    if (!user || user.password !== password) {
+    if (!user) {
+      console.log('[AUTH API] User not found in database');
       return NextResponse.json(
         { 
           success: false,
           error: 'Invalid username or password' 
         },
-        { status: 401 }
+        { status: 200 }
+      );
+    }
+    
+    if (user.password !== password) {
+      console.log('[AUTH API] Password mismatch. Expected:', user.password, 'Received:', password);
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Invalid username or password' 
+        },
+        { status: 200 }
       );
     }
 
+    console.log('[AUTH API] User authenticated successfully:', { id: user.id, username: user.username, role: user.role });
+    
     // Log successful login
     await logUserActivity(user.id, 'login', 'auth', {
       ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
@@ -60,7 +83,11 @@ export async function POST(request: NextRequest) {
       email: user.email,
       role: user.role,
     });
+    
+    console.log('[AUTH API] Session token created');
 
+    console.log('[AUTH API] Creating response...');
+    
     // Create response with user information
     const response = NextResponse.json({
       success: true,
@@ -81,11 +108,15 @@ export async function POST(request: NextRequest) {
       sameSite: 'strict',
       maxAge: 60 * 60 * 24, // 24 hours
     });
+    
+    console.log('[AUTH API] Response created with session cookie');
+    console.log('[AUTH API] Login successful for user:', user.username);
 
     return response;
 
   } catch (error) {
-    console.error('Auth login error:', error);
+    console.error('[AUTH API] Auth login error:', error);
+    console.error('[AUTH API] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
       { 
         success: false,
