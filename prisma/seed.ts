@@ -12,11 +12,11 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Universities
-  await prisma.university.createMany({
+  // Courses (thay cho Universities)
+  await prisma.course.createMany({
     data: [
       { id: 1, name: 'Đại học Bách Khoa', status: 'Undone' },
-      { id: 3, name: 'Đại học Sư phạm', status: 'Undone' },
+      { id: 2, name: 'Đại học Sư phạm', status: 'Undone' },
     ],
     skipDuplicates: true,
   });
@@ -94,29 +94,29 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Teams (updated with universityId and teamLeaderId)
+  // Teams (updated with courseId and teamLeaderId)
   await prisma.team.createMany({
     data: [
-      { id: 1, name: 'Team1', program: Program.DH, universityId: 1, teamLeaderId: 1 },
-      { id: 2, name: 'Team2', program: Program.DH, universityId: 1, teamLeaderId: 2 },
-      { id: 3, name: 'Team3', program: Program.DH, universityId: 2, teamLeaderId: 3 },
-      { id: 4, name: 'Team4', program: Program.DH, universityId: 2, teamLeaderId: 4 },
-      { id: 5, name: 'Team5', program: Program.DH, universityId: 3, teamLeaderId: 5 },
-      { id: 6, name: 'Team6', program: Program.DH, universityId: 3, teamLeaderId: 6 },
-      { id: 7, name: 'Team7', program: Program.DH, universityId: 1, teamLeaderId: 7 },
-      { id: 8, name: 'Team8', program: Program.DH, universityId: 2, teamLeaderId: 8 },
-      { id: 9, name: 'Team9', program: Program.DH, universityId: 3, teamLeaderId: 9 },
-      { id: 10, name: 'Team10', program: Program.DH, universityId: 1, teamLeaderId: 10 },
+      { id: 1, name: 'Team1', program: Program.DH, courseId: 1, teamLeaderId: 1 },
+      { id: 2, name: 'Team2', program: Program.DH, courseId: 1, teamLeaderId: 2 },
+      { id: 3, name: 'Team3', program: Program.DH, courseId: 2, teamLeaderId: 3 },
+      { id: 4, name: 'Team4', program: Program.DH, courseId: 2, teamLeaderId: 4 },
+      { id: 5, name: 'Team5', program: Program.DH, courseId: 1, teamLeaderId: 5 },
+      { id: 6, name: 'Team6', program: Program.DH, courseId: 2, teamLeaderId: 6 },
+      { id: 7, name: 'Team7', program: Program.DH, courseId: 1, teamLeaderId: 7 },
+      { id: 8, name: 'Team8', program: Program.DH, courseId: 2, teamLeaderId: 8 },
+      { id: 9, name: 'Team9', program: Program.DH, courseId: 1, teamLeaderId: 9 },
+      { id: 10, name: 'Team10', program: Program.DH, courseId: 2, teamLeaderId: 10 },
     ],
     skipDuplicates: true,
   });
 
-  // Schedule Files
+  // Schedule Files (thêm courseId)
   await prisma.scheduleFile.createMany({
     data: [
-      { id: 1, filePath: 'path/schedule1.csv' },
-      { id: 2, filePath: 'path/schedule2.csv' },
-      { id: 3, filePath: 'path/schedule3.csv' },
+      { id: 1, filePath: 'path/schedule1.csv', courseId: 1 },
+      { id: 2, filePath: 'path/schedule2.csv', courseId: 1 },
+      { id: 3, filePath: 'path/schedule3.csv', courseId: 2 },
     ],
     skipDuplicates: true,
   });
@@ -134,14 +134,14 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Lecturer Statistics
+  // Lecturer Statistics (thêm courseId)
   await prisma.lecturerStatistic.createMany({
     data: [
-      { id: 1, lecturerId: 1, fromDate: '2025-01-01', toDate: '2025-01-31', numberOfSessions: 8 },
-      { id: 2, lecturerId: 2, fromDate: '2025-01-01', toDate: '2025-01-31', numberOfSessions: 6 },
-      { id: 3, lecturerId: 3, fromDate: '2025-01-01', toDate: '2025-01-31', numberOfSessions: 10 },
-      { id: 4, lecturerId: 1, fromDate: '2025-02-01', toDate: '2025-02-28', numberOfSessions: 7 },
-      { id: 5, lecturerId: 6, fromDate: '2025-01-01', toDate: '2025-01-31', numberOfSessions: 9 },
+      { id: 1, lecturerId: 1, fromDate: '2025-01-01', toDate: '2025-01-31', numberOfSessions: 8, courseId: 1 },
+      { id: 2, lecturerId: 2, fromDate: '2025-01-01', toDate: '2025-01-31', numberOfSessions: 6, courseId: 1 },
+      { id: 3, lecturerId: 3, fromDate: '2025-01-01', toDate: '2025-01-31', numberOfSessions: 10, courseId: 2 },
+      { id: 4, lecturerId: 1, fromDate: '2025-02-01', toDate: '2025-02-28', numberOfSessions: 7, courseId: 2 },
+      { id: 5, lecturerId: 6, fromDate: '2025-01-01', toDate: '2025-01-31', numberOfSessions: 9, courseId: 1 },
     ],
     skipDuplicates: true,
   });

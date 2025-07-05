@@ -12,7 +12,7 @@ function Sidebar() {
     const [activeItem, setActiveItem] = useState("");
     const { user } = useAuth();
     // Trạng thái mở/đóng cho từng submenu
-    type SubMenuKey = 'lecturers' | 'subjects' | 'locations' | 'curriculums' | 'teams';
+    type SubMenuKey = 'lecturers' | 'subjects' | 'locations' | 'curriculums' | 'teams' | 'courses';
     type SubMenuOpenState = { [key in SubMenuKey]: boolean };
     const [subMenuOpen, setSubMenuOpen] = useState<SubMenuOpenState>({
         lecturers: false,
@@ -20,6 +20,7 @@ function Sidebar() {
         locations: false,
         curriculums: false,
         teams: false,
+        courses: false,
     });
 
     const [openManage, setOpenManage] = useState(false);
@@ -37,6 +38,7 @@ function Sidebar() {
         { name: "Địa điểm học", link: "/locations", key: "locations" },
         { name: "Chương trình học", link: "/curriculums", key: "curriculums" },
         { name: "Đại đội", link: "/teams", key: "teams" },
+        { name: "Khóa học", link: "/courses", key: "courses" },
     ];
 
     // Tất cả role đều thấy menu quản lý
@@ -263,14 +265,14 @@ function Sidebar() {
                             </button>
                             {(openManage || subMenuItems.some(sub => sub.link === pathname)) && isOpen && (
                                 <ul className="nav flex-column submenu">
-                                    {subMenuItems.map((sub) => (
-                                        <li key={sub.name}>
+                                    {subMenuItems.map((item) => (
+                                        <li key={item.key}>
                                             <Link
-                                                href={sub.link}
-                                                className={`nav-link ${activeItem === sub.name ? "active" : "text-dark"}`}
-                                                onClick={() => setActiveItem(sub.name)}
+                                                href={item.link}
+                                                className={`nav-link${pathname.startsWith(item.link) ? ' active' : ''}`}
+                                                style={{ fontWeight: pathname.startsWith(item.link) ? 700 : 400 }}
                                             >
-                                                {sub.name}
+                                                {item.name}
                                             </Link>
                                         </li>
                                     ))}
