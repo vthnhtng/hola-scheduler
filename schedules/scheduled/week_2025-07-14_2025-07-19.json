@@ -1,8 +1,8 @@
 [
   {
     "week": 3,
-    "teamId": 7,
-    "subjectId": 14,
+    "teamId": 2,
+    "subjectId": 5,
     "date": "2025-07-15",
     "dayOfWeek": "Tue",
     "session": "morning",
@@ -11,7 +11,7 @@
   },
   {
     "week": 3,
-    "teamId": 7,
+    "teamId": 2,
     "subjectId": null,
     "date": "2025-07-15",
     "dayOfWeek": "Tue",
@@ -21,7 +21,7 @@
   },
   {
     "week": 3,
-    "teamId": 7,
+    "teamId": 2,
     "subjectId": null,
     "date": "2025-07-15",
     "dayOfWeek": "Tue",

@@ -41,6 +41,12 @@ function Sidebar() {
         { name: "Khóa học", link: "/courses", key: "courses" },
     ];
 
+    const customMenuItems = [
+        { name: "Sinh lịch môn học", link: "/schedule" },
+        { name: "Phân công GV/Địa điểm", link: "/assign" },
+        { name: "Kiểm tra file lịch", link: "/status" },
+    ];
+
     // Tất cả role đều thấy menu quản lý
     const showManageMenu = true;
 
@@ -280,6 +286,19 @@ function Sidebar() {
                             )}
                         </li>
                     )}
+
+                    {/* Custom menu for UAT/tester */}
+                    <li className="nav-item"><hr /></li>
+                    {customMenuItems.map(item => (
+                        <li className="nav-item" key={item.name}>
+                            <Link
+                                href={item.link}
+                                className={`nav-link ${pathname === item.link ? "active" : "text-dark"}`}
+                            >
+                                {isOpen && <span>{item.name}</span>}
+                            </Link>
+                        </li>
+                    ))}
                 </ul>
             </div>
         </>
