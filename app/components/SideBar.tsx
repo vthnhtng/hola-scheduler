@@ -30,6 +30,7 @@ function Sidebar() {
         { name: "Lịch giảng dạy", icon: <FaChalkboardTeacher />, link: "/timetable" },
         { name: "Lịch nghỉ lễ", icon: <FaCalendarAlt />, link: "/holidays" },
         { name: "Tài khoản", icon: <FaUser />, link: "/users" },
+        { name: "Sắp xếp lịch", icon: <FaCog />, link: "/scheduler" },
     ];
 
     const subMenuItems = [
