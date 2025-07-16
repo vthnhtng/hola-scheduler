@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "next dev",
+		"dev": "next dev --turbopack",
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint",
@@ -12,6 +12,7 @@
 		"create-users": "ts-node scripts/create-default-users.ts"
 	},
 	"dependencies": {
+		"@dnd-kit/core": "^6.3.1",
 		"@prisma/client": "^6.10.1",
 		"@types/xlsx": "^0.0.35",
 		"bootstrap": "^5.3.3",

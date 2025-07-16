@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { generateSchedulesForTeamsJob } from '@/app/scheduler/generator';
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
  * @param request - Request containing array of team IDs
  * @returns Response with generated schedule files
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   return withAuth(request, async (req, user) => {
     try {
       const body = await req.json();
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
         return createErrorResponse(validationError, 400);
       }
 
-      const { teamIds } = body;
+      const { teamIds, startDate } = body;
 
       if (!Array.isArray(teamIds) || teamIds.length === 0) {
         return createErrorResponse('Invalid team IDs list', 400);
@@ -42,15 +42,24 @@ export async function POST(request: Request) {
         return createErrorResponse('Some team IDs are invalid or not found', 400);
       }
 
+      // Use startDate from request or default to current date
+      const scheduleStartDate = startDate ? new Date(startDate) : new Date();
+
+      // Map teams to match the expected interface (add universityId as courseId)
+      const mappedTeams = teams.map(team => ({
+        ...team,
+        universityId: team.courseId // Map courseId to universityId for compatibility
+      }));
+
       // Generate schedules for specified teams
-      const result = await generateSchedulesForTeamsJob(new Date(), teams);
+      const result = await generateSchedulesForTeamsJob(scheduleStartDate, mappedTeams);
 
       if (result.errors.length > 0) {
         return createErrorResponse('Error generating schedules', 500);
       }
 
       // Read processed files content
-      const fileContents: { [key: string]: any } = {};
+      const fileContents: { [key: string]: unknown } = {};
       const scheduledDir = path.join(process.cwd(), 'schedules/scheduled');
       
       for (const fileName of result.processedFiles) {
@@ -64,6 +73,7 @@ export async function POST(request: Request) {
       // Log activity
       await logApiActivity(user.id, 'POST', '/api/generate-schedules', {
         teamIds,
+        startDate: scheduleStartDate.toISOString(),
         processedFiles: result.processedFiles.length,
         errors: result.errors.length
       });

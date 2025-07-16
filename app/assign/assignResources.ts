@@ -18,28 +18,26 @@ interface ScheduleSession {
     locationId: number | null;
 }
 
-interface LecturerWithSpecializations extends Lecturer {
-    specializations: { subjectId: number }[];
+interface ResourceQueues {
+    lecturers: (Lecturer & {
+        specializations: { subjectId: number }[];
+    })[];
+    locations: (Location & {
+        subjects: { subjectId: number }[];
+    })[];
 }
 
-interface LocationWithSubjects extends Location {
-    subjects: { subjectId: number }[];
+interface TimeSlot {
+    date: string;
+    session: SessionType;
 }
 
-interface TeamWithLeader {
-    id: number;
-    name: string;
-    program: Program;
-    courseId: number;
-    teamLeaderId: number;
+interface TimeSlotGroup {
+    timeSlot: TimeSlot;
+    sessions: ScheduleSession[];
 }
 
-interface SubjectWithCategory {
-    id: number;
-    name: string;
-    category: Category;
-    prerequisiteId?: number | null;
-}
+const locationUsage = new Map<string, Map<number, number>>();
 
 // Helper functions
 const shuffleArray = <T>(array: T[]): T[] => {
@@ -54,7 +52,228 @@ const shuffleArray = <T>(array: T[]): T[] => {
 const getSlotKey = (session: ScheduleSession): string => 
     `${session.date}-${session.session}`;
 
-// Validation function
+const canAssignLocation = (session: ScheduleSession, locationId: number, capacity: number): boolean => {
+    const slotKey = getSlotKey(session);
+    return (locationUsage.get(slotKey)?.get(locationId) || 0) < capacity;
+};
+
+const markLocationUsed = (session: ScheduleSession, locationId: number): void => {
+    const slotKey = getSlotKey(session);
+    if (!locationUsage.has(slotKey)) {
+        locationUsage.set(slotKey, new Map());
+    }
+    const current = locationUsage.get(slotKey)!.get(locationId) || 0;
+    locationUsage.get(slotKey)!.set(locationId, current + 1);
+};
+
+async function getAvailableResources(week: number, date: string, session: SessionType): Promise<ResourceQueues> {
+    const doneDir = path.join(process.cwd(), 'schedules/done');
+    const existingFiles = fs.readdirSync(doneDir)
+        .filter(f => f.endsWith('.json'));
+
+    // Get all lecturers and locations
+    const allLecturers = await prisma.lecturer.findMany({
+        include: {
+            specializations: { 
+                select: { subjectId: true }
+            }
+        },
+        where: {
+            maxSessionsPerWeek: { gt: 0 }
+        }
+    });
+
+    const allLocations = await prisma.location.findMany({
+        include: {
+            subjects: {
+                select: { subjectId: true }
+            }
+        }
+    });
+
+    // If no existing files, return all resources
+    if (existingFiles.length === 0) {
+        return {
+            lecturers: allLecturers.sort((a, b) => {
+                const aHasSpecialization = a.specializations.length > 0;
+                const bHasSpecialization = b.specializations.length > 0;
+                if (aHasSpecialization !== bHasSpecialization) {
+                    return bHasSpecialization ? 1 : -1;
+                }
+                return b.maxSessionsPerWeek - a.maxSessionsPerWeek;
+            }),
+            locations: shuffleArray(allLocations.filter(l => l.subjects.length > 0))
+        };
+    }
+
+    // Check existing schedules for conflicts
+    const usedLecturerIds = new Set<number>();
+    const usedLocationIds = new Set<number>();
+
+    for (const file of existingFiles) {
+        const fileData = JSON.parse(fs.readFileSync(path.join(doneDir, file), 'utf-8'));
+        const conflictingSessions = fileData.filter((s: ScheduleSession) => 
+            s.week === week && 
+            s.date === date && 
+            s.session === session
+        );
+
+        for (const session of conflictingSessions) {
+            if (session.lecturerId) usedLecturerIds.add(session.lecturerId);
+            if (session.locationId) usedLocationIds.add(session.locationId);
+        }
+    }
+
+    // Filter out used resources
+    const availableLecturers = allLecturers
+        .filter(l => !usedLecturerIds.has(l.id))
+        .sort((a, b) => {
+            const aHasSpecialization = a.specializations.length > 0;
+            const bHasSpecialization = b.specializations.length > 0;
+            if (aHasSpecialization !== bHasSpecialization) {
+                return bHasSpecialization ? 1 : -1;
+            }
+            return b.maxSessionsPerWeek - a.maxSessionsPerWeek;
+        });
+
+    const availableLocations = shuffleArray(
+        allLocations.filter(l => 
+            !usedLocationIds.has(l.id) && 
+            l.subjects.length > 0
+        )
+    );
+
+    return {
+        lecturers: availableLecturers,
+        locations: availableLocations
+    };
+}
+
+// Helper function to group sessions by time slot
+function groupSessionsByTimeSlot(sessions: ScheduleSession[]): TimeSlotGroup[] {
+    const groups = new Map<string, TimeSlotGroup>();
+    
+    for (const session of sessions) {
+        const key = `${session.date}-${session.session}`;
+        if (!groups.has(key)) {
+            groups.set(key, {
+                timeSlot: {
+                    date: session.date,
+                    session: session.session
+                },
+                sessions: []
+            });
+        }
+        groups.get(key)!.sessions.push(session);
+    }
+    
+    return Array.from(groups.values());
+}
+
+async function assignLecturersForTimeSlot(
+    timeSlotGroup: TimeSlotGroup,
+    lecturers: (Lecturer & { specializations: { subjectId: number }[] })[]
+): Promise<void> {
+    // Create a queue of lecturers
+    let lecturerQueue = [...lecturers];
+    
+    for (const session of timeSlotGroup.sessions) {
+        if (!session.subjectId) continue;
+        
+        // Get subject information
+        const subject = await prisma.subject.findUnique({
+            where: { id: session.subjectId },
+            select: { id: true, name: true, category: true }
+        });
+        
+        if (!subject) continue;
+        
+        // Track usage
+        const lecturerUsageThisSlot = new Map<number, number>();
+
+        // Assign lecturer first
+        if (!session.lecturerId) {
+            // 1. Iterate through entire queue, find lecturer with matching specialization and not exceeding limit
+            let lecturerIndex = lecturerQueue.findIndex(l => {
+                const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
+                return l.specializations.some(s => s.subjectId === session.subjectId) &&
+                       currentUsage < l.maxSessionsPerWeek;
+            });
+            
+            // 2. If not found, iterate through queue again, find lecturer with CT or QS category matching subject.category
+            if (lecturerIndex === -1 && (subject.category === 'CT' || subject.category === 'QS')) {
+                lecturerIndex = lecturerQueue.findIndex(l => {
+                    const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
+                    return l.faculty === subject.category && currentUsage < l.maxSessionsPerWeek;
+                });
+            }
+            
+            // 3. If still not found, assign first available lecturer
+            if (lecturerIndex === -1) {
+                lecturerIndex = lecturerQueue.findIndex(l => {
+                    const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
+                    return currentUsage < l.maxSessionsPerWeek;
+                });
+            }
+
+            if (lecturerIndex !== -1) {
+                const lecturer = lecturerQueue[lecturerIndex];
+                session.lecturerId = lecturer.id;
+                
+                // Track usage
+                const currentUsage = lecturerUsageThisSlot.get(lecturer.id) || 0;
+                lecturerUsageThisSlot.set(lecturer.id, currentUsage + 1);
+                
+                // Remove lecturer if at capacity
+                if (lecturerUsageThisSlot.get(lecturer.id)! >= lecturer.maxSessionsPerWeek) {
+                    lecturerQueue.splice(lecturerIndex, 1);
+                }
+                
+                console.log(`Assigned lecturer ${lecturer.id} to subject ${session.subjectId}`);
+            }
+        }
+    }
+}
+
+async function assignLocationsForTimeSlot(
+    timeSlotGroup: TimeSlotGroup,
+    locations: (Location & { subjects: { subjectId: number }[] })[]
+): Promise<void> {
+    // Create a queue of locations with capacity
+    let locationQueue: { location: Location & { subjects: { subjectId: number }[] }, remainingCapacity: number }[] = [];
+    
+    for (const location of locations) {
+        for (let i = 0; i < location.capacity; i++) {
+            locationQueue.push({ location, remainingCapacity: 1 });
+        }
+    }
+    
+    // Shuffle the queue
+    locationQueue = shuffleArray(locationQueue);
+    
+    for (const session of timeSlotGroup.sessions) {
+        if (!session.subjectId) continue;
+        
+        // Find suitable location
+        const locationIndex = locationQueue.findIndex(l => 
+            l.location.subjects.some(s => s.subjectId === session.subjectId) &&
+            l.remainingCapacity > 0
+        );
+        
+        if (locationIndex !== -1) {
+            const locationEntry = locationQueue[locationIndex];
+            session.locationId = locationEntry.location.id;
+            locationEntry.remainingCapacity--;
+            
+            // Remove location if capacity is exhausted
+            if (locationEntry.remainingCapacity === 0) {
+                locationQueue.splice(locationIndex, 1);
+            }
+        }
+    }
+}
+
+// Validation and processing
 function isValidSession(session: unknown): session is ScheduleSession {
     const validDays: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const validSessions: SessionType[] = ['morning', 'afternoon', 'evening'];
@@ -74,257 +293,240 @@ function isValidSession(session: unknown): session is ScheduleSession {
     );
 }
 
-// Get all data from database
-async function getAllDataFromDB() {
-    console.log('\n=== Fetching data from database ===');
-    
-    const lecturers = await prisma.lecturer.findMany({
-        include: {
-            specializations: {
-                select: { subjectId: true }
-            }
-        },
-        where: {
-            maxSessionsPerWeek: { gt: 0 }
-        }
-    });
-    console.log(`Fetched ${lecturers.length} lecturers`);
+async function processScheduleFile(filePath: string): Promise<string> {
+    locationUsage.clear();
+    const scheduledDir = path.join(process.cwd(), 'schedules/scheduled');
 
-    const locations = await prisma.location.findMany({
-        include: {
-            subjects: {
-                select: { subjectId: true }
-            }
-        }
-    });
-    console.log(`Fetched ${locations.length} locations`);
-
-    const teams = await prisma.team.findMany({
-        select: {
-            id: true,
-            name: true,
-            program: true,
-            courseId: true,
-            teamLeaderId: true
-        }
-    });
-    console.log(`Fetched ${teams.length} teams`);
-
-    const subjects = await prisma.subject.findMany({
-        select: {
-            id: true,
-            name: true,
-            category: true,
-            prerequisiteId: true
-        }
-    });
-    console.log(`Fetched ${subjects.length} subjects`);
-
-    return { lecturers, locations, teams, subjects };
-}
-
-// Main assignment algorithm
-function assignLecturerAndLocationForSessions(
-    sessions: ScheduleSession[],
-    lecturers: LecturerWithSpecializations[],
-    locations: LocationWithSubjects[],
-    teams: TeamWithLeader[],
-    subjects: SubjectWithCategory[]
-): ScheduleSession[] {
-    console.log('\n=== Starting assignment algorithm ===');
-    console.log(`Processing ${sessions.length} sessions`);
-    
-    // Copy sessions to avoid modifying original data
-    const result: ScheduleSession[] = JSON.parse(JSON.stringify(sessions));
-    
-    // Group sessions by time slot
-    const sessionsBySlot = new Map<string, ScheduleSession[]>();
-    for (const session of result) {
-        const slotKey = `${session.date}-${session.session}`;
-        if (!sessionsBySlot.has(slotKey)) {
-            sessionsBySlot.set(slotKey, []);
-        }
-        sessionsBySlot.get(slotKey)!.push(session);
-    }
-    
-    console.log(`Grouped into ${sessionsBySlot.size} time slots`);
-    
-    // Process each time slot
-    for (const [slotKey, slotSessions] of sessionsBySlot) {
-        console.log(`\n=== Processing time slot: ${slotKey} (${slotSessions.length} sessions) ===`);
+    try {
+        console.log(`\nProcessing file: ${filePath}`);
+        const rawData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        console.log(`Total records in file: ${rawData.length}`);
         
-        // Create fresh lecturer queue for this slot (for global tracking)
-        let globalLecturerQueue = lecturers.map(l => ({
-            ...l,
-            assignedSessionsCount: 0
-        }));
-        console.log(`Initial global lecturer queue size: ${globalLecturerQueue.length}`);
+        const data = rawData.filter(isValidSession) as ScheduleSession[];
+        console.log(`Valid records after filtering: ${data.length}`);
+
+        if (rawData.length !== data.length) {
+            console.warn(`Filtered ${rawData.length - data.length} invalid records`);
+            const invalidRecords = rawData.filter((record: unknown) => !isValidSession(record));
+            console.log('Sample of invalid records:', JSON.stringify(invalidRecords.slice(0, 3), null, 2));
+        }
+
+        // Get team and university info from first session
+        const firstSession = data[0];
+        console.log(`\nFirst session info:`, firstSession);
         
-        // --- PHÂN GIẢNG VIÊN THEO PRIORITY VÀ TEAM LEADER ---
-        for (const session of slotSessions) {
-            if (session.subjectId == null) continue;
+        const team = await prisma.team.findUnique({
+            where: { id: firstSession.teamId },
+            select: { id: true, program: true }
+        });
+
+        if (!team) {
+            throw new Error(`Team ${firstSession.teamId} not found`);
+        }
+
+        const universityId = team.program;
+        console.log(`\nTeam program: ${universityId}`);
+
+        // Get all unique weeks sorted
+        const weeks = Array.from(new Set(data.map(s => s.week))).sort((a, b) => a - b);
+        console.log(`\nProcessing ${weeks.length} weeks:`, weeks);
+        
+        // Process each week sequentially
+        for (const week of weeks) {
+            console.log(`\nProcessing week ${week}`);
             
-            const subject = subjects.find(s => s.id === session.subjectId);
-            if (!subject) continue;
-            
-            // Tạo queue ưu tiên team leader cho session này
-            const team = teams.find(t => t.id === session.teamId);
-            const teamLeaderName = lecturers.find(l => l.id === team?.teamLeaderId)?.fullName || 'Unknown';
-            
-            console.log(`\nAssigning lecturer for Team ${session.teamId} (Leader: ${teamLeaderName}) - Subject ${subject.name} (${subject.category})`);
-            let assignedLecturerId: number | null = null;
-            let globalLecturerToRemoveIndex = -1;
-            
-            // PRIORITY 1: Team leader có chuyên môn trùng với môn học
-            console.log('Priority 1: Checking if team leader has specialization...');
-            for (let i = 0; i < globalLecturerQueue.length; i++) {
-                const lecturer = globalLecturerQueue[i];
-                const hasSpecialization = lecturer.specializations?.some(s => s.subjectId === session.subjectId);
-                const withinMaxSessions = lecturer.assignedSessionsCount < lecturer.maxSessionsPerWeek;
-                const isTeamLeader = lecturer.id === team?.teamLeaderId;
-                
-                if (isTeamLeader && hasSpecialization && withinMaxSessions && lecturer.faculty === subject.category) {
-                    assignedLecturerId = lecturer.id;
-                    globalLecturerToRemoveIndex = i;
-                    console.log(`✓ Found specialized TEAM LEADER: ${lecturer.fullName} (${lecturer.faculty})`);
-                    break;
-                }
-            }
-            
-            // PRIORITY 2: Team leader cùng category (nếu chưa tìm được)
-            if (!assignedLecturerId) {
-                console.log('Priority 2: Checking if team leader matches category...');
-                for (let i = 0; i < globalLecturerQueue.length; i++) {
-                    const lecturer = globalLecturerQueue[i];
-                    const withinMaxSessions = lecturer.assignedSessionsCount < lecturer.maxSessionsPerWeek;
-                    const isTeamLeader = lecturer.id === team?.teamLeaderId;
+            // Get all sessions for this week
+            const weekSessions = data.filter(s => s.week === week);
+            console.log(`Found ${weekSessions.length} sessions for week ${week}`);
+
+            // Get all unique dates in this week
+            const dates = Array.from(new Set(weekSessions.map(s => s.date))).sort();
+            console.log(`\nProcessing ${dates.length} dates:`, dates);
+
+            // Process each date
+            for (const date of dates) {
+                console.log(`\nProcessing date: ${date}`);
+
+                // Get all sessions for this date
+                const dateSessions = weekSessions.filter(s => s.date === date);
+                console.log(`Found ${dateSessions.length} sessions for date ${date}`);
+
+                // Get all unique session types (morning, afternoon, evening)
+                const sessionTypes: SessionType[] = ['morning', 'afternoon', 'evening'];
+
+                // Process each session type
+                for (const sessionType of sessionTypes) {
+                    console.log(`\nProcessing ${sessionType} session`);
                     
-                    if (isTeamLeader && lecturer.faculty === subject.category && withinMaxSessions) {
-                        assignedLecturerId = lecturer.id;
-                        globalLecturerToRemoveIndex = i;
-                        console.log(`✓ Found same category TEAM LEADER: ${lecturer.fullName} (${lecturer.faculty})`);
-                        break;
+                    // Get sessions for this time slot
+                    const timeSlotSessions = dateSessions.filter(s => s.session === sessionType);
+                    console.log(`Found ${timeSlotSessions.length} sessions for ${sessionType}`);
+
+                    if (timeSlotSessions.length === 0) {
+                        console.log(`No sessions to process for ${sessionType}`);
+                        continue;
+                    }
+
+                    // Get available resources for this time slot
+                    const { lecturers, locations } = await getAvailableResources(
+                        week,
+                        date,
+                        sessionType
+                    );
+
+                    console.log(`Available resources for ${sessionType}:`);
+                    console.log(`- Lecturers: ${lecturers.length}`);
+                    console.log(`- Locations: ${locations.length}`);
+
+                    // Create queues for this time slot
+                    let lecturerQueue = [...lecturers];
+                    let locationQueue = [...locations];
+
+                    // Shuffle both queues
+                    lecturerQueue = shuffleArray(lecturerQueue);
+                    locationQueue = shuffleArray(locationQueue);
+                    
+                    // Track lecturer usage for this time slot
+                    const lecturerUsageThisSlot = new Map<number, number>();
+
+                    // Process each session in this time slot
+                    for (const session of timeSlotSessions) {
+                        try {
+                            if (!session.subjectId) {
+                                console.log('Session missing subjectId, skipping...');
+                                continue;
+                            }
+
+                            // Get subject information
+                            const subject = await prisma.subject.findUnique({
+                                where: { id: session.subjectId },
+                                select: { id: true, name: true, category: true }
+                            });
+                            
+                            if (!subject) {
+                                console.log(`Subject with id ${session.subjectId} not found, skipping...`);
+                                continue;
+                            }
+
+                            // Assign lecturer first
+                            if (!session.lecturerId) {
+                                // 1. Iterate through entire queue, find lecturer with matching specialization and not exceeding limit
+                                let lecturerIndex = lecturerQueue.findIndex(l => {
+                                    const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
+                                    return l.specializations.some(s => s.subjectId === session.subjectId) &&
+                                           currentUsage < l.maxSessionsPerWeek;
+                                });
+                                
+                                // 2. If not found, iterate through queue again, find lecturer with CT or QS category matching subject.category
+                                if (lecturerIndex === -1 && (subject.category === 'CT' || subject.category === 'QS')) {
+                                    lecturerIndex = lecturerQueue.findIndex(l => {
+                                        const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
+                                        return l.faculty === subject.category && currentUsage < l.maxSessionsPerWeek;
+                                    });
+                                }
+                                
+                                // 3. If still not found, assign first available lecturer
+                                if (lecturerIndex === -1) {
+                                    lecturerIndex = lecturerQueue.findIndex(l => {
+                                        const currentUsage = lecturerUsageThisSlot.get(l.id) || 0;
+                                        return currentUsage < l.maxSessionsPerWeek;
+                                    });
+                                }
+
+                                if (lecturerIndex !== -1) {
+                                    const lecturer = lecturerQueue[lecturerIndex];
+                                    session.lecturerId = lecturer.id;
+                                    
+                                    // Track usage
+                                    const currentUsage = lecturerUsageThisSlot.get(lecturer.id) || 0;
+                                    lecturerUsageThisSlot.set(lecturer.id, currentUsage + 1);
+                                    
+                                    // Remove lecturer if at capacity
+                                    if (lecturerUsageThisSlot.get(lecturer.id)! >= lecturer.maxSessionsPerWeek) {
+                                        lecturerQueue.splice(lecturerIndex, 1);
+                                    }
+                                    
+                                    console.log(`Assigned lecturer ${lecturer.id} to subject ${session.subjectId}`);
+                                }
+                            }
+
+                            // Assign location separately
+                            if (!session.locationId) {
+                                // Find suitable location
+                                let locationIndex = locationQueue.findIndex(l => 
+                                    l.subjects.some(s => s.subjectId === session.subjectId) &&
+                                    canAssignLocation(session, l.id, l.capacity)
+                                );
+                                
+                                // If no specific location found, use any available location
+                                if (locationIndex === -1 && locationQueue.length > 0) {
+                                    locationIndex = locationQueue.findIndex(l =>
+                                        canAssignLocation(session, l.id, l.capacity)
+                                    );
+                                }
+
+                                if (locationIndex !== -1) {
+                                    const location = locationQueue[locationIndex];
+                                    session.locationId = location.id;
+                                    markLocationUsed(session, location.id);
+                                    
+                                    // Check if location is at capacity for this time slot
+                                    if (!canAssignLocation(session, location.id, location.capacity)) {
+                                        locationQueue.splice(locationIndex, 1);
+                                    }
+                                    console.log(`Assigned location ${location.id} to subject ${session.subjectId}`);
+                                }
+                            }
+
+                        } catch (error) {
+                            console.error('Error processing session:', error);
+                            continue;
+                        }
+                    }
+
+                    // Log assignment results for this time slot
+                    const assigned = timeSlotSessions.filter(s => s.lecturerId && s.locationId);
+                    const unassigned = timeSlotSessions.filter(s => !s.lecturerId || !s.locationId);
+                    console.log(`Assigned: ${assigned.length}, Unassigned: ${unassigned.length}`);
+                    
+                    if (unassigned.length > 0) {
+                        console.log('Unassigned sessions:', unassigned.map(s => ({
+                            subjectId: s.subjectId,
+                            date: s.date,
+                            session: s.session
+                        })));
                     }
                 }
             }
             
-            // PRIORITY 3: Lecturer khác có chuyên môn trùng với môn học
-            if (!assignedLecturerId) {
-                console.log('Priority 3: Searching for specialized lecturer...');
-                for (let i = 0; i < globalLecturerQueue.length; i++) {
-                    const lecturer = globalLecturerQueue[i];
-                    const hasSpecialization = lecturer.specializations?.some(s => s.subjectId === session.subjectId);
-                    const withinMaxSessions = lecturer.assignedSessionsCount < lecturer.maxSessionsPerWeek;
-                    
-                    if (hasSpecialization && withinMaxSessions && lecturer.faculty === subject.category) {
-                        assignedLecturerId = lecturer.id;
-                        globalLecturerToRemoveIndex = i;
-                        console.log(`✓ Found specialized lecturer: ${lecturer.fullName} (${lecturer.faculty})`);
-                        break;
+            // Reset lecturer maxSessionsPerWeek for next week
+            await prisma.lecturer.updateMany({
+                data: {
+                    maxSessionsPerWeek: {
+                        set: 5 // Reset to default value or get from config
                     }
                 }
-            }
-            
-            // PRIORITY 4: Lecturer khác cùng category
-            if (!assignedLecturerId) {
-                console.log('Priority 4: Searching for same category lecturer...');
-                for (let i = 0; i < globalLecturerQueue.length; i++) {
-                    const lecturer = globalLecturerQueue[i];
-                    const withinMaxSessions = lecturer.assignedSessionsCount < lecturer.maxSessionsPerWeek;
-                    
-                    if (lecturer.faculty === subject.category && withinMaxSessions) {
-                        assignedLecturerId = lecturer.id;
-                        globalLecturerToRemoveIndex = i;
-                        console.log(`✓ Found same category lecturer: ${lecturer.fullName} (${lecturer.faculty})`);
-                        break;
-                    }
-                }
-            }
-            
-            // KHÔNG SẮP XẾP nếu khác category
-            if (!assignedLecturerId) {
-                console.log(`✗ No suitable lecturer found for ${subject.category} subject`);
-            }
-            
-            // Assign lecturer và update global queue
-            if (assignedLecturerId && globalLecturerToRemoveIndex >= 0) {
-                session.lecturerId = assignedLecturerId;
-                const globalLecturer = globalLecturerQueue[globalLecturerToRemoveIndex];
-                globalLecturer.assignedSessionsCount++;
-                
-                // Xóa lecturer khỏi global queue nếu đã đạt max sessions
-                if (globalLecturer.assignedSessionsCount >= globalLecturer.maxSessionsPerWeek) {
-                    globalLecturerQueue.splice(globalLecturerToRemoveIndex, 1);
-                    console.log(`Removed lecturer ${globalLecturer.fullName} from global queue (reached max: ${globalLecturer.maxSessionsPerWeek})`);
-                }
-            }
-        }
-        
-        console.log(`Remaining lecturers in global queue: ${globalLecturerQueue.length}`);
-        
-        // --- PHÂN PHÒNG (USING EXPANDED QUEUE) ---
-        const locationUsageInSlot = new Map<number, number>();
-        
-        for (const session of slotSessions) {
-            if (session.subjectId == null) continue;
-            
-            let locationId: number | null = null;
-            
-            // Create expanded location queue for this slot
-            let availableLocationQueue: { location: LocationWithSubjects, slotCapacity: number }[] = [];
-            for (const location of locations) {
-                // Thêm n phần tử cho location có capacity = n
-                for (let i = 0; i < location.capacity; i++) {
-                    availableLocationQueue.push({ location, slotCapacity: 1 });
-                }
-            }
-            
-            // Filter out locations that are already at capacity for this slot
-            availableLocationQueue = availableLocationQueue.filter(item => {
-                const currentUsageInSlot = locationUsageInSlot.get(item.location.id) || 0;
-                return currentUsageInSlot < item.location.capacity;
             });
-            
-            // Try to find a suitable location with subject compatibility first
-            for (const item of availableLocationQueue) {
-                const hasSubject = item.location.subjects.find(ls => ls.subjectId === session.subjectId);
-                if (!hasSubject) continue;
-                
-                locationId = item.location.id;
-                break;
-            }
-            
-            // If no subject-specific location, try any available location
-            if (!locationId && availableLocationQueue.length > 0) {
-                locationId = availableLocationQueue[0].location.id;
-            }
-            
-            if (locationId) {
-                session.locationId = locationId;
-                locationUsageInSlot.set(locationId, (locationUsageInSlot.get(locationId) || 0) + 1);
-                console.log(`Assigned location ${locationId} to subject ${session.subjectId}`);
-            } else {
-                console.log(`No suitable location found for subject ${session.subjectId}`);
-            }
         }
+
+        // Write processed data back to the same file
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+        console.log(`\nSuccessfully processed file: ${filePath}`);
+        return filePath;
+    } catch (error) {
+        console.error(`\nFile processing failed: ${error}`);
+        throw error;
     }
-    
-    return result;
 }
 
 // Main job runner
 export async function runAssignmentJob(): Promise<{ processedFiles: string[]; errors: string[] }> {
-    console.log('\n=== STARTING ASSIGNMENT JOB ===');
     const processedFiles: string[] = [];
     const errors: string[] = [];
 
     try {
-        // Get all data from database
-        const { lecturers, locations, teams, subjects } = await getAllDataFromDB();
-        
         const scheduledDir = path.join(process.cwd(), 'schedules/scheduled');
         const doneDir = path.join(process.cwd(), 'schedules/done');
-        
         console.log('\nChecking directories:', { scheduledDir, doneDir });
         
         // Create directories if they don't exist
@@ -347,46 +549,24 @@ export async function runAssignmentJob(): Promise<{ processedFiles: string[]; er
             return { processedFiles, errors };
         }
 
-        // Process each file
         for (const file of files) {
             try {
                 console.log(`\nProcessing file: ${file}`);
                 const filePath = path.join(scheduledDir, file);
+                const newFilePath = await processScheduleFile(filePath);
                 
-                // Read and validate sessions
-                const rawData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-                const sessions = rawData.filter(isValidSession) as ScheduleSession[];
+                // Move file to done directory
+                const doneFilePath = path.join(doneDir, path.basename(newFilePath));
+                fs.renameSync(newFilePath, doneFilePath);
                 
-                console.log(`Total records in file: ${rawData.length}`);
-                console.log(`Valid records after filtering: ${sessions.length}`);
-
-                if (rawData.length !== sessions.length) {
-                    console.warn(`Filtered ${rawData.length - sessions.length} invalid records`);
-                }
-
-                // Assign lecturers and locations
-                const assignedSessions = assignLecturerAndLocationForSessions(
-                    sessions, 
-                    lecturers, 
-                    locations, 
-                    teams, 
-                    subjects
-                );
-                
-                // Write to done directory
-                const doneFilePath = path.join(doneDir, file);
-                fs.writeFileSync(doneFilePath, JSON.stringify(assignedSessions, null, 2));
-                
-                processedFiles.push(file);
-                console.log(`Successfully processed and wrote: ${doneFilePath}`);
-                
+                processedFiles.push(path.basename(doneFilePath));
+                console.log(`Successfully processed and moved ${file} to done directory`);
             } catch (error) {
                 const message = error instanceof Error ? error.message : 'Unknown error';
                 console.error(`Failed to process ${file}:`, message);
                 errors.push(`Failed to process ${file}: ${message}`);
             }
         }
-        
     } catch (error) {
         console.error('Error in runAssignmentJob:', error);
         errors.push(error instanceof Error ? error.message : 'Unknown error');
@@ -399,53 +579,4 @@ export async function runAssignmentJob(): Promise<{ processedFiles: string[]; er
     console.log('Errors:', errors);
 
     return { processedFiles, errors };
-}
-
-// Hàm tạo lịch cho 1 team trong khoảng ngày
-function generateTeamSchedule(teamId: number, startDate: string, endDate: string, subjects: SubjectWithCategory[]): ScheduleSession[] {
-    // Hàm này chỉ là placeholder, bạn cần thay bằng logic sinh lịch thực tế
-    // Ở đây sẽ tạo 1 session mỗi ngày, mỗi buổi sáng, cho subject đầu tiên
-    const result: ScheduleSession[] = [];
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    let week = 1;
-    let current = new Date(start);
-    while (current <= end) {
-        const dateStr = current.toISOString().split('T')[0];
-        result.push({
-            week,
-            teamId,
-            subjectId: subjects[0]?.id || null,
-            date: dateStr,
-            dayOfWeek: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][current.getDay()] as DayOfWeek,
-            session: 'morning',
-            lecturerId: null,
-            locationId: null
-        });
-        // sang ngày tiếp theo
-        current.setDate(current.getDate() + 1);
-        if (current.getDay() === 1) week++; // sang tuần mới nếu là thứ 2
-    }
-    return result;
-}
-
-// Hàm chính: nhận vào startDate, endDate, courseId, sinh lịch cho tất cả team thuộc course
-export async function scheduleForCourse({ startDate, endDate, courseId }:{ startDate: string, endDate: string, courseId: number }) {
-    const { lecturers, locations, teams, subjects } = await getAllDataFromDB();
-    // Lọc các team thuộc courseId
-    const courseTeams = teams.filter(t => t.courseId === courseId);
-    const schedules: { teamId: number, schedule: ScheduleSession[] }[] = [];
-    for (const team of courseTeams) {
-        // Sinh lịch cho team
-        let teamSchedule = generateTeamSchedule(team.id, startDate, endDate, subjects);
-        // Phân công GV, phòng
-        teamSchedule = assignLecturerAndLocationForSessions(teamSchedule, lecturers, locations, teams, subjects);
-        schedules.push({ teamId: team.id, schedule: teamSchedule });
-        // Ghi file
-        const dir = path.join(process.cwd(), `Resource/Schedules/Team_${team.id}/Done`);
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        const filePath = path.join(dir, `week_${startDate}_${endDate}.json`);
-        fs.writeFileSync(filePath, JSON.stringify(teamSchedule, null, 2), 'utf-8');
-    }
-    return { teams: schedules };
 } 

@@ -12,6 +12,12 @@ import { FaEdit, FaTrashAlt } from "react-icons/fa";
 
 const courseAttributes = [
   { name: "name", label: "Tên khóa học", type: "string" },
+  { name: "school", label: "Tên trường", type: "string" },
+  { name: "startDate", label: "Thời gian bắt đầu", type: "date", required: true },
+  { name: "endDate", label: "Thời gian kết thúc", type: "date", required: true },
+];
+const courseTableColumns = [
+  ...courseAttributes,
   { name: "status", label: "Trạng thái", type: "select", selections: [
     { value: "Done", label: "Hoàn thành" },
     { value: "Processing", label: "Đang diễn ra" },
@@ -68,7 +74,7 @@ export default function CoursesPage() {
                 <thead className="table-light">
                   <tr>
                     <th>STT</th>
-                    {courseAttributes.map((attr, idx) => <th key={idx}>{attr.label}</th>)}
+                    {courseTableColumns.map((attr, idx) => <th key={idx}>{attr.label}</th>)}
                     <th>Thao tác</th>
                   </tr>
                 </thead>
@@ -78,7 +84,7 @@ export default function CoursesPage() {
                       {courses.map((course: any, idx: number) => (
                         <GridRow
                           key={course.id}
-                          attributes={courseAttributes}
+                          attributes={courseTableColumns}
                           record={course}
                           index={idx + (pagination.currentPage - 1) * 10}
                           actions={[
@@ -114,7 +120,7 @@ export default function CoursesPage() {
                       {Array.from({ length: 10 - courses.length }).map((_, padIdx) => (
                         <GridRow
                           key={`pad-${padIdx}`}
-                          attributes={courseAttributes}
+                          attributes={courseTableColumns}
                           record={{}}
                           index={courses.length + padIdx}
                           actions={[]}
@@ -123,7 +129,7 @@ export default function CoursesPage() {
                     </>
                   ) : (
                     <tr>
-                      <td colSpan={courseAttributes.length + 2}>Chưa có dữ liệu</td>
+                      <td colSpan={courseTableColumns.length + 2}>Chưa có dữ liệu</td>
                     </tr>
                   )}
                 </tbody>

@@ -6,7 +6,7 @@ async function main() {
   // Users
   await prisma.appUser.createMany({
     data: [
-      { id: 1, username: 'admin', password: 'admin123', fullName: 'Nguyen Van A', role: Role.scheduler, email: 'admin@example.com' },
+      { id: 1, username: 'admin', password: 'admin123', fullName: 'Nguyễn Văn A', role: Role.scheduler, email: 'admin@example.com' },
       { id: 2, username: 'viewer1', password: 'pass123', fullName: 'Tran Thi B', role: Role.viewer, email: 'viewer1@example.com' },
     ],
     skipDuplicates: true,
@@ -15,8 +15,38 @@ async function main() {
   // Courses (thay cho Universities)
   await prisma.course.createMany({
     data: [
-      { id: 1, name: 'Đại học Bách Khoa', status: 'Undone' },
-      { id: 2, name: 'Đại học Sư phạm', status: 'Undone' },
+      {
+        id: 1,
+        name: 'UET - K36',
+        status: 'Undone',
+        startDate: new Date('2025-09-01'),
+        endDate: new Date('2026-06-30'),
+        school: 'Đại học Công Nghệ - ĐHQGHN'
+      },
+      {
+        id: 2,
+        name: 'UEB - K36',
+        status: 'Undone',
+        startDate: new Date('2025-09-01'),
+        endDate: new Date('2026-06-30'),
+        school: 'Đại học Kinh tế - ĐHQGHN'
+      },
+      {
+        id: 3,
+        name: 'AOF - K36',
+        status: 'Undone',
+        startDate: new Date('2025-09-01'),
+        endDate: new Date('2026-06-30'),
+        school: 'Học viện Tài Chính'
+      },
+      {
+        id: 4,
+        name: 'HMC',
+        status: 'Undone',
+        startDate: new Date('2025-09-01'),
+        endDate: new Date('2026-06-30'),
+        school: 'Cao đẳng Y Hà Nội'
+      },
     ],
     skipDuplicates: true,
   });
@@ -33,26 +63,26 @@ async function main() {
   // Subjects
   await prisma.subject.createMany({
     data: [
-      { id: 1, name: 'Hoc phan CT1', category: Category.CT },
-      { id: 2, name: 'Hoc phan CT2', category: Category.CT },
-      { id: 3, name: 'Hoc phan CT3', category: Category.CT, prerequisiteId: 2 },
-      { id: 4, name: 'Hoc phan CT4', category: Category.CT, prerequisiteId: 3 },
-      { id: 5, name: 'Hoc phan CT5', category: Category.CT },
-      { id: 6, name: 'Hoc phan CT6', category: Category.CT },
-      { id: 7, name: 'Hoc phan CT7', category: Category.CT, prerequisiteId: 6 },
-      { id: 8, name: 'Hoc phan CT8', category: Category.CT, prerequisiteId: 7 },
-      { id: 9, name: 'Hoc phan CT9', category: Category.CT },
-      { id: 10, name: 'Hoc phan CT10', category: Category.CT, prerequisiteId: 9 },
-      { id: 11, name: 'Hoc phan QS1', category: Category.QS },
-      { id: 12, name: 'Hoc phan QS2', category: Category.QS },
-      { id: 13, name: 'Hoc phan QS3', category: Category.QS, prerequisiteId: 12 },
-      { id: 14, name: 'Hoc phan QS4', category: Category.QS, prerequisiteId: 13 },
-      { id: 15, name: 'Hoc phan QS5', category: Category.QS },
-      { id: 16, name: 'Hoc phan QS6', category: Category.QS },
-      { id: 17, name: 'Hoc phan QS7', category: Category.QS, prerequisiteId: 16 },
-      { id: 18, name: 'Hoc phan QS8', category: Category.QS },
-      { id: 19, name: 'Hoc phan QS9', category: Category.QS, prerequisiteId: 17 },
-      { id: 20, name: 'Hoc phan QS10', category: Category.QS, prerequisiteId: 19 },
+      { id: 1, name: 'Học phần Chính Trị 1', category: Category.CT },
+      { id: 2, name: 'Học phần Chính Trị 2', category: Category.CT },
+      { id: 3, name: 'Học phần Chính Trị 3', category: Category.CT, prerequisiteId: 2 },
+      { id: 4, name: 'Học phần Chính Trị 4', category: Category.CT, prerequisiteId: 3 },
+      { id: 5, name: 'Học phần Chính Trị 5', category: Category.CT },
+      { id: 6, name: 'Học phần Chính Trị 6', category: Category.CT },
+      { id: 7, name: 'Học phần Chính Trị 7', category: Category.CT, prerequisiteId: 6 },
+      { id: 8, name: 'Học phần Chính Trị 8', category: Category.CT, prerequisiteId: 7 },
+      { id: 9, name: 'Học phần Chính Trị 9', category: Category.CT },
+      { id: 10, name: 'Học phần Chính Trị 10', category: Category.CT, prerequisiteId: 9 },
+      { id: 11, name: 'Học phần Quân Sự 1', category: Category.QS },
+      { id: 12, name: 'Học phần Quân Sự 2', category: Category.QS },
+      { id: 13, name: 'Học phần Quân Sự 3', category: Category.QS, prerequisiteId: 12 },
+      { id: 14, name: 'Học phần Quân Sự 4', category: Category.QS, prerequisiteId: 13 },
+      { id: 15, name: 'Học phần Quân Sự 5', category: Category.QS },
+      { id: 16, name: 'Học phần Quân Sự 6', category: Category.QS },
+      { id: 17, name: 'Học phần Quân Sự 7', category: Category.QS, prerequisiteId: 16 },
+      { id: 18, name: 'Học phần Quân Sự 8', category: Category.QS },
+      { id: 19, name: 'Học phần Quân Sự 9', category: Category.QS, prerequisiteId: 17 },
+      { id: 20, name: 'Học phần Quân Sự 10', category: Category.QS, prerequisiteId: 19 },
     ],
     skipDuplicates: true,
   });
@@ -60,16 +90,16 @@ async function main() {
   // Lecturers
   await prisma.lecturer.createMany({
     data: [
-      { id: 1, fullName: 'Le Van C', faculty: Category.CT, maxSessionsPerWeek: 10 },
-      { id: 2, fullName: 'Pham Thi D', faculty: Category.CT, maxSessionsPerWeek: 8 },
-      { id: 3, fullName: 'Nguyen Van E', faculty: Category.CT, maxSessionsPerWeek: 12 },
-      { id: 4, fullName: 'Le Thi F', faculty: Category.CT, maxSessionsPerWeek: 10 },
-      { id: 5, fullName: 'Tran Thi G', faculty: Category.CT, maxSessionsPerWeek: 8 },
-      { id: 6, fullName: 'Nguyen Thi H', faculty: Category.QS, maxSessionsPerWeek: 12 },
-      { id: 7, fullName: 'Phan Van I', faculty: Category.QS, maxSessionsPerWeek: 12 },
-      { id: 8, fullName: 'Do Van J', faculty: Category.QS, maxSessionsPerWeek: 10 },
-      { id: 9, fullName: 'Dang Thi K', faculty: Category.QS, maxSessionsPerWeek: 8 },
-      { id: 10, fullName: 'Ta Van L', faculty: Category.QS, maxSessionsPerWeek: 12 },
+      { id: 1, fullName: 'Lê Văn C', faculty: Category.CT, maxSessionsPerWeek: 10 },
+      { id: 2, fullName: 'Phạm Thị D', faculty: Category.CT, maxSessionsPerWeek: 8 },
+      { id: 3, fullName: 'Nguyễn Văn E', faculty: Category.CT, maxSessionsPerWeek: 12 },
+      { id: 4, fullName: 'Lê Thị F', faculty: Category.CT, maxSessionsPerWeek: 10 },
+      { id: 5, fullName: 'Trần Thị G', faculty: Category.CT, maxSessionsPerWeek: 8 },
+      { id: 6, fullName: 'Nguyễn Thị H', faculty: Category.QS, maxSessionsPerWeek: 12 },
+      { id: 7, fullName: 'Phan Văn I', faculty: Category.QS, maxSessionsPerWeek: 12 },
+      { id: 8, fullName: 'Đỗ Văn J', faculty: Category.QS, maxSessionsPerWeek: 10 },
+      { id: 9, fullName: 'Đặng Thị K', faculty: Category.QS, maxSessionsPerWeek: 8 },
+      { id: 10, fullName: 'Tạ Văn L', faculty: Category.QS, maxSessionsPerWeek: 12 },
     ],
     skipDuplicates: true,
   });
@@ -77,19 +107,19 @@ async function main() {
   // Locations
   await prisma.location.createMany({
     data: [
-      { id: 1, name: 'Phong A101', capacity: 1 },
-      { id: 2, name: 'Phong A102', capacity: 1 },
-      { id: 3, name: 'Phong A103', capacity: 1 },
-      { id: 4, name: 'Phong B101', capacity: 1 },
-      { id: 5, name: 'Phong B202', capacity: 1 },
-      { id: 6, name: 'Phong B103', capacity: 1 },
-      { id: 7, name: 'Phong C301', capacity: 1 },
-      { id: 8, name: 'Phong C302', capacity: 1 },
-      { id: 9, name: 'Phong C303', capacity: 1 },
-      { id: 10, name: 'Doi sau truong', capacity: 3 },
-      { id: 11, name: 'Doi truoc truong', capacity: 3 },
-      { id: 12, name: 'San the duc', capacity: 5 },
-      { id: 13, name: 'Thao truong', capacity: 5 },
+      { id: 1, name: 'Phòng A101', capacity: 1 },
+      { id: 2, name: 'Phòng A102', capacity: 1 },
+      { id: 3, name: 'Phòng A103', capacity: 1 },
+      { id: 4, name: 'Phòng B101', capacity: 1 },
+      { id: 5, name: 'Phòng B202', capacity: 1 },
+      { id: 6, name: 'Phòng B103', capacity: 1 },
+      { id: 7, name: 'Phòng C301', capacity: 1 },
+      { id: 8, name: 'Phòng C302', capacity: 1 },
+      { id: 9, name: 'Phòng C303', capacity: 1 },
+      { id: 10, name: 'Đồi sau trường', capacity: 3 },
+      { id: 11, name: 'Đồi trước trường', capacity: 3 },
+      { id: 12, name: 'Sân thể dục', capacity: 5 },
+      { id: 13, name: 'Thao trường', capacity: 5 },
     ],
     skipDuplicates: true,
   });

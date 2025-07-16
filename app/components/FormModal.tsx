@@ -205,6 +205,20 @@ function FormModal({
                     </Form.Group>
                 );
 
+            case 'date':
+                return (
+                    <Form.Group key={index} className="mb-3" controlId={name}>
+                        <Form.Label>{label}</Form.Label>
+                        <Form.Control
+                            name={name}
+                            type="date"
+                            placeholder={`Nhập ${label}`}
+                            defaultValue={record?.[name] ? record[name].slice(0, 10) : ''}
+                            required={formMethod === 'POST'}
+                        />
+                    </Form.Group>
+                );
+
             default:
                 return null;
         }

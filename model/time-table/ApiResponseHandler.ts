@@ -11,16 +11,31 @@ export class ApiResponseHandler {
         weeks.forEach((week: string) => {
             const weekData = fileContents[week];
             weekData.forEach((day: any) => {
-                timetableData.push({
-                    date: day.date,
-                    session: day.session,
-                    teamId: day.teamId.toString(),
-                    class: {
-                        subject: day.subjectId,
-                        lecturer: day.lecturerId,
-                        location: day.locationId
-                    }
-                });
+                // Only add if there's a subject (not null)
+                if (day.subjectId !== null) {
+                    timetableData.push({
+                        date: day.date,
+                        session: day.session,
+                        teamId: day.teamId.toString(),
+                        class: {
+                            subject: `Subject ${day.subjectId}`, // Convert to string
+                            lecturer: day.lecturerId ? `Lecturer ${day.lecturerId}` : 'TBA',
+                            location: day.locationId ? `Location ${day.locationId}` : 'TBA'
+                        }
+                    });
+                } else {
+                    // Add empty slot for breaks
+                    timetableData.push({
+                        date: day.date,
+                        session: day.session,
+                        teamId: day.teamId.toString(),
+                        class: {
+                            subject: '',
+                            lecturer: '',
+                            location: ''
+                        }
+                    });
+                }
                 teams.push(day.teamId.toString());
             });
         });

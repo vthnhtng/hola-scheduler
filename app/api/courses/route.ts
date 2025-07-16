@@ -12,7 +12,15 @@ export async function GET(request: NextRequest) {
     prisma.course.findMany({
       skip,
       take: limit,
-      orderBy: { id: 'asc' }
+      orderBy: { id: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        school: true,
+        startDate: true,
+        endDate: true,
+        status: true,
+      }
     }),
     prisma.course.count()
   ]);
@@ -30,9 +38,9 @@ export async function GET(request: NextRequest) {
 // POST: Thêm mới Course
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { name, status } = body;
+  const { name, school, startDate, endDate } = body;
   const course = await prisma.course.create({
-    data: { name, status }
+    data: { name, school, startDate, endDate, status: 'Undone' }
   });
   return NextResponse.json({ success: true, data: course });
 }
@@ -40,10 +48,16 @@ export async function POST(request: NextRequest) {
 // PUT: Sửa Course
 export async function PUT(request: NextRequest) {
   const body = await request.json();
-  const { id, name, status } = body;
+  const { id, name, school, startDate, endDate } = body;
+  // Chỉ cập nhật startDate và endDate nếu cả hai trường đều có trong request
+  const updateData: any = { name, school };
+  if (startDate && endDate) {
+    updateData.startDate = startDate;
+    updateData.endDate = endDate;
+  }
   const course = await prisma.course.update({
     where: { id: Number(id) },
-    data: { name, status }
+    data: updateData
   });
   return NextResponse.json({ success: true, data: course });
 }

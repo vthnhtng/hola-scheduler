@@ -62,10 +62,13 @@ model Location {
 }
 
 model Course {
-  id     Int                 @id @default(autoincrement())
-  name   String              @unique(map: "name") @db.VarChar(50)
-  status Status
-  teams  Team[]              @relation("course_id_fk")
+  id        Int                 @id @default(autoincrement())
+  name      String              @unique(map: "name") @db.VarChar(50)
+  school    String?             @db.VarChar(100) // Tên trường
+  startDate DateTime            // Thời gian bắt đầu (bắt buộc)
+  endDate   DateTime            // Thời gian kết thúc (bắt buộc)
+  status    Status
+  teams     Team[]              @relation("course_id_fk")
   scheduleFiles ScheduleFile[]
   lecturerStatistics LecturerStatistic[]
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { ObjectAttribute } from '../types/object-attribute';
+import { format } from 'date-fns';
 
 interface GridRowProps {
     attributes: ObjectAttribute[];
@@ -17,6 +18,17 @@ export default function GridRow({
 }: GridRowProps) {
     const getLabelByValue = (value: string, selections: { value: string; label: string }[] | undefined) => {
         return selections?.find(selection => selection.value == value)?.label || "Không";
+    }
+
+    function renderCell(attr: ObjectAttribute, value: any) {
+        if ((attr.name === 'startDate' || attr.name === 'endDate') && value) {
+            try {
+                return format(new Date(value), 'dd/MM/yyyy');
+            } catch {
+                return value;
+            }
+        }
+        return value;
     }
 
     return (
@@ -52,7 +64,7 @@ export default function GridRow({
                                     }}
                                 />
                               </td>
-                            : <td key={attribute.name}>{record[attribute.name]}</td>
+                            : <td key={attribute.name}>{renderCell(attribute, record[attribute.name])}</td>
             ))}
             <td className='w-auto' style={{ height: '70px'}}>
                 {Object.keys(record).length === 0 ? null : (
