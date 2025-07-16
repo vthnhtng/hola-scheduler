@@ -40,7 +40,13 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { name, school, startDate, endDate } = body;
   const course = await prisma.course.create({
-    data: { name, school, startDate, endDate, status: 'Undone' }
+    data: {
+      name,
+      school,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
+      status: 'Undone'
+    }
   });
   return NextResponse.json({ success: true, data: course });
 }
@@ -52,8 +58,8 @@ export async function PUT(request: NextRequest) {
   // Chỉ cập nhật startDate và endDate nếu cả hai trường đều có trong request
   const updateData: any = { name, school };
   if (startDate && endDate) {
-    updateData.startDate = startDate;
-    updateData.endDate = endDate;
+    updateData.startDate = new Date(startDate);
+    updateData.endDate = new Date(endDate);
   }
   const course = await prisma.course.update({
     where: { id: Number(id) },

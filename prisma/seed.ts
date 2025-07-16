@@ -124,19 +124,19 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Teams (updated with courseId and teamLeaderId)
+  // Teams (updated with courseId và teamLeaderId hợp lệ, courseId chỉ từ 1-4)
   await prisma.team.createMany({
     data: [
       { id: 1, name: 'Team1', program: Program.DH, courseId: 1, teamLeaderId: 1 },
       { id: 2, name: 'Team2', program: Program.DH, courseId: 1, teamLeaderId: 2 },
       { id: 3, name: 'Team3', program: Program.DH, courseId: 2, teamLeaderId: 3 },
       { id: 4, name: 'Team4', program: Program.DH, courseId: 2, teamLeaderId: 4 },
-      { id: 5, name: 'Team5', program: Program.DH, courseId: 1, teamLeaderId: 5 },
-      { id: 6, name: 'Team6', program: Program.DH, courseId: 2, teamLeaderId: 6 },
-      { id: 7, name: 'Team7', program: Program.DH, courseId: 1, teamLeaderId: 7 },
-      { id: 8, name: 'Team8', program: Program.DH, courseId: 2, teamLeaderId: 8 },
-      { id: 9, name: 'Team9', program: Program.DH, courseId: 1, teamLeaderId: 9 },
-      { id: 10, name: 'Team10', program: Program.DH, courseId: 2, teamLeaderId: 10 },
+      { id: 5, name: 'Team5', program: Program.DH, courseId: 3, teamLeaderId: 5 },
+      { id: 6, name: 'Team6', program: Program.DH, courseId: 3, teamLeaderId: 6 },
+      { id: 7, name: 'Team7', program: Program.DH, courseId: 4, teamLeaderId: 7 },
+      { id: 8, name: 'Team8', program: Program.DH, courseId: 4, teamLeaderId: 8 },
+      { id: 9, name: 'Team9', program: Program.CD, courseId: 1, teamLeaderId: 9 },
+      { id: 10, name: 'Team10', program: Program.CD, courseId: 2, teamLeaderId: 10 },
     ],
     skipDuplicates: true,
   });
