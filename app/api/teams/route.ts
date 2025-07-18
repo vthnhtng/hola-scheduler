@@ -16,6 +16,10 @@ export async function GET(request: NextRequest) {
         const teams = await prisma.team.findMany({
             skip: (page - 1) * limit,
             take: limit,
+            include: {
+                teamLeaderReference: true,
+                courseReference: true
+            }
         });
 
         const totalCount = await prisma.team.count();
@@ -43,14 +47,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, program, teamLeaderId, universityId } = body;
+        const { name, program, teamLeaderId, courseId } = body;
 
         const newTeam = await prisma.team.create({
             data: {
                 name,
                 program,
                 teamLeaderId: parseInt(teamLeaderId),
-                universityId: parseInt(universityId)
+                courseId: parseInt(courseId)
             },
         });
 
@@ -107,7 +111,7 @@ export async function DELETE(request: Request) {
 export async function PUT(request: Request) {
     try {
         const body = await request.json();
-        const { id, name, program } = body;
+        const { id, name, program, teamLeaderId, courseId } = body;
 
         if (typeof id !== 'number') {
             return NextResponse.json(
@@ -121,6 +125,8 @@ export async function PUT(request: Request) {
             data: {
                 name,
                 program,
+                teamLeaderId: teamLeaderId ? parseInt(teamLeaderId) : undefined,
+                courseId: courseId ? parseInt(courseId) : undefined,
             },
         });
 
