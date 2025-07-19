@@ -9,14 +9,15 @@ import GridRow from "../components/GridRow";
 import Pagination from "../components/Pagination";
 import LoadingOverlay from "../components/LoadingOverlay";
 import { FaEdit, FaTrashAlt } from "react-icons/fa";
+import { ObjectAttribute } from '../types/object-attribute';
 
-const courseAttributes = [
+const courseAttributes: ObjectAttribute[] = [
   { name: "name", label: "Tên khóa học", type: "string" },
   { name: "school", label: "Tên trường", type: "string" },
-  { name: "startDate", label: "Thời gian bắt đầu", type: "date", required: true },
-  { name: "endDate", label: "Thời gian kết thúc", type: "date", required: true },
+  { name: "startDate", label: "Thời gian bắt đầu", type: "date" },
+  { name: "endDate", label: "Thời gian kết thúc", type: "date" },
 ];
-const courseTableColumns = [
+const courseTableColumns: ObjectAttribute[] = [
   ...courseAttributes,
   { name: "status", label: "Trạng thái", type: "select", selections: [
     { value: "Done", label: "Hoàn thành" },
