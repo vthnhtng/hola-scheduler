@@ -310,11 +310,15 @@ export async function generateSchedulesForTeamsJob(startDate: Date, teams: Team[
         }
         
         await writeSchedulesToFile(startDate, endDate, schedules);
-        // Get all generated files
-        const scheduleDir = path.join(process.cwd(), 'schedules', 'scheduled');
-        const files = fs.readdirSync(scheduleDir)
-            .filter(f => f.startsWith('week_') && f.endsWith('.json'));
-        processedFiles.push(...files);
+        // Get all generated files from team directories
+        for (const team of teams) {
+            const teamScheduleDir = path.join(process.cwd(), 'resource', 'schedules', `team${team.id}`, 'scheduled');
+            if (fs.existsSync(teamScheduleDir)) {
+                const files = fs.readdirSync(teamScheduleDir)
+                    .filter(f => f.startsWith('week_') && f.endsWith('.json'));
+                processedFiles.push(...files.map(f => `team${team.id}_${f}`));
+            }
+        }
         return { processedFiles, errors };
     } catch (error) {
         console.error('Error generating schedules:', error);
@@ -324,13 +328,14 @@ export async function generateSchedulesForTeamsJob(startDate: Date, teams: Team[
 }
 
 async function writeSchedulesToFile(startDate: Date, endDate: Date, schedules: ClassSchedule[]) {
-    const baseDir = path.join(process.cwd(), 'schedules', 'scheduled');
-    fs.mkdirSync(baseDir, { recursive: true });
-
-    // Group by week based on actual dates
-    const weekMap: { [week: number]: any[] } = {};
+    // Group by team and week
+    const teamWeekMap: { [teamId: number]: { [week: number]: any[] } } = {};
 
     for (const { classId, schedule } of schedules) {
+        if (!teamWeekMap[classId]) {
+            teamWeekMap[classId] = {};
+        }
+
         for (const [dateString, daySchedule] of Object.entries(schedule)) {
             const currentDate = new Date(dateString);
             
@@ -363,7 +368,7 @@ async function writeSchedulesToFile(startDate: Date, endDate: Date, schedules: C
                 week = Math.floor(daysDiff / 7) + 2; // +2 because we start from week 2
             }
             
-            if (!weekMap[week]) weekMap[week] = [];
+            if (!teamWeekMap[classId][week]) teamWeekMap[classId][week] = [];
             const seen = new Set<string>();
 
             const dayOfWeek = currentDate.toLocaleDateString('en-US', { weekday: 'short' }) as DayOfWeek;
@@ -379,7 +384,7 @@ async function writeSchedulesToFile(startDate: Date, endDate: Date, schedules: C
                 if (seen.has(key)) continue;
                 seen.add(key);
 
-                weekMap[week].push({
+                teamWeekMap[classId][week].push({
                     week,
                     teamId: classId,
                     subjectId: sessionValue === 'BREAK' || !sessionValue ? null : (sessionValue as Subject).id,
@@ -393,40 +398,49 @@ async function writeSchedulesToFile(startDate: Date, endDate: Date, schedules: C
         }
     }
 
-    // Write each week to a separate file
-    for (const [weekStr, data] of Object.entries(weekMap)) {
-        if (!data.length) continue;
-        const week = Number(weekStr);
-        
-        // Calculate proper week start and end dates based on week number
-        let weekStart: Date, weekEnd: Date;
-        
-        if (week === 1) {
-            // Week 1: from startDate to first Saturday
-            weekStart = new Date(startDate);
-            weekEnd = new Date(startDate);
-            const startDay = startDate.getDay();
-            const daysToSaturday = startDay === 0 ? 6 : (startDay === 6 ? 0 : 6 - startDay);
-            weekEnd.setDate(startDate.getDate() + daysToSaturday);
-        } else {
-            // Week 2+: full weeks from Monday to Saturday
-            const firstSaturday = new Date(startDate);
-            const startDay = startDate.getDay();
-            const daysToSaturday = startDay === 0 ? 6 : (startDay === 6 ? 0 : 6 - startDay);
-            firstSaturday.setDate(startDate.getDate() + daysToSaturday);
+    // Write files for each team
+    for (const [teamIdStr, weekData] of Object.entries(teamWeekMap)) {
+        const teamId = Number(teamIdStr);
+        const teamDir = path.join(process.cwd(), 'resource', 'schedules', `team${teamId}`, 'scheduled');
+        fs.mkdirSync(teamDir, { recursive: true });
+
+        for (const [weekStr, data] of Object.entries(weekData)) {
+            if (!data.length) continue;
+            const week = Number(weekStr);
             
-            const firstMondayAfter = new Date(firstSaturday);
-            firstMondayAfter.setDate(firstSaturday.getDate() + 2);
+            // Calculate proper week start and end dates based on week number
+            let weekStart: Date, weekEnd: Date;
             
-            weekStart = new Date(firstMondayAfter);
-            weekStart.setDate(firstMondayAfter.getDate() + (week - 2) * 7);
+            if (week === 1) {
+                // Week 1: from startDate to first Saturday
+                weekStart = new Date(startDate);
+                weekEnd = new Date(startDate);
+                const startDay = startDate.getDay();
+                const daysToSaturday = startDay === 0 ? 6 : (startDay === 6 ? 0 : 6 - startDay);
+                weekEnd.setDate(startDate.getDate() + daysToSaturday);
+            } else {
+                // Week 2+: full weeks from Monday to Saturday
+                const firstSaturday = new Date(startDate);
+                const startDay = startDate.getDay();
+                const daysToSaturday = startDay === 0 ? 6 : (startDay === 6 ? 0 : 6 - startDay);
+                firstSaturday.setDate(startDate.getDate() + daysToSaturday);
+                
+                const firstMondayAfter = new Date(firstSaturday);
+                firstMondayAfter.setDate(firstSaturday.getDate() + 2);
+                
+                weekStart = new Date(firstMondayAfter);
+                weekStart.setDate(firstMondayAfter.getDate() + (week - 2) * 7);
+                
+                weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 5); // Monday + 5 = Saturday
+            }
             
-            weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekStart.getDate() + 5); // Monday + 5 = Saturday
+            const fileName = `week_${weekStart.toISOString().split('T')[0]}_${weekEnd.toISOString().split('T')[0]}.json`;
+            const filePath = path.join(teamDir, fileName);
+            
+            console.log('Writing schedule file for team', teamId, ':', filePath); // Debug log
+            fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+            console.log('File written successfully for team', teamId, ':', fileName); // Debug log
         }
-        
-        const fileName = `week_${weekStart.toISOString().split('T')[0]}_${weekEnd.toISOString().split('T')[0]}.json`;
-        const filePath = path.join(baseDir, fileName);
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
     }
 }
