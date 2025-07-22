@@ -97,18 +97,28 @@ function LecturersPage() {
                             <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
                                 <h2 className="page-title" style={{ fontSize: '2rem' }}>DANH SÁCH GIẢNG VIÊN</h2>
                                 <div className="d-flex gap-2" style={{ marginRight: "20px" }}>
-                                    <FormModal
-                                        title={'THÊM GIẢNG VIÊN'}
-                                        button={
-                                        <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center" disabled={!isScheduler}>
+                                    {isScheduler ? (
+                                        <FormModal
+                                            title={'THÊM GIẢNG VIÊN'}
+                                            button={
+                                            <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center">
+                                                THÊM GIẢNG VIÊN
+                                            </button>}
+                                            attributes={lecturerAttributes}
+                                            record={null}
+                                            formAction={'/api/lecturers'}
+                                            formMethod='POST'
+                                            onLoadingChange={setIsLoading}
+                                        />
+                                    ) : (
+                                        <button 
+                                            className="btn btn-success text-uppercase d-flex align-items-center justify-content-center" 
+                                            disabled
+                                            style={{ pointerEvents: 'none', opacity: 0.6 }}
+                                        >
                                             THÊM GIẢNG VIÊN
-                                        </button>}
-                                        attributes={lecturerAttributes}
-                                        record={null}
-                                        formAction={'/api/lecturers'}
-                                        formMethod='POST'
-                                        onLoadingChange={setIsLoading}
-                                    />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                             <div
@@ -138,11 +148,11 @@ function LecturersPage() {
                                                             attributes={lecturerAttributes}
                                                             record={lecturer}
                                                             index={index + (pagination.currentPage - 1) * 10}
-                                                            actions={[
+                                                            actions={isScheduler ? [
                                                                 <div key="edit">
                                                                     <FormModal
                                                                         title={'CHỈNH SỬA GIẢNG VIÊN'}
-                                                                        button={<button className="btn btn-outline-success me-2 action-btn" onClick={() => handleClickAction(index)} disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaEdit /></button>}
+                                                                        button={<button className="btn btn-outline-success me-2 action-btn" onClick={() => handleClickAction(index)}><FaEdit /></button>}
                                                                         attributes={lecturerAttributes}
                                                                         record={lecturer}
                                                                         formAction={'/api/lecturers'}
@@ -154,7 +164,7 @@ function LecturersPage() {
                                                                     <DynamicRows
                                                                         title={'MÔN CHUYÊN SÂU'}
                                                                         attribute={{ name: 'subject', label: 'MÔN'}}
-                                                                        button={<button className="btn btn-outline-primary me-2 action-btn" onClick={() => handleClickAction(index)} disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaLink /></button>}
+                                                                        button={<button className="btn btn-outline-primary me-2 action-btn" onClick={() => handleClickAction(index)}><FaLink /></button>}
                                                                         getSelectionsUrl={'/api/getSubjectsByCategory?category=' + lecturer.faculty}
                                                                         getRowsUrl={'/api/getSubjectsByLecturer?lecturerId=' + lecturer.id}
                                                                         saveUrl={'/api/saveLecturerSpecializations'}
@@ -165,12 +175,16 @@ function LecturersPage() {
                                                                 <div key="delete">
                                                                     <DeleteModal
                                                                         title={'GIẢNG VIÊN'}
-                                                                        button={<button className="btn btn-outline-danger action-btn" onClick={() => handleClickAction(index)} disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaTrashAlt /></button>}
+                                                                        button={<button className="btn btn-outline-danger action-btn" onClick={() => handleClickAction(index)}><FaTrashAlt /></button>}
                                                                         record={lecturer}
                                                                         onClose={() => {}}
                                                                         formAction={'/api/lecturers'}
                                                                     />
                                                                 </div>
+                                                            ] : [
+                                                                <button key="edit" className="btn btn-outline-success me-2 action-btn" disabled style={{ pointerEvents: 'none', opacity: 0.4 }}><FaEdit /></button>,
+                                                                <button key="specialize" className="btn btn-outline-primary me-2 action-btn" disabled style={{ pointerEvents: 'none', opacity: 0.4 }}><FaLink /></button>,
+                                                                <button key="delete" className="btn btn-outline-danger action-btn" disabled style={{ pointerEvents: 'none', opacity: 0.4 }}><FaTrashAlt /></button>
                                                             ]}
                                                         />
                                                     )

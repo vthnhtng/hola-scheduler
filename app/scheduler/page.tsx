@@ -5,6 +5,7 @@ import Scheduler from "../components/Scheduler";
 import SideBar from "../components/SideBar";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { usePermissions } from "../hooks/usePermissions";
 
 function EditableTimetable({ schedule, onChange }: { schedule: any, onChange: (s: any) => void }) {
     // Simple editable table for demo (edit subjectId directly)
@@ -48,6 +49,7 @@ export default function SchedulerPage() {
     const [showModal, setShowModal] = useState(false);
     const [editingSchedule, setEditingSchedule] = useState<any>(null);
     const [filePath, setFilePath] = useState<string>("");
+    const { isScheduler } = usePermissions();
 
     // Listener để nhận message từ popup window
     React.useEffect(() => {
@@ -116,7 +118,11 @@ export default function SchedulerPage() {
                         <EditableTimetable schedule={editingSchedule} onChange={setEditingSchedule} />
                         <div className="d-flex justify-content-end gap-2 mt-3">
                             <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Đóng</button>
-                            <button className="btn btn-success" onClick={handleSave}>Lưu</button>
+                            {isScheduler ? (
+                                <button className="btn btn-success" onClick={handleSave}>Lưu</button>
+                            ) : (
+                                <button className="btn btn-success" disabled style={{ pointerEvents: 'none', opacity: 0.6 }}>Lưu</button>
+                            )}
                         </div>
                     </div>
                 </div>

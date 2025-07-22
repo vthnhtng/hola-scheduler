@@ -1,8 +1,8 @@
 [
   {
     "week": 2,
-    "teamId": 9,
-    "subjectId": 19,
+    "teamId": 10,
+    "subjectId": 4,
     "date": "2025-09-08",
     "dayOfWeek": "Mon",
     "session": "morning",
@@ -11,8 +11,8 @@
   },
   {
     "week": 2,
-    "teamId": 9,
-    "subjectId": 1,
+    "teamId": 10,
+    "subjectId": 11,
     "date": "2025-09-08",
     "dayOfWeek": "Mon",
     "session": "afternoon",
@@ -21,8 +21,8 @@
   },
   {
     "week": 2,
-    "teamId": 9,
-    "subjectId": 20,
+    "teamId": 10,
+    "subjectId": 1,
     "date": "2025-09-08",
     "dayOfWeek": "Mon",
     "session": "evening",
@@ -31,8 +31,8 @@
   },
   {
     "week": 2,
-    "teamId": 9,
-    "subjectId": 11,
+    "teamId": 10,
+    "subjectId": 18,
     "date": "2025-09-09",
     "dayOfWeek": "Tue",
     "session": "morning",
@@ -41,7 +41,7 @@
   },
   {
     "week": 2,
-    "teamId": 9,
+    "teamId": 10,
     "subjectId": null,
     "date": "2025-09-09",
     "dayOfWeek": "Tue",
@@ -51,7 +51,7 @@
   },
   {
     "week": 2,
-    "teamId": 9,
+    "teamId": 10,
     "subjectId": null,
     "date": "2025-09-09",
     "dayOfWeek": "Tue",

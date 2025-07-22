@@ -95,17 +95,27 @@ function LocationsPage() {
                             <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
                                 <h2 className="page-title" style={{ fontSize: '2rem' }}>DANH SÁCH ĐỊA ĐIỂM HỌC</h2>
                                 <div className="d-flex gap-2" style={{ marginRight: "20px" }}>
-                                    <FormModal
-                                        title={'THÊM ĐỊA ĐIỂM'}
-                                        button={
-                                        <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}>
+                                    {isScheduler ? (
+                                        <FormModal
+                                            title={'THÊM ĐỊA ĐIỂM'}
+                                            button={
+                                            <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center">
+                                                THÊM ĐỊA ĐIỂM
+                                            </button>}
+                                            attributes={locationAttributes}
+                                            record={null}
+                                            formAction={'/api/locations'}
+                                            formMethod='POST'
+                                        />
+                                    ) : (
+                                        <button 
+                                            className="btn btn-success text-uppercase d-flex align-items-center justify-content-center" 
+                                            disabled
+                                            style={{ pointerEvents: 'none', opacity: 0.6 }}
+                                        >
                                             THÊM ĐỊA ĐIỂM
-                                        </button>}
-                                        attributes={locationAttributes}
-                                        record={null}
-                                        formAction={'/api/locations'}
-                                        formMethod='POST'
-                                    />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                             <div
@@ -135,11 +145,11 @@ function LocationsPage() {
                                                             attributes={locationAttributes}
                                                             record={location}
                                                             index={index + (pagination.currentPage - 1) * 10}
-                                                            actions={[
+                                                            actions={isScheduler ? [
                                                             <FormModal
                                                                 key="edit"
                                                                 title={'CHỈNH SỬA ĐỊA ĐIỂM'}
-                                                                button={<button className="btn btn-outline-success me-2 action-btn" title="Sửa" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaEdit /></button>}
+                                                                button={<button className="btn btn-outline-success me-2 action-btn" title="Sửa"><FaEdit /></button>}
                                                                 attributes={locationAttributes}
                                                                 record={location}
                                                                 formAction={'/api/locations'}
@@ -149,7 +159,7 @@ function LocationsPage() {
                                                                 key="link"
                                                                 title={'LIÊN KẾT MÔN HỌC'}
                                                                 attribute={{ name: 'subject', label: 'MÔN HỌC'}}
-                                                                button={<button className="btn btn-outline-primary me-2 action-btn" title="Liên kết môn học" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaLink /></button>}
+                                                                button={<button className="btn btn-outline-primary me-2 action-btn" title="Liên kết môn học"><FaLink /></button>}
                                                                 getSelectionsUrl={'/api/getSubjectsByCategory?category=all'}
                                                                 getRowsUrl={'/api/locationSubjects?locationId=' + location.id}
                                                                 saveUrl={'/api/saveLocationSubjects'}
@@ -158,11 +168,15 @@ function LocationsPage() {
                                                             <DeleteModal
                                                                 key="delete"
                                                                 title={'ĐỊA ĐIỂM'}
-                                                                button={<button className="btn btn-outline-danger action-btn" title="Xóa" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaTrashAlt /></button>}
+                                                                button={<button className="btn btn-outline-danger action-btn" title="Xóa"><FaTrashAlt /></button>}
                                                                 record={location}
                                                                 onClose={() => fetchLocations(page, limit)}
                                                                 formAction={'/api/locations'}
                                                             />
+                                                            ] : [
+                                                                <button key="edit" className="btn btn-outline-success me-2 action-btn" disabled style={{ pointerEvents: 'none', opacity: 0.4 }} title="Sửa"><FaEdit /></button>,
+                                                                <button key="link" className="btn btn-outline-primary me-2 action-btn" disabled style={{ pointerEvents: 'none', opacity: 0.4 }} title="Liên kết môn học"><FaLink /></button>,
+                                                                <button key="delete" className="btn btn-outline-danger action-btn" disabled style={{ pointerEvents: 'none', opacity: 0.4 }} title="Xóa"><FaTrashAlt /></button>
                                                             ]}
                                                         />
                                                     )

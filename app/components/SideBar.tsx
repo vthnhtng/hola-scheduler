@@ -5,12 +5,14 @@ import { usePathname } from 'next/navigation';
 import { FaHome, FaUser, FaChalkboardTeacher, FaChartBar, FaBars, FaCalendarAlt, FaCog } from "react-icons/fa";
 import Link from "next/link";
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 
 function Sidebar() {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(true);
     const [activeItem, setActiveItem] = useState("");
     const { user } = useAuth();
+    const { isScheduler } = usePermissions();
     // Trạng thái mở/đóng cho từng submenu
     type SubMenuKey = 'lecturers' | 'subjects' | 'locations' | 'curriculums' | 'teams' | 'courses';
     type SubMenuOpenState = { [key in SubMenuKey]: boolean };
@@ -25,13 +27,21 @@ function Sidebar() {
 
     const [openManage, setOpenManage] = useState(false);
 
-    const menuItems = [
+    const allMenuItems = [
         { name: "Trang chủ", icon: <FaHome />, link: "/" },
         { name: "Lịch giảng dạy", icon: <FaChalkboardTeacher />, link: "/timetable" },
         { name: "Lịch nghỉ lễ", icon: <FaCalendarAlt />, link: "/holidays" },
         { name: "Tài khoản", icon: <FaUser />, link: "/users" },
-        { name: "Sắp xếp lịch", icon: <FaCog />, link: "/scheduler" },
+        { name: "Sắp xếp lịch", icon: <FaCog />, link: "/scheduler", requireScheduler: true },
     ];
+
+    // Filter menu items based on user permissions
+    const menuItems = allMenuItems.filter(item => {
+        if (item.requireScheduler && !isScheduler) {
+            return false;
+        }
+        return true;
+    });
 
     const subMenuItems = [
         { name: "Giảng viên", link: "/lecturers", key: "lecturers" },

@@ -93,17 +93,27 @@ function CurriculumsPage() {
                             <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
                                 <h2 className="page-title" style={{ fontSize: '2rem' }}>DANH SÁCH CHƯƠNG TRÌNH ĐÀO TẠO</h2>
                                 <div className="d-flex gap-2" style={{ marginRight: "20px" }}>
-                                    <FormModal
-                                        title={'THÊM CHƯƠNG TRÌNH'}
-                                        button={
-                                        <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center" disabled={!isScheduler}>
+                                    {isScheduler ? (
+                                        <FormModal
+                                            title={'THÊM CHƯƠNG TRÌNH'}
+                                            button={
+                                            <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center">
+                                                THÊM CHƯƠNG TRÌNH
+                                            </button>}
+                                            attributes={curriculumAttributes}
+                                            record={null}
+                                            formAction={'/api/curriculums'}
+                                            formMethod='POST'
+                                        />
+                                    ) : (
+                                        <button 
+                                            className="btn btn-success text-uppercase d-flex align-items-center justify-content-center" 
+                                            disabled
+                                            style={{ pointerEvents: 'none', opacity: 0.6 }}
+                                        >
                                             THÊM CHƯƠNG TRÌNH
-                                        </button>}
-                                        attributes={curriculumAttributes}
-                                        record={null}
-                                        formAction={'/api/curriculums'}
-                                        formMethod='POST'
-                                    />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                             <div
@@ -133,11 +143,11 @@ function CurriculumsPage() {
                                                             attributes={curriculumAttributes}
                                                             record={curriculum}
                                                             index={index + (pagination.currentPage - 1) * 10}
-                                                            actions={[
+                                                            actions={isScheduler ? [
                                                                 <FormModal
                                                                     key="edit"
                                                                     title={'SỬA CHƯƠNG TRÌNH'}
-                                                                    button={<button className="btn btn-outline-success me-2 action-btn" title="Sửa" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaEdit /></button>}
+                                                                    button={<button className="btn btn-outline-success me-2 action-btn" title="Sửa"><FaEdit /></button>}
                                                                     attributes={curriculumAttributes}
                                                                     record={curriculum}
                                                                     formAction={'/api/curriculums'}
@@ -147,7 +157,7 @@ function CurriculumsPage() {
                                                                     key="link"
                                                                     title={'LIÊN KẾT MÔN HỌC'}
                                                                     attribute={{ name: 'subject', label: 'MÔN HỌC'}}
-                                                                    button={<button className="btn btn-outline-primary me-2 action-btn" title="Liên kết môn học" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaLink /></button>}
+                                                                    button={<button className="btn btn-outline-primary me-2 action-btn" title="Liên kết môn học"><FaLink /></button>}
                                                                     getSelectionsUrl={'/api/getSubjectsByCategory?category=all'}
                                                                     getRowsUrl={'/api/curriculumSubjects?curriculumId=' + curriculum.id}
                                                                     saveUrl={'/api/saveCurriculumSubjects'}
@@ -156,11 +166,15 @@ function CurriculumsPage() {
                                                                 <DeleteModal
                                                                     key="delete"
                                                                     title={'CHƯƠNG TRÌNH'}
-                                                                    button={<button className="btn btn-outline-danger action-btn" title="Xóa" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaTrashAlt /></button>}
+                                                                    button={<button className="btn btn-outline-danger action-btn" title="Xóa"><FaTrashAlt /></button>}
                                                                     record={curriculum}
                                                                     onClose={() => fetchCurriculums(page, limit)}
                                                                     formAction={'/api/curriculums'}
                                                                 />
+                                                            ] : [
+                                                                <button key="edit" className="btn btn-outline-success me-2 action-btn" disabled style={{ pointerEvents: 'none', opacity: 0.4 }} title="Sửa"><FaEdit /></button>,
+                                                                <button key="link" className="btn btn-outline-primary me-2 action-btn" disabled style={{ pointerEvents: 'none', opacity: 0.4 }} title="Liên kết môn học"><FaLink /></button>,
+                                                                <button key="delete" className="btn btn-outline-danger action-btn" disabled style={{ pointerEvents: 'none', opacity: 0.4 }} title="Xóa"><FaTrashAlt /></button>
                                                             ]}
                                                         />
                                                     )

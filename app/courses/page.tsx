@@ -10,6 +10,7 @@ import Pagination from "../components/Pagination";
 import LoadingOverlay from "../components/LoadingOverlay";
 import { FaEdit, FaTrashAlt } from "react-icons/fa";
 import { ObjectAttribute } from '../types/object-attribute';
+import { usePermissions } from '../hooks/usePermissions';
 
 const courseAttributes: ObjectAttribute[] = [
   { name: "name", label: "Tên khóa học", type: "string" },
@@ -31,6 +32,7 @@ export default function CoursesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1, totalCount: 0 });
+  const { isScheduler } = usePermissions();
 
   const fetchCourses = async (page = 1) => {
     setLoading(true);
@@ -61,15 +63,25 @@ export default function CoursesPage() {
             <div className="d-flex flex-column" style={{ width: "calc(100% - 20px)", marginLeft: "20px" }}>
               <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
                 <h2 className="fw-bold text-uppercase" style={{ fontSize: "2.2rem" }}>DANH SÁCH KHÓA HỌC</h2>
-                <FormModal
-                  title="THÊM KHÓA HỌC"
-                  button={<button className="btn btn-success">THÊM KHÓA HỌC</button>}
-                  attributes={courseAttributes}
-                  record={null}
-                  formAction="/api/courses"
-                  formMethod="POST"
-                  onLoadingChange={setLoading}
-                />
+                {isScheduler ? (
+                  <FormModal
+                    title="THÊM KHÓA HỌC"
+                    button={<button className="btn btn-success">THÊM KHÓA HỌC</button>}
+                    attributes={courseAttributes}
+                    record={null}
+                    formAction="/api/courses"
+                    formMethod="POST"
+                    onLoadingChange={setLoading}
+                  />
+                ) : (
+                  <button 
+                    className="btn btn-success" 
+                    disabled
+                    style={{ pointerEvents: 'none', opacity: 0.6 }}
+                  >
+                    THÊM KHÓA HỌC
+                  </button>
+                )}
               </div>
               <table className="table table-hover">
                 <thead className="table-light">
@@ -88,7 +100,7 @@ export default function CoursesPage() {
                           attributes={courseTableColumns}
                           record={course}
                           index={idx + (pagination.currentPage - 1) * 10}
-                          actions={[
+                          actions={isScheduler ? [
                             <FormModal
                               key="edit"
                               title="SỬA KHÓA HỌC"
@@ -115,6 +127,9 @@ export default function CoursesPage() {
                               onClose={() => fetchCourses(pagination.currentPage)}
                               formAction="/api/courses"
                             />
+                          ] : [
+                            <button key="edit" className="btn btn-outline-success me-2 action-btn" disabled style={{ pointerEvents: 'none', opacity: 0.4 }} title="Sửa"><FaEdit /></button>,
+                            <button key="delete" className="btn btn-outline-danger action-btn" disabled style={{ pointerEvents: 'none', opacity: 0.4 }} title="Xóa"><FaTrashAlt /></button>
                           ]}
                         />
                       ))}

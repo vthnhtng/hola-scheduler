@@ -65,8 +65,12 @@ function SubjectsPage() {
                 throw new Error(response.statusText);
             }
             const data = await response.json();
-            setSubjects(data.data);
-            setPagination(data.pagination);
+            setSubjects(data.data || []);
+            setPagination(data.pagination || {
+                currentPage: 1,
+                totalPages: 1,
+                totalCount: 0
+            });
         } catch (err: any) {
             setError(err.message || 'Failed to fetch subjects');
         } finally {
@@ -106,17 +110,27 @@ function SubjectsPage() {
                             <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
                                 <h2 className="page-title" style={{ fontSize: '2rem' }}>DANH SÁCH HỌC PHẦN</h2>
                                 <div className="d-flex gap-2" style={{ marginRight: "20px" }}>
-                                    <FormModal
-                                        title={'THÊM GIẢNG VIÊN'}
-                                        button={
-                                        <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center" disabled={!isScheduler}>
+                                    {isScheduler ? (
+                                        <FormModal
+                                            title={'THÊM MÔN HỌC'}
+                                            button={
+                                            <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center">
+                                                THÊM MÔN HỌC
+                                            </button>}
+                                            attributes={subjectAttributes}
+                                            record={null}
+                                            formAction={'/api/subjects'}
+                                            formMethod='POST'
+                                        />
+                                    ) : (
+                                        <button 
+                                            className="btn btn-success text-uppercase d-flex align-items-center justify-content-center" 
+                                            disabled
+                                            style={{ pointerEvents: 'none', opacity: 0.6 }}
+                                        >
                                             THÊM MÔN HỌC
-                                        </button>}
-                                        attributes={subjectAttributes}
-                                        record={null}
-                                        formAction={'/api/subjects'}
-                                        formMethod='POST'
-                                    />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                             <div
@@ -142,15 +156,15 @@ function SubjectsPage() {
                                                 {subjects.map((subject, index) =>
                                                     subject && (
                                                         <GridRow
-                                                            key={index + (pagination.currentPage - 1) * 10}
+                                                            key={index + ((pagination?.currentPage || 1) - 1) * 10}
                                                             attributes={subjectAttributes}
                                                             record={subject}
-                                                            index={index + (pagination.currentPage - 1) * 10}
-                                                            actions={[
+                                                            index={index + ((pagination?.currentPage || 1) - 1) * 10}
+                                                            actions={isScheduler ? [
                                                                 <FormModal
                                                                     key="edit"
                                                                     title={'CHỈNH SỬA MÔN HỌC'}
-                                                                    button={<button className="btn btn-outline-success me-2 action-btn" onClick={() => handleClickAction(index)} title="Sửa" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaEdit /></button>}
+                                                                    button={<button className="btn btn-outline-success me-2 action-btn" onClick={() => handleClickAction(index)} title="Sửa"><FaEdit /></button>}
                                                                     attributes={subjectAttributes}
                                                                     record={subject}
                                                                     formAction={'/api/subjects'}
@@ -159,11 +173,14 @@ function SubjectsPage() {
                                                                 <DeleteModal
                                                                     key="delete"
                                                                     title={'MÔN HỌC'}
-                                                                    button={<button className="btn btn-outline-danger action-btn" onClick={() => handleClickAction(index)} title="Xóa" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}><FaTrashAlt /></button>}
+                                                                    button={<button className="btn btn-outline-danger action-btn" onClick={() => handleClickAction(index)} title="Xóa"><FaTrashAlt /></button>}
                                                                     record={subject}
                                                                     onClose={() => fetchSubjects(page, limit)}
                                                                     formAction={'/api/subjects'}
                                                                 />
+                                                            ] : [
+                                                                <button key="edit" className="btn btn-outline-success me-2 action-btn" disabled style={{ pointerEvents: 'none', opacity: 0.4 }} title="Sửa"><FaEdit /></button>,
+                                                                <button key="delete" className="btn btn-outline-danger action-btn" disabled style={{ pointerEvents: 'none', opacity: 0.4 }} title="Xóa"><FaTrashAlt /></button>
                                                             ]}
                                                         />
                                                     )
@@ -190,8 +207,8 @@ function SubjectsPage() {
                         </div>
                         <div className="d-flex justify-content-center align-items-center">
                             <Pagination
-                                currentPage={pagination.currentPage}
-                                totalPages={pagination.totalPages}
+                                currentPage={pagination?.currentPage || 1}
+                                totalPages={pagination?.totalPages || 1}
                                 onPageChange={changePage}
                             />
                         </div>

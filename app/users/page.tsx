@@ -29,11 +29,16 @@ interface PaginationData {
 }
 
 function UsersPage() {
+    const roleOptions = [
+        { value: 'scheduler', label: 'Người lập lịch' },
+        { value: 'viewer', label: 'Người xem' }
+    ];
+
     const userAttributes: ObjectAttribute[] = [
         { name: 'username', label: 'Tên đăng nhập', type: 'string' },
         { name: 'fullName', label: 'Họ tên', type: 'string' },
         { name: 'email', label: 'Email', type: 'string' },
-        { name: 'role', label: 'Vai trò', type: 'string' },
+        { name: 'role', label: 'Vai trò', type: 'select', selections: roleOptions },
         { name: 'password', label: 'Mật khẩu', type: 'password' }
     ];
 
@@ -100,19 +105,29 @@ function UsersPage() {
                             <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
                                 <h2 className="page-title" style={{ fontSize: '2rem' }}>DANH SÁCH NGƯỜI DÙNG</h2>
                                 <div className="d-flex gap-2" style={{ marginRight: "20px" }}>
-                                    <FormModal
-                                        title={'THÊM NGƯỜI DÙNG'}
-                                        button={
-                                            <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center" disabled={!isScheduler} style={{ pointerEvents: !isScheduler ? 'none' : 'auto' }}>
-                                                THÊM NGƯỜI DÙNG
-                                            </button>
-                                        }
-                                        attributes={userAttributes}
-                                        record={null}
-                                        formAction={'/api/users'}
-                                        formMethod='POST'
-                                        onLoadingChange={setIsLoading}
-                                    />
+                                    {isScheduler ? (
+                                        <FormModal
+                                            title={'THÊM NGƯỜI DÙNG'}
+                                            button={
+                                                <button className="btn btn-success text-uppercase d-flex align-items-center justify-content-center">
+                                                    THÊM NGƯỜI DÙNG
+                                                </button>
+                                            }
+                                            attributes={userAttributes}
+                                            record={null}
+                                            formAction={'/api/users'}
+                                            formMethod='POST'
+                                            onLoadingChange={setIsLoading}
+                                        />
+                                    ) : (
+                                        <button 
+                                            className="btn btn-success text-uppercase d-flex align-items-center justify-content-center" 
+                                            disabled
+                                            style={{ pointerEvents: 'none', opacity: 0.6 }}
+                                        >
+                                            THÊM NGƯỜI DÙNG
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                             <div className="d-flex flex-column" style={{ width: 'calc(100% - 20px)', marginLeft: "20px" }}>
@@ -136,22 +151,37 @@ function UsersPage() {
                                                             attributes={userAttributes}
                                                             record={{ ...user, _showPlainPassword: true }}
                                                             index={index + (pagination.currentPage - 1) * 10}
-                                                            actions={[
+                                                            actions={isScheduler ? [
                                                                 <button
                                                                     key="edit"
                                                                     className="btn btn-outline-success me-2 d-flex align-items-center justify-content-center"
-                                                                    style={{ minWidth: 40, height: 40, borderRadius: 8, fontSize: 18, padding: 0, pointerEvents: !isScheduler ? 'none' : 'auto' }}
+                                                                    style={{ minWidth: 40, height: 40, borderRadius: 8, fontSize: 18, padding: 0 }}
                                                                     onClick={() => setEditUser(user)}
-                                                                    disabled={!isScheduler}
                                                                 >
                                                                     <FaEdit />
                                                                 </button>,
                                                                 <button
                                                                     key="delete"
                                                                     className="btn btn-outline-danger d-flex align-items-center justify-content-center"
-                                                                    style={{ minWidth: 40, height: 40, borderRadius: 8, fontSize: 18, padding: 0, pointerEvents: !isScheduler ? 'none' : 'auto' }}
+                                                                    style={{ minWidth: 40, height: 40, borderRadius: 8, fontSize: 18, padding: 0 }}
                                                                     onClick={() => setDeleteUser(user)}
-                                                                    disabled={!isScheduler}
+                                                                >
+                                                                    <FaTrashAlt />
+                                                                </button>
+                                                            ] : [
+                                                                <button
+                                                                    key="edit"
+                                                                    className="btn btn-outline-success me-2 d-flex align-items-center justify-content-center"
+                                                                    style={{ minWidth: 40, height: 40, borderRadius: 8, fontSize: 18, padding: 0, pointerEvents: 'none', opacity: 0.4 }}
+                                                                    disabled
+                                                                >
+                                                                    <FaEdit />
+                                                                </button>,
+                                                                <button
+                                                                    key="delete"
+                                                                    className="btn btn-outline-danger d-flex align-items-center justify-content-center"
+                                                                    style={{ minWidth: 40, height: 40, borderRadius: 8, fontSize: 18, padding: 0, pointerEvents: 'none', opacity: 0.4 }}
+                                                                    disabled
                                                                 >
                                                                     <FaTrashAlt />
                                                                 </button>

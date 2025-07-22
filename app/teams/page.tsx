@@ -9,6 +9,7 @@ import Pagination from '../components/Pagination';
 import FormModal from '../components/FormModal';
 import DeleteModal from '../components/DeleteModal';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { usePermissions } from '../hooks/usePermissions';
 import LoadingOverlay from '../components/LoadingOverlay';
 
 interface Team {
@@ -31,6 +32,7 @@ function TeamsPage() {
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const { isScheduler } = usePermissions();
   const [teams, setTeams] = useState<Team[]>([]);
   const [lecturers, setLecturers] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
@@ -153,14 +155,24 @@ function TeamsPage() {
             <div className="d-flex flex-column flex-grow-1">
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <h2 className="fw-bold text-uppercase" style={{ fontSize: '2rem' }}>Danh sách đại đội</h2>
-                <FormModal
-                  title="THÊM ĐẠI ĐỘI"
-                  button={<button className="btn btn-success text-uppercase">THÊM ĐẠI ĐỘI</button>}
-                  attributes={teamAttributes}
-                  record={null}
-                  formAction="/api/teams"
-                  formMethod="POST"
-                />
+                {isScheduler ? (
+                  <FormModal
+                    title="THÊM ĐẠI ĐỘI"
+                    button={<button className="btn btn-success text-uppercase">THÊM ĐẠI ĐỘI</button>}
+                    attributes={teamAttributes}
+                    record={null}
+                    formAction="/api/teams"
+                    formMethod="POST"
+                  />
+                ) : (
+                  <button 
+                    className="btn btn-success text-uppercase" 
+                    disabled
+                    style={{ pointerEvents: 'none', opacity: 0.6 }}
+                  >
+                    THÊM ĐẠI ĐỘI
+                  </button>
+                )}
               </div>
 
               <div className="table-responsive">
@@ -187,53 +199,92 @@ function TeamsPage() {
                             <td>{team.courseReference?.name || 'Chưa có'}</td>
                             <td>
                               <div className="d-flex gap-2">
-                                <FormModal
-                                  key="edit"
-                                  title="SỬA ĐẠI ĐỘI"
-                                  button={
-                                    <button
-                                      className="btn btn-outline-success action-btn"
-                                      onClick={() => handleClickAction(index)}
-                                      title="Sửa"
-                                      style={{
+                                {isScheduler ? (
+                                  <>
+                                    <FormModal
+                                      key="edit"
+                                      title="SỬA ĐẠI ĐỘI"
+                                      button={
+                                        <button
+                                          className="btn btn-outline-success action-btn"
+                                          onClick={() => handleClickAction(index)}
+                                          title="Sửa"
+                                          style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            height: '36px',
+                                            width: '36px',
+                                          }}
+                                        >
+                                          <FaEdit />
+                                        </button>
+                                      }
+                                      attributes={teamAttributes}
+                                      record={team}
+                                      formAction="/api/teams"
+                                      formMethod="PUT"
+                                    />
+                                    <DeleteModal
+                                      key="delete"
+                                      title="ĐẠI ĐỘI"
+                                      button={
+                                        <button
+                                          className="btn btn-outline-danger action-btn"
+                                          onClick={() => handleClickAction(index)}
+                                          title="Xóa"
+                                          style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            height: '36px',
+                                            width: '36px',
+                                          }}
+                                        >
+                                          <FaTrashAlt />
+                                        </button>
+                                      }
+                                      record={team}
+                                      onClose={() => fetchTeams(page, limit)}
+                                      formAction="/api/teams"
+                                    />
+                                  </>
+                                ) : (
+                                  <>
+                                    <button 
+                                      className="btn btn-outline-success action-btn" 
+                                      disabled 
+                                      style={{ 
+                                        pointerEvents: 'none', 
+                                        opacity: 0.4,
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         height: '36px',
                                         width: '36px',
-                                      }}
+                                      }} 
+                                      title="Sửa"
                                     >
                                       <FaEdit />
                                     </button>
-                                  }
-                                  attributes={teamAttributes}
-                                  record={team}
-                                  formAction="/api/teams"
-                                  formMethod="PUT"
-                                />
-                                <DeleteModal
-                                  key="delete"
-                                  title="ĐẠI ĐỘI"
-                                  button={
-                                    <button
-                                      className="btn btn-outline-danger action-btn"
-                                      onClick={() => handleClickAction(index)}
-                                      title="Xóa"
-                                      style={{
+                                    <button 
+                                      className="btn btn-outline-danger action-btn" 
+                                      disabled 
+                                      style={{ 
+                                        pointerEvents: 'none', 
+                                        opacity: 0.4,
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         height: '36px',
                                         width: '36px',
-                                      }}
+                                      }} 
+                                      title="Xóa"
                                     >
                                       <FaTrashAlt />
                                     </button>
-                                  }
-                                  record={team}
-                                  onClose={() => fetchTeams(page, limit)}
-                                  formAction="/api/teams"
-                                />
+                                  </>
+                                )}
                               </div>
                             </td>
                           </tr>
