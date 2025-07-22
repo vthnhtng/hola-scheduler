@@ -141,7 +141,7 @@ export default function ManualEditPage() {
         const day = d.getDay();
         if (day === 0) return; // Bỏ qua Chủ nhật hoàn toàn
         const weekStartDate = startOfWeek(d, { weekStartsOn: 1 });
-        const weekEndDate = addDays(weekStartDate, 6);
+        const weekEndDate = addDays(weekStartDate, 5);
         if (weekEndDate.getDay() !== 6) return; // Chỉ group tuần kết thúc là Thứ 7
         const weekStart = formatDate(weekStartDate, 'yyyy-MM-dd');
         const weekEnd = formatDate(weekEndDate, 'yyyy-MM-dd');
