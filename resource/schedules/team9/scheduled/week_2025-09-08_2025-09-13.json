@@ -2,7 +2,7 @@
   {
     "week": 2,
     "teamId": 9,
-    "subjectId": 11,
+    "subjectId": 13,
     "date": "2025-09-08",
     "dayOfWeek": "Mon",
     "session": "morning",
@@ -22,7 +22,7 @@
   {
     "week": 2,
     "teamId": 9,
-    "subjectId": null,
+    "subjectId": 14,
     "date": "2025-09-08",
     "dayOfWeek": "Mon",
     "session": "evening",
@@ -32,7 +32,7 @@
   {
     "week": 2,
     "teamId": 9,
-    "subjectId": 3,
+    "subjectId": 11,
     "date": "2025-09-09",
     "dayOfWeek": "Tue",
     "session": "morning",
@@ -55,36 +55,6 @@
     "subjectId": null,
     "date": "2025-09-09",
     "dayOfWeek": "Tue",
-    "session": "evening",
-    "lecturerId": null,
-    "locationId": null
-  },
-  {
-    "week": 2,
-    "teamId": 9,
-    "subjectId": 4,
-    "date": "2025-09-10",
-    "dayOfWeek": "Wed",
-    "session": "morning",
-    "lecturerId": null,
-    "locationId": null
-  },
-  {
-    "week": 2,
-    "teamId": 9,
-    "subjectId": null,
-    "date": "2025-09-10",
-    "dayOfWeek": "Wed",
-    "session": "afternoon",
-    "lecturerId": null,
-    "locationId": null
-  },
-  {
-    "week": 2,
-    "teamId": 9,
-    "subjectId": null,
-    "date": "2025-09-10",
-    "dayOfWeek": "Wed",
     "session": "evening",
     "lecturerId": null,
     "locationId": null

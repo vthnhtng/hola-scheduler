@@ -2,7 +2,7 @@
   {
     "week": 2,
     "teamId": 1,
-    "subjectId": 14,
+    "subjectId": 11,
     "date": "2025-09-08",
     "dayOfWeek": "Mon",
     "session": "morning",
@@ -12,7 +12,7 @@
   {
     "week": 2,
     "teamId": 1,
-    "subjectId": 8,
+    "subjectId": 3,
     "date": "2025-09-08",
     "dayOfWeek": "Mon",
     "session": "afternoon",
@@ -22,7 +22,7 @@
   {
     "week": 2,
     "teamId": 1,
-    "subjectId": 18,
+    "subjectId": 20,
     "date": "2025-09-08",
     "dayOfWeek": "Mon",
     "session": "evening",
@@ -32,7 +32,7 @@
   {
     "week": 2,
     "teamId": 1,
-    "subjectId": 1,
+    "subjectId": 4,
     "date": "2025-09-09",
     "dayOfWeek": "Tue",
     "session": "morning",
@@ -42,7 +42,7 @@
   {
     "week": 2,
     "teamId": 1,
-    "subjectId": 15,
+    "subjectId": null,
     "date": "2025-09-09",
     "dayOfWeek": "Tue",
     "session": "afternoon",
@@ -52,9 +52,69 @@
   {
     "week": 2,
     "teamId": 1,
-    "subjectId": 5,
+    "subjectId": null,
     "date": "2025-09-09",
     "dayOfWeek": "Tue",
+    "session": "evening",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 1,
+    "subjectId": 5,
+    "date": "2025-09-10",
+    "dayOfWeek": "Wed",
+    "session": "morning",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 1,
+    "subjectId": null,
+    "date": "2025-09-10",
+    "dayOfWeek": "Wed",
+    "session": "afternoon",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 1,
+    "subjectId": null,
+    "date": "2025-09-10",
+    "dayOfWeek": "Wed",
+    "session": "evening",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 1,
+    "subjectId": 8,
+    "date": "2025-09-11",
+    "dayOfWeek": "Thu",
+    "session": "morning",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 1,
+    "subjectId": null,
+    "date": "2025-09-11",
+    "dayOfWeek": "Thu",
+    "session": "afternoon",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 1,
+    "subjectId": null,
+    "date": "2025-09-11",
+    "dayOfWeek": "Thu",
     "session": "evening",
     "lecturerId": null,
     "locationId": null

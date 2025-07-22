@@ -88,12 +88,20 @@ export async function POST(request: NextRequest) {
       console.log('Generating schedules for teams:', mappedTeams.length); // Debug log
 
       // Generate schedules for teams in this course
+      console.log('Calling generateSchedulesForTeamsJob with:', {
+        startDate: scheduleStartDate,
+        teamsCount: mappedTeams.length,
+        teams: mappedTeams.map(t => ({ id: t.id, name: t.name, program: t.program }))
+      });
       const result = await generateSchedulesForTeamsJob(scheduleStartDate, mappedTeams);
       console.log('Result from generateSchedulesForTeamsJob:', result);
+      console.log('Result errors:', result.errors);
+      console.log('Result processedFiles:', result.processedFiles);
 
       if (result.errors.length > 0) {
         console.error('Errors during schedule generation:', result.errors); // Debug log
-        return createErrorResponse('Error generating schedules', 500);
+        // Không return error ngay, vẫn thử đọc file nếu có
+        console.warn('Continue despite errors to check if any files were created');
       }
 
       // Small delay to ensure files are written

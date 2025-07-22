@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom/client';
 
 interface SchedulerProps {
   onScheduleGenerated?: (schedule: any, filePath: string) => void;
@@ -62,6 +63,14 @@ export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
   };
 
   const handleCreate = async () => {
+    console.log('handleCreate called');
+    console.log('selectedCourse:', selectedCourse);
+    console.log('hasDateChanges():', hasDateChanges());
+    
+    if (!selectedCourse) {
+      setMessage('Vui lòng chọn khóa học trước');
+      return;
+    }
     
     if (hasDateChanges()) {
       setShowConfirmOverlay(true);
@@ -71,6 +80,7 @@ export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
   };
 
   const generateSchedule = async () => {
+    console.log('generateSchedule called');
     setLoading(true);
     setMessage('');
 
@@ -83,11 +93,13 @@ export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
         requestBody.endDate = endDate;
       }
 
+      console.log('Calling API with requestBody:', requestBody);
       const res = await fetch('/api/generate-schedules', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
       });
+      console.log('API response status:', res.status);
 
       let data;
       try {
@@ -97,148 +109,42 @@ export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
         return;
       }
       
-      const apiData = data.data || {};
-      let scheduleData = apiData.scheduleData;
-      let fileName = 'schedule_data';
-      if (!scheduleData && apiData.fileContents) {
-        const fileKeys = Object.keys(apiData.fileContents);
-        fileName = fileKeys[0] || 'schedule_data';
-        scheduleData = apiData.fileContents[fileName];
-      }
-      if (!scheduleData || !Array.isArray(scheduleData) || scheduleData.length === 0) {
-        setMessage('Không có dữ liệu lịch được tạo');
-        return;
-      }
-      // Mở popup debug hiển thị JSON dữ liệu lịch học
-      const debugPopup = window.open('', '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes');
-      if (debugPopup) {
-        debugPopup.document.body.innerHTML = '<pre>' + JSON.stringify(scheduleData, null, 2) + '</pre>';
-        debugPopup.document.title = 'Debug Schedule Data';
-        debugPopup.document.close();
-      } else {
-        setMessage('Popup debug bị chặn!');
-        return;
-      }
-      let popupWindow;
-      try {
-        popupWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
-        if (!popupWindow) {
-          setMessage('Popup bị chặn! Hãy cho phép popup cho trang web này.');
-          return;
+      // Log toàn bộ response để debug
+      console.log('Full API response:', data);
+      console.log('Response has success:', data.success);
+      console.log('Response data:', data.data);
+      
+      // Kiểm tra cả data trực tiếp và data.data
+      let scheduleData = data.scheduleData || (data.data && data.data.scheduleData);
+      let fileContents = data.fileContents || (data.data && data.data.fileContents);
+      
+      console.log('scheduleData found:', scheduleData);
+      console.log('fileContents found:', fileContents);
+      
+      // Nếu không có scheduleData, thử lấy từ fileContents
+      if (!scheduleData && fileContents) {
+        const fileKeys = Object.keys(fileContents);
+        console.log('fileContents keys:', fileKeys);
+        if (fileKeys.length > 0) {
+          const fileName = fileKeys[0];
+          scheduleData = fileContents[fileName];
+          console.log('Using fileContents for scheduleData:', fileName, scheduleData);
         }
-        alert('Popup opened thành công! Đang ghi nội dung...');
-        const htmlContent = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Lịch giảng dạy - ${data.course?.name || 'Khóa học'}</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 20px; }
-              .header { background: #f0f0f0; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-              .schedule-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-              .schedule-table th, .schedule-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              .schedule-table th { background-color: #f2f2f2; }
-              .subject-input { width: 100px; padding: 4px; }
-              .save-btn { background: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; }
-              .save-btn:hover { background: #45a049; }
-              .close-btn { background: #f44336; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; margin-left: 10px; }
-              .close-btn:hover { background: #da190b; }
-              .team-header { background: #e8f4fd; padding: 8px; margin: 10px 0; border-left: 4px solid #2196F3; }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <h2>Lịch giảng dạy - ${data.course?.name || 'Khóa học'}</h2>
-              <p><strong>Tổng số môn học:</strong> ${Array.isArray(scheduleData) ? scheduleData.length : 0}</p>
-              <p><strong>Số đội:</strong> ${data.teamsCount || 0}</p>
-            </div>
-            <table class="schedule-table">
-              <thead>
-                <tr>
-                  <th>Đội</th>
-                  <th>Tuần</th>
-                  <th>Ngày</th>
-                  <th>Buổi</th>
-                  <th>Môn học (ID)</th>
-                  <th>Giảng viên</th>
-                  <th>Địa điểm</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${Array.isArray(scheduleData) ? scheduleData.map((row, idx) => `
-                  <tr>
-                    <td>${row.teamName || 'N/A'}</td>
-                    <td>${row.week || ''}</td>
-                    <td>${row.date || ''}</td>
-                    <td>${row.session || ''}</td>
-                    <td><input type="text" class="subject-input" value="${row.subjectId || ''}" data-index="${idx}" onchange="updateSchedule(${idx}, 'subjectId', this.value)"></td>
-                    <td><input type="text" class="subject-input" value="${row.lecturerId || ''}" data-index="${idx}" onchange="updateSchedule(${idx}, 'lecturerId', this.value)"></td>
-                    <td><input type="text" class="subject-input" value="${row.locationId || ''}" data-index="${idx}" onchange="updateSchedule(${idx}, 'locationId', this.value)"></td>
-                  </tr>
-                `).join('') : '<tr><td colspan="7">Không có dữ liệu</td></tr>'}
-              </tbody>
-            </table>
-            <button class="save-btn" onclick="saveSchedule()">Lưu thay đổi</button>
-            <button class="close-btn" onclick="window.close()">Đóng</button>
-            <script>
-              let scheduleData = ${JSON.stringify(scheduleData)};
-              function updateSchedule(index, field, value) {
-                if (scheduleData && scheduleData[index]) {
-                  scheduleData[index][field] = value;
-                }
-              }
-              function saveSchedule() {
-                if (window.opener) {
-                  window.opener.postMessage({
-                    type: 'SAVE_SCHEDULE',
-                    fileName: '${fileName}',
-                    scheduleData: scheduleData
-                  }, '*');
-                }
-                fetch('/api/schedule/save', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    filePath: '${fileName}',
-                    content: scheduleData
-                  })
-                })
-                .then(response => response.json())
-                .then(data => {
-                  if (data.success) {
-                    alert('Lưu lịch thành công!');
-                  } else {
-                    alert('Có lỗi khi lưu lịch: ' + (data.error || 'Unknown error'));
-                  }
-                })
-                .catch(error => {
-                  alert('Có lỗi khi lưu lịch');
-                });
-              }
-            </script>
-          </body>
-          </html>
-        `;
-        popupWindow.document.write(htmlContent);
-        popupWindow.document.close();
-        popupWindow.focus();
-        alert('Đã ghi nội dung vào popup!');
-      } catch (err) {
-        alert('Lỗi khi mở hoặc ghi popup: ' + err);
-        setMessage('Lỗi khi mở hoặc ghi popup: ' + err);
+      }
+      
+      console.log('Final scheduleData to save:', scheduleData);
+      
+      if (!scheduleData || !Array.isArray(scheduleData) || scheduleData.length === 0) {
+        setMessage('Không có dữ liệu lịch được tạo. API response structure: ' + JSON.stringify(Object.keys(data)));
+        console.error('No schedule data found. Full response:', data);
+        return;
+      }
+      
+      // Lưu dữ liệu vào localStorage và mở popup chỉnh sửa
+      localStorage.setItem('manualEditScheduleData', JSON.stringify(scheduleData));
+      console.log('Saved to localStorage:', scheduleData.length, 'items');
+      window.open('/manual-edit', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
       return;
-      }
-      if (onScheduleGenerated) {
-        onScheduleGenerated(scheduleData, fileName);
-      }
-      const successMessage = data.datesUpdated 
-        ? `Đã cập nhật thông tin khóa học và tạo lịch thành công cho "${data.course?.name}"!`
-        : `Đã tạo lịch thành công cho khóa "${data.course?.name}"!`;
-      setMessage(successMessage);
-      if (data.datesUpdated) {
-        setOriginalStartDate(startDate);
-        setOriginalEndDate(endDate);
-      }
     } catch (error) {
       alert('Error generating schedule: ' + error);
       setMessage('Có lỗi xảy ra khi tạo lịch');
