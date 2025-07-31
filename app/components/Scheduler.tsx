@@ -4,9 +4,10 @@ import ReactDOM from 'react-dom/client';
 
 interface SchedulerProps {
   onScheduleGenerated?: (schedule: any, filePath: string) => void;
+  onScheduleSuccess?: (courseId: number) => void;
 }
 
-export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
+export default function Scheduler({ onScheduleGenerated, onScheduleSuccess }: SchedulerProps) {
   const [courses, setCourses] = useState<any[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
   const [startDate, setStartDate] = useState('');
@@ -18,18 +19,21 @@ export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
   const [loading, setLoading] = useState(false);
   const [showConfirmOverlay, setShowConfirmOverlay] = useState(false);
 
-  const fetchCourses = async () => {
-    if (coursesLoaded) return;
+  const fetchCourses = async (forceRefresh = false) => {
+    if (coursesLoaded && !forceRefresh) return;
     try {
+      console.log('Fetching courses...');
       const res = await fetch('/api/courses?page=1&limit=9999');
       const data = await res.json();
       if (Array.isArray(data.data)) {
         setCourses(data.data);
+        console.log('Courses updated:', data.data.length, 'items');
       } else {
         setCourses([]);
       }
       setCoursesLoaded(true);
     } catch (e) {
+      console.error('Error fetching courses:', e);
       setCourses([]);
     }
   };
@@ -37,6 +41,23 @@ export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
   const handleSelectFocus = () => {
     fetchCourses();
   };
+
+  // Listen for refresh events
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'refreshCourses' && e.newValue === 'true') {
+        console.log('Refreshing courses due to storage event');
+        fetchCourses(true);
+        localStorage.removeItem('refreshCourses');
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   const handleSelectCourse = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const courseId = parseInt(e.target.value);
@@ -140,10 +161,20 @@ export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
         return;
       }
       
-      // Lưu dữ liệu vào localStorage và mở popup chỉnh sửa
-      localStorage.setItem('manualEditScheduleData', JSON.stringify(scheduleData));
-      console.log('Saved to localStorage:', scheduleData.length, 'items');
-      window.open('/manual-edit', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+      // Thêm courseId vào từng item trong scheduleData
+      const scheduleDataWithCourseId = scheduleData.map((item: any) => ({
+        ...item,
+        courseId: selectedCourse
+      }));
+      
+      // Hiển thị thông báo thành công
+      setMessage('✅ Lịch đã được sắp xếp thành công! Lịch mới đã được thêm vào "Thời khóa biểu đã sắp môn học".');
+      
+      // Gọi callback để thông báo thành công
+      if (onScheduleSuccess && selectedCourse) {
+        onScheduleSuccess(selectedCourse);
+      }
+      
       return;
     } catch (error) {
       alert('Error generating schedule: ' + error);

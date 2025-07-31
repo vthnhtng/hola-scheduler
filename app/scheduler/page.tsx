@@ -1,7 +1,11 @@
 'use client';
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Scheduler from "../components/Scheduler";
+import TimetableGrid from "../components/TimetableGrid";
+import ProcessingTimetable from "../components/ProcessingTimetable";
+import CompletedTimetable from "../components/CompletedTimetable";
+import SuccessNotification from "../components/SuccessNotification";
 import SideBar from "../components/SideBar";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -49,7 +53,46 @@ export default function SchedulerPage() {
     const [showModal, setShowModal] = useState(false);
     const [editingSchedule, setEditingSchedule] = useState<any>(null);
     const [filePath, setFilePath] = useState<string>("");
+    const [activeTab, setActiveTab] = useState<'generate' | 'view' | 'processing'>('generate');
+    const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+    
+    // Dynamic data for dropdowns
+    const [courses, setCourses] = useState<any[]>([]);
+    const [teams, setTeams] = useState<any[]>([]);
+    
+    // Schedule viewing filters
+    const [viewFilters, setViewFilters] = useState({
+        courseId: '',
+        teamId: '',
+        startDate: '',
+        endDate: '',
+        status: 'done' as 'scheduled' | 'done' | 'all' // Mặc định chỉ hiển thị lịch đã hoàn thành
+    });
+    
     const { isScheduler } = usePermissions();
+
+    // Load courses and teams data
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const [coursesRes, teamsRes] = await Promise.all([
+                    fetch('/api/courses'),
+                    fetch('/api/teams')
+                ]);
+                
+                const coursesData = await coursesRes.json();
+                const teamsData = await teamsRes.json();
+                
+                setCourses(coursesData.data || []);
+                setTeams(teamsData.data || []);
+            } catch (error) {
+                console.error('Error loading dropdown data:', error);
+            }
+        };
+        
+        loadData();
+    }, []);
 
     // Listener để nhận message từ popup window
     React.useEffect(() => {
@@ -72,6 +115,24 @@ export default function SchedulerPage() {
         // console.log('Modal should be visible now, showModal:', true); // Debug
     };
 
+    const handleScheduleSuccess = (courseId: number) => {
+        console.log('Schedule generated successfully for course:', courseId);
+        
+        // Hiển thị thông báo thành công
+        setSuccessMessage('✅ Lịch đã được sắp xếp thành công! Lịch mới đã được thêm vào "Thời khóa biểu đã sắp môn học".');
+        setShowSuccessNotification(true);
+        
+        // Tự động chuyển sang tab "Thời khóa biểu đã sắp môn học" sau 2 giây
+        setTimeout(() => {
+            setActiveTab('processing');
+            // Cập nhật filter để hiển thị lịch của course vừa tạo
+            setViewFilters(prev => ({
+                ...prev,
+                courseId: courseId.toString()
+            }));
+        }, 2000);
+    };
+
     async function handleSave() {
         try {
             const res = await fetch('/api/schedule/save', {
@@ -92,6 +153,13 @@ export default function SchedulerPage() {
         }
     }
 
+    const handleViewFilterChange = (field: string, value: string) => {
+        setViewFilters(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
     return (
         <>
             <Header />
@@ -99,16 +167,245 @@ export default function SchedulerPage() {
                 <SideBar />
                 <div style={{ width: '100%', minHeight: '100vh', background: '#f9fafb' }}>
                     <div className="px-4 py-3 max-w-6xl mx-auto">
-                        <h2 className="page-title" style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>SẮP XẾP LỊCH GIẢNG DẠY</h2>
-                        <div className="flex justify-center mt-10">
-                            <div className="w-full max-w-4xl">
-                                <Scheduler onScheduleGenerated={handleScheduleGenerated} />
+                        <h2 className="page-title" style={{ fontSize: '2rem', marginBottom: '1rem' }}>
+                            SẮP XẾP LỊCH GIẢNG DẠY
+                        </h2>
+                        
+                        {/* Tab Navigation */}
+                        <div className="mb-6">
+                            <div className="border-b border-gray-200">
+                                <nav className="-mb-px flex space-x-8">
+                                    <button
+                                        onClick={() => setActiveTab('generate')}
+                                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                                            activeTab === 'generate'
+                                                ? 'border-blue-500 text-blue-600'
+                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        }`}
+                                    >
+                                        Tạo Lịch Mới
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('view')}
+                                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                                            activeTab === 'view'
+                                                ? 'border-blue-500 text-blue-600'
+                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        }`}
+                                    >
+                                        Thời khóa biểu đã hoàn thành
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('processing')}
+                                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                                            activeTab === 'processing'
+                                                ? 'border-blue-500 text-blue-600'
+                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        }`}
+                                    >
+                                        Thời khóa biểu đã sắp môn học
+                                    </button>
+                                </nav>
                             </div>
                         </div>
+
+                        {/* Tab Content */}
+                        {activeTab === 'generate' && (
+                            <div className="flex justify-center mt-10">
+                                <div className="w-full max-w-4xl">
+                                    <Scheduler 
+                                        onScheduleGenerated={handleScheduleGenerated} 
+                                        onScheduleSuccess={handleScheduleSuccess}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'view' && (
+                            <div className="space-y-6">
+                                {/* Filters */}
+                                <div className="bg-white rounded-lg shadow-sm border p-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Bộ lọc</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Khóa học
+                                            </label>
+                                            <select
+                                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                                                value={viewFilters.courseId}
+                                                onChange={(e) => handleViewFilterChange('courseId', e.target.value)}
+                                            >
+                                                <option value="">Tất cả khóa học</option>
+                                                {courses.map((course) => (
+                                                    <option key={course.id} value={course.id}>
+                                                        {course.name || `Khóa học ${course.id}`}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Đại đội
+                                            </label>
+                                            <select
+                                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                                                value={viewFilters.teamId}
+                                                onChange={(e) => handleViewFilterChange('teamId', e.target.value)}
+                                            >
+                                                <option value="">Tất cả đại đội</option>
+                                                {teams.map((team) => (
+                                                    <option key={team.id} value={team.id}>
+                                                        {team.name || `Đại đội ${team.id}`}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Từ ngày
+                                            </label>
+                                            <input
+                                                type="date"
+                                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                                                value={viewFilters.startDate}
+                                                onChange={(e) => handleViewFilterChange('startDate', e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Đến ngày
+                                            </label>
+                                            <input
+                                                type="date"
+                                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                                                value={viewFilters.endDate}
+                                                onChange={(e) => handleViewFilterChange('endDate', e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Trạng thái
+                                            </label>
+                                            <select
+                                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                                                value={viewFilters.status}
+                                                onChange={(e) => handleViewFilterChange('status', e.target.value as any)}
+                                            >
+                                                <option value="done">Hoàn thành</option>
+                                                <option value="scheduled">Đã lên lịch</option>
+                                                <option value="all">Tất cả</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Completed Timetable */}
+                                <CompletedTimetable
+                                    courseId={viewFilters.courseId ? Number(viewFilters.courseId) : undefined}
+                                    teamId={viewFilters.teamId ? Number(viewFilters.teamId) : undefined}
+                                    startDate={viewFilters.startDate || undefined}
+                                    endDate={viewFilters.endDate || undefined}
+                                    onScheduleUpdate={(updatedSchedules) => {
+                                        console.log('Completed schedules updated:', updatedSchedules);
+                                        // Có thể thêm logic lưu cập nhật vào database
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        {activeTab === 'processing' && (
+                            <div className="space-y-6">
+                                {/* Filters */}
+                                <div className="bg-white rounded-lg shadow-sm border p-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Bộ lọc</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Khóa học
+                                            </label>
+                                            <select
+                                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                                                value={viewFilters.courseId}
+                                                onChange={(e) => handleViewFilterChange('courseId', e.target.value)}
+                                            >
+                                                <option value="">Tất cả khóa học</option>
+                                                {courses.map((course) => (
+                                                    <option key={course.id} value={course.id}>
+                                                        {course.name || `Khóa học ${course.id}`}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Đại đội
+                                            </label>
+                                            <select
+                                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                                                value={viewFilters.teamId}
+                                                onChange={(e) => handleViewFilterChange('teamId', e.target.value)}
+                                            >
+                                                <option value="">Tất cả đại đội</option>
+                                                {teams.map((team) => (
+                                                    <option key={team.id} value={team.id}>
+                                                        {team.name || `Đại đội ${team.id}`}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Từ ngày
+                                            </label>
+                                            <input
+                                                type="date"
+                                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                                                value={viewFilters.startDate}
+                                                onChange={(e) => handleViewFilterChange('startDate', e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Đến ngày
+                                            </label>
+                                            <input
+                                                type="date"
+                                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                                                value={viewFilters.endDate}
+                                                onChange={(e) => handleViewFilterChange('endDate', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Processing Timetable */}
+                                <ProcessingTimetable
+                                    courseId={viewFilters.courseId ? Number(viewFilters.courseId) : undefined}
+                                    teamId={viewFilters.teamId ? Number(viewFilters.teamId) : undefined}
+                                    startDate={viewFilters.startDate || undefined}
+                                    endDate={viewFilters.endDate || undefined}
+                                    onScheduleUpdate={(updatedSchedules) => {
+                                        console.log('Processing schedules updated:', updatedSchedules);
+                                        // Có thể thêm logic lưu cập nhật vào database
+                                    }}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </main>
             <Footer />
+            
+            {/* Success Notification */}
+            <SuccessNotification
+                message={successMessage}
+                isVisible={showSuccessNotification}
+                onClose={() => setShowSuccessNotification(false)}
+                autoHide={true}
+                duration={4000}
+            />
+            
             {/* Modal chỉnh sửa lịch dạng timetable đơn giản */}
             {showModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.3)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
