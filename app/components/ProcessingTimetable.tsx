@@ -40,10 +40,12 @@ function DraggableDroppableCell({ id, children }: { id: string, children: React.
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     opacity: isDragging ? 0.5 : 1,
     cursor: 'grab',
+    border: isOver ? '2px solid #3b82f6' : undefined,
+    borderRadius: isOver ? '4px' : undefined,
   };
   
   return (
-    <td ref={setRef} style={style} {...attributes} {...listeners} className="px-6 py-4 text-sm border-r">
+    <td ref={setRef} style={style} {...attributes} {...listeners} className="px-6 py-4 text-sm border-r border-gray-300">
       {children}
     </td>
   );
@@ -72,12 +74,16 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editData, setEditData] = useState<{subjectId: string, lecturerId: string, locationId: string}>({
     subjectId: '',
     lecturerId: '',
     locationId: ''
   });
+
+  // State để quản lý các ngày mở rộng (extended dates)
+  const [extendedDates, setExtendedDates] = useState<string[]>([]);
 
   // Load reference data
   useEffect(() => {
@@ -144,6 +150,13 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
       .finally(() => setLoading(false));
   }, [courseId, teamId, startDate, endDate]);
 
+  // Tự động xóa ngày mở rộng không sử dụng khi schedules thay đổi
+  useEffect(() => {
+    if (schedules.length > 0) {
+      setTimeout(() => removeUnusedExtendedDates(), 200);
+    }
+  }, [schedules]);
+
   const getSubjectName = (subjectId: number) => {
     const subject = subjects.find(s => s.id === subjectId);
     return subject?.name || subject?.subjectName || `Subject ${subjectId}`;
@@ -163,11 +176,30 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
 
   const getSessionLabel = (session: string) => {
     const labels = {
-      morning: 'Morning',
-      afternoon: 'Afternoon', 
-      evening: 'Evening'
+      morning: 'Sáng',
+      afternoon: 'Chiều', 
+      evening: 'Tối'
     };
     return labels[session as keyof typeof labels] || session;
+  };
+
+  const formatDateToVietnamese = (dateString: string) => {
+    const date = parseISO(dateString);
+    const dayOfWeek = format(date, 'EEEE');
+    const day = format(date, 'dd');
+    const month = format(date, 'MM');
+    
+    const dayNames = {
+      'Monday': 'Thứ Hai',
+      'Tuesday': 'Thứ Ba', 
+      'Wednesday': 'Thứ Tư',
+      'Thursday': 'Thứ Năm',
+      'Friday': 'Thứ Sáu',
+      'Saturday': 'Thứ Bảy',
+      'Sunday': 'Chủ Nhật'
+    };
+    
+    return `${dayNames[dayOfWeek as keyof typeof dayNames]}, ngày ${day} tháng ${month}`;
   };
 
   const getTeamName = (teamId: number) => {
@@ -240,6 +272,8 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
       return;
     }
 
+    console.log('📋 Drag from:', active.id, 'to:', over.id);
+
     // Parse IDs giống ManualEdit: "date-session-teamId"
     const parseId = (id: string) => {
       const parts = id.split('-');
@@ -252,15 +286,20 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
     const from = parseId(String(active.id));
     const to = parseId(String(over.id));
 
-    console.log('🎯 PARSED:', { from, to });
-
     // Chỉ swap cùng team
     if (from.teamId !== to.teamId) {
-      console.log('❌ DIFFERENT TEAMS - NO SWAP');
+      console.log('Không cho phép swap giữa các đại đội');
       return;
     }
 
-    console.log('💥 SWAPPING same team:', from.teamId);
+    // Kiểm tra không cho phép kéo thả vào ngày Chủ nhật
+    if (isSunday(to.date)) {
+      console.log('❌ Không cho phép kéo thả vào ngày Chủ nhật');
+      return;
+    }
+
+    // Đảm bảo có đủ ngày mở rộng cho ngày đích
+    ensureExtendedDates(to.date);
 
     setSchedules(prev => {
       const newSchedules = prev.map(item => ({ ...item })); // Deep copy
@@ -277,33 +316,220 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
         item.teamId.toString() === to.teamId
       );
 
-      console.log('📍 FOUND INDICES:', { fromIdx, toIdx });
+      // Tìm schedule cho vị trí đích (có thể không tồn tại nếu là cell trống)
+      const toSchedule = newSchedules.find(item => 
+        item.date.split('T')[0] === to.date && 
+        item.session === to.session && 
+        item.teamId.toString() === to.teamId
+      );
 
-      if (fromIdx === -1 || toIdx === -1) {
-        console.log('❌ SCHEDULE NOT FOUND');
+      // Nếu không tìm thấy schedule ở vị trí đích (cell trống), tạo schedule mới
+      if (toIdx === -1 && fromIdx !== -1) {
+        console.log('📥 Di chuyển schedule từ cell có dữ liệu sang cell trống');
+        console.log('📍 From:', from, 'To:', to);
+        console.log('📊 FromIdx:', fromIdx, 'ToIdx:', toIdx);
+        
+        // Tạo schedule mới cho vị trí đích
+        const newSchedule = {
+          ...newSchedules[fromIdx],
+          date: to.date,
+          dayOfWeek: getDayOfWeek(to.date),
+          session: to.session as 'morning' | 'afternoon' | 'evening'
+        };
+        
+        console.log('🆕 New schedule:', newSchedule);
+        
+        // Xóa schedule cũ
+        newSchedules.splice(fromIdx, 1);
+        
+        // Thêm schedule mới
+        newSchedules.push(newSchedule);
+        
+                 console.log('✅ Schedule moved successfully');
+         if (onScheduleUpdate) onScheduleUpdate(newSchedules);
+         
+         // Xóa ngày mở rộng không sử dụng sau khi di chuyển
+         setTimeout(() => removeUnusedExtendedDates(), 100);
+         
+         return newSchedules;
+      }
+
+      // Nếu cả hai vị trí đều có schedule, swap như bình thường
+      if (fromIdx !== -1 && toIdx !== -1) {
+        console.log('🔄 Swap giữa hai cell có dữ liệu');
+        
+        // Swap date, dayOfWeek, session (giữ nguyên teamId, subjectId)
+        const temp = {
+          date: newSchedules[fromIdx].date,
+          dayOfWeek: newSchedules[fromIdx].dayOfWeek,
+          session: newSchedules[fromIdx].session
+        };
+
+        newSchedules[fromIdx].date = newSchedules[toIdx].date;
+        newSchedules[fromIdx].dayOfWeek = newSchedules[toIdx].dayOfWeek;
+        newSchedules[fromIdx].session = newSchedules[toIdx].session;
+
+        newSchedules[toIdx].date = temp.date;
+        newSchedules[toIdx].dayOfWeek = temp.dayOfWeek;
+        newSchedules[toIdx].session = temp.session;
+        
+        if (onScheduleUpdate) onScheduleUpdate(newSchedules);
+        
+        // Xóa ngày mở rộng không sử dụng sau khi swap
+        setTimeout(() => removeUnusedExtendedDates(), 100);
+        
         return newSchedules;
       }
 
-      // Swap date, dayOfWeek, session (giữ nguyên teamId, subjectId)
-      const temp = {
-        date: newSchedules[fromIdx].date,
-        dayOfWeek: newSchedules[fromIdx].dayOfWeek,
-        session: newSchedules[fromIdx].session
-      };
+      // Nếu vị trí nguồn không có schedule (cell trống), không làm gì
+      if (fromIdx === -1) {
+        console.log('❌ Không có schedule để di chuyển');
+        return newSchedules;
+      }
 
-      newSchedules[fromIdx].date = newSchedules[toIdx].date;
-      newSchedules[fromIdx].dayOfWeek = newSchedules[toIdx].dayOfWeek;
-      newSchedules[fromIdx].session = newSchedules[toIdx].session;
-
-      newSchedules[toIdx].date = temp.date;
-      newSchedules[toIdx].dayOfWeek = temp.dayOfWeek;
-      newSchedules[toIdx].session = temp.session;
-
-      console.log('✅ SWAPPED DATE/SESSION!');
-      if (onScheduleUpdate) onScheduleUpdate(newSchedules);
-
+      console.log('❌ Không thể xử lý drag & drop');
       return newSchedules;
     });
+  };
+
+  // Helper function để lấy dayOfWeek từ date
+  const getDayOfWeek = (dateString: string) => {
+    const date = new Date(dateString);
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return days[date.getDay()];
+  };
+
+  // Helper function để kiểm tra có phải ngày Chủ nhật không
+  const isSunday = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.getDay() === 0; // 0 = Sunday
+  };
+
+  // Helper function để tạo ngày mới
+  const createNewDate = (baseDate: string, daysToAdd: number = 1) => {
+    const date = new Date(baseDate);
+    date.setDate(date.getDate() + daysToAdd);
+    return date.toISOString().split('T')[0];
+  };
+
+  // Helper function để thêm ngày mở rộng
+  const addExtendedDate = (targetDate: string) => {
+    if (!extendedDates.includes(targetDate)) {
+      setExtendedDates(prev => [...prev, targetDate]);
+      console.log('📅 Thêm ngày mở rộng:', targetDate);
+    }
+  };
+
+  // Helper function để xóa ngày mở rộng không sử dụng
+  const removeUnusedExtendedDates = () => {
+    // Tạo danh sách tất cả các ngày có schedule thực tế
+    const datesWithSchedules = schedules.map(s => s.date.split('T')[0]);
+    const uniqueDatesWithSchedules = [...new Set(datesWithSchedules)].sort();
+    
+    if (uniqueDatesWithSchedules.length === 0) {
+      // Nếu không có schedule nào, xóa tất cả ngày mở rộng
+      setExtendedDates([]);
+      return;
+    }
+    
+    // Tìm ngày đầu tiên và cuối cùng có schedule thực tế
+    const firstDateWithSchedule = uniqueDatesWithSchedules[0];
+    const lastDateWithSchedule = uniqueDatesWithSchedules[uniqueDatesWithSchedules.length - 1];
+    
+    // Xóa các ngày mở rộng không có schedule và nằm ngoài khoảng từ ngày đầu đến ngày cuối có schedule
+    setExtendedDates(prev => {
+      const newExtendedDates = prev.filter(date => {
+        const dateObj = new Date(date);
+        const firstDateObj = new Date(firstDateWithSchedule);
+        const lastDateObj = new Date(lastDateWithSchedule);
+        
+        // Giữ lại ngày mở rộng chỉ khi nó nằm trong khoảng từ ngày đầu đến ngày cuối có schedule
+        return dateObj >= firstDateObj && dateObj <= lastDateObj;
+      });
+      
+      if (newExtendedDates.length !== prev.length) {
+        console.log('🗑️ Xóa ngày mở rộng không sử dụng:', prev.filter(d => !newExtendedDates.includes(d)));
+        console.log('📊 Khoảng schedule hiện tại:', firstDateWithSchedule, 'đến', lastDateWithSchedule);
+      }
+      
+      return newExtendedDates;
+    });
+  };
+
+  // Helper function để tạo các ngày mở rộng khi cần
+  const ensureExtendedDates = (targetDate: string) => {
+    // Tạo groupedByDate tạm thời để tính toán
+    const tempGroupedByDate = schedules.reduce((acc, schedule) => {
+      if (!acc[schedule.date]) {
+        acc[schedule.date] = {
+          date: schedule.date,
+          sessions: {}
+        };
+      }
+      return acc;
+    }, {} as Record<string, { date: string; sessions: Record<string, Record<number, ScheduleItem>> }>);
+
+    const allDates = [...Object.keys(tempGroupedByDate), ...extendedDates];
+    const sortedAllDates = allDates.sort();
+    
+    if (sortedAllDates.length === 0) return;
+
+    const firstDate = sortedAllDates[0];
+    const lastDate = sortedAllDates[sortedAllDates.length - 1];
+    const targetDateObj = new Date(targetDate);
+    const firstDateObj = new Date(firstDate);
+    const lastDateObj = new Date(lastDate);
+
+    // Nếu ngày đích nằm ngoài phạm vi hiện tại, thêm ngày mở rộng
+    if (targetDateObj < firstDateObj) {
+      // Kéo lên trên - thêm ngày trước ngày đầu tiên
+      let currentDate = new Date(firstDate);
+      while (currentDate > targetDateObj) {
+        currentDate.setDate(currentDate.getDate() - 1);
+        const newDate = currentDate.toISOString().split('T')[0];
+        addExtendedDate(newDate);
+      }
+      console.log('📅 Thêm ngày mở rộng phía trên cho:', targetDate);
+    } else if (targetDateObj > lastDateObj) {
+      // Kéo xuống dưới - thêm ngày sau ngày cuối cùng
+      let currentDate = new Date(lastDate);
+      while (currentDate < targetDateObj) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        const newDate = currentDate.toISOString().split('T')[0];
+        addExtendedDate(newDate);
+      }
+      console.log('📅 Thêm ngày mở rộng phía dưới cho:', targetDate);
+    }
+  };
+
+  // Helper function để thêm ngày ở đầu lịch
+  const addDayAtBeginning = () => {
+    const allDates = [...Object.keys(groupedByDate), ...extendedDates];
+    const sortedAllDates = allDates.sort();
+    
+    if (sortedAllDates.length === 0) return;
+    
+    const firstDate = sortedAllDates[0];
+    const newDate = createNewDate(firstDate, -1);
+    
+    // Cho phép thêm ngày Chủ nhật
+    addExtendedDate(newDate);
+    console.log('📅 Thêm ngày ở đầu lịch:', newDate, isSunday(newDate) ? '(Chủ nhật)' : '');
+  };
+
+  // Helper function để thêm ngày ở cuối lịch
+  const addDayAtEnd = () => {
+    const allDates = [...Object.keys(groupedByDate), ...extendedDates];
+    const sortedAllDates = allDates.sort();
+    
+    if (sortedAllDates.length === 0) return;
+    
+    const lastDate = sortedAllDates[sortedAllDates.length - 1];
+    const newDate = createNewDate(lastDate, 1);
+    
+    // Cho phép thêm ngày Chủ nhật
+    addExtendedDate(newDate);
+    console.log('📅 Thêm ngày ở cuối lịch:', newDate, isSunday(newDate) ? '(Chủ nhật)' : '');
   };
 
 
@@ -323,13 +549,34 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
     return acc;
   }, {} as Record<string, { date: string; sessions: Record<string, Record<number, ScheduleItem>> }>);
 
-  const sortedDates = Object.keys(groupedByDate).sort();
+  // Tạo danh sách tất cả các ngày trong khoảng thời gian (bao gồm cả Chủ nhật)
+  const createFullDateRange = () => {
+    if (schedules.length === 0) return [];
+    const dates = schedules.map(s => s.date.split('T')[0]);
+    const sortedDates = [...new Set(dates)].sort();
+    if (sortedDates.length === 0) return [];
+    const startDate = new Date(sortedDates[0]);
+    const endDate = new Date(sortedDates[sortedDates.length - 1]);
+    const allDatesInRange = [];
+    let currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      allDatesInRange.push(currentDate.toISOString().split('T')[0]);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return allDatesInRange;
+  };
+
+  // Kết hợp ngày gốc, ngày mở rộng và tất cả ngày trong khoảng thời gian
+  const baseDates = createFullDateRange();
+  const allDates = [...new Set([...baseDates, ...Object.keys(groupedByDate), ...extendedDates])];
+  const sortedDates = allDates.sort();
 
   // Get unique teams
   const uniqueTeams = Array.from(new Set(schedules.map(s => s.teamId))).sort();
 
   console.log('Grouped schedules:', groupedByDate);
   console.log('Sorted dates:', sortedDates);
+  console.log('Extended dates:', extendedDates);
   console.log('Unique teams:', uniqueTeams);
   console.log('Total schedules:', schedules.length);
   console.log('Schedules with IDs:', schedules.map(s => ({ id: s.id, date: s.date, session: s.session, teamId: s.teamId, subjectId: s.subjectId })));
@@ -358,78 +605,195 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
     );
   }
 
-  return (
-    <div className="bg-white rounded-lg shadow-sm border m-4">
-      {/* Success Notification */}
-      {saveSuccess && (
-        <div className="bg-green-100 border-l-4 border-green-500 p-4 mb-4 animate-pulse">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-green-700 font-medium">
-                ✅ Lưu thành công! Thời khóa biểu đã được cập nhật.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+     return (
+     <div className="bg-white rounded-lg shadow-sm border m-4">
+       
+
+       {/* Success Notification */}
+       {saveSuccess && (
+         <div className="bg-green-100 border-l-4 border-green-500 p-4 mb-4 animate-pulse">
+           <div className="flex items-center">
+             <div className="flex-1">
+               <p className="text-sm text-green-700 font-medium">
+                 Lưu thành công! Thời khóa biểu đang được cập nhật ...
+               </p>
+             </div>
+           </div>
+         </div>
+       )}
 
       <div className="px-6 py-4 border-b flex justify-between items-center">
         <h3 className="text-lg font-semibold text-gray-900">
           THỜI KHÓA BIỂU ĐÃ SẮP MÔN HỌC
         </h3>
-        <div className="text-sm text-gray-500">
-          {schedules.length} lịch cần sắp giảng viên
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-500">
+            {schedules.length} lịch cần sắp giảng viên
+          </div>
+                     <button
+             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+             disabled={saving}
+             onClick={async () => {
+               try {
+                 setSaving(true);
+                 setError(null);
+                 const res = await fetch('/api/save-schedules', {
+                   method: 'POST',
+                   headers: { 'Content-Type': 'application/json' },
+                   body: JSON.stringify({ schedules })
+                 });
+                 const data = await res.json();
+                 if (!data.success) throw new Error(data.error || 'Lỗi khi lưu file');
+                 
+                                   // Show success notification
+                  setSaveSuccess(true);
+                  
+                  // Tự động xóa ngày mở rộng không sử dụng sau khi lưu
+                  setTimeout(() => {
+                    removeUnusedExtendedDates();
+                  }, 500);
+                  
+                                     // Fetch lại dữ liệu thay vì refresh trang
+                   setTimeout(async () => {
+                     setSaveSuccess(false);
+                     setLoading(true); // Sử dụng loading overlay có sẵn
+                     
+                     try {
+                       let url = '';
+                       let params = new URLSearchParams();
+
+                       if (courseId) {
+                         url = '/api/get-schedules-by-course';
+                         params.append('courseId', courseId.toString());
+                         params.append('status', 'scheduled');
+                       } else {
+                         url = '/api/get-schedules';
+                         if (startDate) params.append('startDate', startDate);
+                         if (endDate) params.append('endDate', endDate);
+                         if (teamId) params.append('teamId', teamId.toString());
+                         params.append('status', 'scheduled');
+                       }
+
+                       const res = await fetch(`${url}?${params}`);
+                       const data = await res.json();
+                       
+                       if (data.success) {
+                         // Chỉ lấy các lịch đã có subjectId (đã sắp môn) nhưng chưa có lecturerId
+                         const processingSchedules = data.data.filter((schedule: ScheduleItem) => 
+                           schedule.subjectId && (!schedule.lecturerId || schedule.lecturerId === null)
+                         ).map((s: ScheduleItem) => ({ ...s, id: makeScheduleId(s) }));
+                         
+                         console.log('Reloaded schedules:', processingSchedules);
+                         setSchedules(processingSchedules);
+                         setExtendedDates([]); // Reset extended dates
+                       } else {
+                         setError(data.error || 'Lỗi khi tải lại dữ liệu');
+                       }
+                     } catch (err) {
+                       console.error('Error reloading schedules:', err);
+                       setError('Lỗi kết nối khi tải lại dữ liệu');
+                     } finally {
+                       setLoading(false); // Tắt loading overlay
+                     }
+                   }, 2000);
+               } catch (err: any) {
+                 setError(err.message || 'Lỗi khi lưu file');
+               } finally {
+                 setSaving(false);
+               }
+             }}
+           >
+             {saving ? 'ĐANG LƯU...' : 'LƯU THAY ĐỔI'}
+           </button>
         </div>
       </div>
       
-      <div className="overflow-x-auto p-4">
-        <DndContext onDragEnd={handleDragEnd}>
-          <table className="w-full">
+             <div className="overflow-x-auto p-4">
+         {/* Button thêm ngày ở đầu lịch */}
+         <div className="flex justify-center mb-4">
+           <button
+             onClick={addDayAtBeginning}
+             className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2"
+           >
+             <span>+</span>
+             Thêm ngày ở đầu lịch
+           </button>
+         </div>
+         
+         <DndContext onDragEnd={handleDragEnd}>
+           <table className="w-full border-collapse border-2 border-gray-300">
           <thead className="bg-blue-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                Date
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                NGÀY THÁNG
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                Session
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                BUỔI HỌC
               </th>
               {uniqueTeams.map(teamId => (
-                <th key={teamId} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                  Team {getTeamName(teamId)}
+                <th key={teamId} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                  {getTeamName(teamId)}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {sortedDates.map(date => {
-              const dateData = groupedByDate[date];
-              const sessions = ['morning', 'afternoon', 'evening'] as const;
+                         {sortedDates.map(date => {
+               const dateData = groupedByDate[date] || { date, sessions: {} };
+               const isExtendedDate = extendedDates.includes(date);
+               const isSundayDate = isSunday(date);
               
+              // Nếu là ngày Chủ nhật, chỉ hiển thị 1 dòng
+              if (isSundayDate) {
+                return (
+                  <tr key={`${date}-sunday`} className={`hover:bg-gray-50 ${isExtendedDate ? 'extended-date-row' : ''}`}>
+                                          <td className={`px-6 py-4 whitespace-nowrap text-sm border-r border-gray-300 ${isExtendedDate ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'}`}>
+                        {formatDateToVietnamese(date)}
+                        {isExtendedDate && <span className="ml-1 text-xs text-blue-500">(Mở rộng)</span>}
+                      </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-r">
+                      Chủ nhật
+                    </td>
+                    {uniqueTeams.map(teamId => {
+                      const cellId = `${date}-sunday-${teamId}`;
+                      
+                      return (
+                        <DraggableDroppableCell key={teamId} id={cellId}>
+                          <div className="sunday-cell">
+                            <div>Chủ nhật</div>
+                          </div>
+                        </DraggableDroppableCell>
+                      );
+                    })}
+                  </tr>
+                );
+              }
+             
+              // Nếu không phải ngày Chủ nhật, hiển thị 3 dòng như bình thường
+              const sessions = ['morning', 'afternoon', 'evening'] as const;
+             
               return sessions.map((session, sessionIndex) => {
                 const sessionData = dateData.sessions[session] || {};
                 const isFirstSession = sessionIndex === 0;
                 
                 return (
-                  <tr key={`${date}-${session}`} className="hover:bg-gray-50">
+                  <tr key={`${date}-${session}`} className={`hover:bg-gray-50 ${isExtendedDate ? 'extended-date-row' : ''}`}>
                     {isFirstSession && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r" rowSpan={3}>
-                        {format(parseISO(date), 'EEE, MMM d')}
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm border-r border-gray-300 ${isExtendedDate ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'}`} rowSpan={3}>
+                        {formatDateToVietnamese(date)}
+                        {isExtendedDate && <span className="ml-1 text-xs text-blue-500">(Mở rộng)</span>}
                       </td>
                     )}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-r">
-                      {getSessionLabel(session)}
-                    </td>
-                    {uniqueTeams.map(teamId => {
-                      const schedule = sessionData[teamId];
-                      const cellId = `${date}-${session}-${teamId}`;
-                      
-                      return (
-                        <DraggableDroppableCell key={teamId} id={cellId}>
+                                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-r border-gray-300">
+                         {getSessionLabel(session)}
+                       </td>
+                                         {uniqueTeams.map(teamId => {
+                       const schedule = sessionData[teamId];
+                       const cellId = `${date}-${session}-${teamId}`;
+                       const isSundayDate = isSunday(date);
+                       
+                       return (
+                         <DraggableDroppableCell key={teamId} id={cellId}>
                           {editingCell === cellId ? (
                             <div className="schedule-cell-edit">
                               <div className="edit-field">
@@ -492,14 +856,14 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
                                 </button>
                               </div>
                             </div>
-                          ) : (
-                            <div 
-                              className={!schedule ? "schedule-cell-empty clickable" : "schedule-cell clickable"}
-                              onClick={() => handleCellEdit(cellId, schedule)}
-                            >
-                              {!schedule ? (
-                                <div>+ Thêm lịch</div>
-                              ) : (
+                                                     ) : (
+                             <div 
+                               className={`${!schedule ? "schedule-cell-empty" : "schedule-cell"} ${isSundayDate ? "sunday-cell" : "clickable"}`}
+                               onClick={() => !isSundayDate && handleCellEdit(cellId, schedule)}
+                             >
+                                                             {!schedule ? (
+                                 <div>{isSundayDate ? "Chủ nhật" : "Lịch trống"}</div>
+                               ) : (
                                 <>
                                   <div className="field-row">
                                     <span className="label">Học phần:</span>
@@ -525,43 +889,21 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
               });
             })}
           </tbody>
-          </table>
-        </DndContext>
-      </div>
-      <div className="flex justify-end px-6 py-4">
-        <button
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-          onClick={async () => {
-            try {
-              setLoading(true);
-              setError(null);
-              const res = await fetch('/api/save-schedules', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ schedules })
-              });
-              const data = await res.json();
-              if (!data.success) throw new Error(data.error || 'Lỗi khi lưu file');
-              
-              // Hiển thị success notification
-              setSaveSuccess(true);
-              setTimeout(() => setSaveSuccess(false), 3000);
-            } catch (err: any) {
-              setError(err.message || 'Lỗi khi lưu file');
-            } finally {
-              setLoading(false);
-            }
-          }}
-        >
-          LƯU THAY ĐỔI
-        </button>
-      </div>
-      <div className="px-6 py-2 text-gray-400">
-        <svg className="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-        </svg>
-        Kéo thả để đổi môn học trong cùng 1 đại đội • Click để thêm/sửa lịch
-      </div>
+                     </table>
+         </DndContext>
+         
+                   {/* Button thêm ngày ở cuối lịch */}
+          <div className="flex justify-center mt-4">
+            <button
+              onClick={addDayAtEnd}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2"
+            >
+              <span>+</span>
+              Thêm ngày ở cuối lịch
+            </button>
+          </div>
+       </div>
+
 
       <style>{`
         .schedule-cell {
@@ -582,11 +924,21 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
           justify-content: center;
           height: 100%;
           min-height: 50px;
-          color: #1e40af;
+          color: #6b7280;
           font-style: italic;
           text-align: center;
           font-size: 12px;
           font-weight: 600;
+          border: 2px dashed #d1d5db;
+          border-radius: 4px;
+          background-color: #f9fafb;
+          transition: all 0.2s;
+        }
+        
+        .schedule-cell-empty:hover {
+          border-color: #3b82f6;
+          background-color: #eff6ff;
+          color: #1e40af;
         }
         
         .field-row {
@@ -709,9 +1061,46 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
           background-color: #059669;
         }
         
-        .cancel-btn:hover {
-          background-color: #dc2626;
-        }
+                 .cancel-btn:hover {
+           background-color: #dc2626;
+         }
+         
+                   /* Styles cho ngày mở rộng */
+          .extended-date-row {
+            background-color: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+          }
+          
+          .extended-date-row:hover {
+            background-color: #e0f2fe;
+          }
+          
+                     /* Styles cho ngày Chủ nhật */
+           .sunday-cell {
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             height: 100%;
+             min-height: 50px;
+             color: #dc2626;
+             font-style: italic;
+             text-align: center;
+             font-size: 12px;
+             font-weight: 600;
+             border: 2px dashed #fca5a5;
+             border-radius: 4px;
+             background-color: #fef2f2;
+             transition: all 0.2s;
+             cursor: not-allowed;
+             opacity: 0.7;
+           }
+           
+           .sunday-cell:hover {
+             border-color: #f87171;
+             background-color: #fee2e2;
+             color: #b91c1c;
+             transform: none;
+           }
       `}</style>
     </div>
   );

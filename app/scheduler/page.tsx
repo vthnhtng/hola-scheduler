@@ -66,8 +66,7 @@ export default function SchedulerPage() {
         courseId: '',
         teamId: '',
         startDate: '',
-        endDate: '',
-        status: 'done' as 'scheduled' | 'done' | 'all' // Mặc định chỉ hiển thị lịch đã hoàn thành
+        endDate: ''
     });
     
     const { isScheduler } = usePermissions();
@@ -115,22 +114,37 @@ export default function SchedulerPage() {
         // console.log('Modal should be visible now, showModal:', true); // Debug
     };
 
-    const handleScheduleSuccess = (courseId: number) => {
-        console.log('Schedule generated successfully for course:', courseId);
+    const handleScheduleSuccess = (courseId: number, actionType: 'generate' | 'assign' = 'generate') => {
+        console.log('Schedule action completed successfully for course:', courseId, 'Action:', actionType);
         
-        // Hiển thị thông báo thành công
-        setSuccessMessage('✅ Lịch đã được sắp xếp thành công! Lịch mới đã được thêm vào "Thời khóa biểu đã sắp môn học".');
-        setShowSuccessNotification(true);
-        
-        // Tự động chuyển sang tab "Thời khóa biểu đã sắp môn học" sau 2 giây
-        setTimeout(() => {
-            setActiveTab('processing');
-            // Cập nhật filter để hiển thị lịch của course vừa tạo
-            setViewFilters(prev => ({
-                ...prev,
-                courseId: courseId.toString()
-            }));
-        }, 2000);
+        if (actionType === 'generate') {
+            // Khi tạo lịch mới - chuyển sang tab "Thời khóa biểu đã sắp môn học"
+            setSuccessMessage('Lịch đã được sắp xếp thành công! Lịch mới đã được thêm vào "Thời khóa biểu đã sắp môn học".');
+            setShowSuccessNotification(true);
+            
+            setTimeout(() => {
+                setActiveTab('processing');
+                setViewFilters(prev => ({
+                    ...prev,
+                    courseId: courseId.toString()
+                }));
+            }, 2000);
+        } else {
+            // Khi sắp giảng viên địa điểm - chuyển sang tab "Thời khóa biểu đã hoàn thành"
+            console.log('🔄 Switching to view tab for assign action');
+            setSuccessMessage('Đã sắp xếp giảng viên và địa điểm thành công! Lịch đã được chuyển vào "Thời khóa biểu đã hoàn thành".');
+            setShowSuccessNotification(true);
+            
+            setTimeout(() => {
+                console.log('⏰ Timeout triggered, setting activeTab to view');
+                setActiveTab('view');
+                setViewFilters(prev => ({
+                    ...prev,
+                    courseId: courseId.toString()
+                }));
+                console.log('✅ Tab switched to view, filters updated');
+            }, 2000);
+        }
     };
 
     async function handleSave() {
@@ -183,7 +197,7 @@ export default function SchedulerPage() {
                                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                         }`}
                                     >
-                                        Tạo Lịch Mới
+                                        Tạo thời khóa biểu mới
                                     </button>
                                     <button
                                         onClick={() => setActiveTab('view')}
@@ -226,7 +240,7 @@ export default function SchedulerPage() {
                                 {/* Filters */}
                                 <div className="bg-white rounded-lg shadow-sm border p-6">
                                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Bộ lọc</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                 Khóa học
@@ -283,20 +297,7 @@ export default function SchedulerPage() {
                                                 onChange={(e) => handleViewFilterChange('endDate', e.target.value)}
                                             />
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Trạng thái
-                                            </label>
-                                            <select
-                                                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                                                value={viewFilters.status}
-                                                onChange={(e) => handleViewFilterChange('status', e.target.value as any)}
-                                            >
-                                                <option value="done">Hoàn thành</option>
-                                                <option value="scheduled">Đã lên lịch</option>
-                                                <option value="all">Tất cả</option>
-                                            </select>
-                                        </div>
+
                                     </div>
                                 </div>
 

@@ -13,6 +13,7 @@ interface ScheduleItem {
   session: 'morning' | 'afternoon' | 'evening';
   lecturerId: number | null;
   locationId: number | null;
+  id?: string; // Thêm id property để hỗ trợ drag & drop
   _metadata?: {
     status: string;
     fileName: string;
@@ -47,6 +48,7 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [dragSuccess, setDragSuccess] = useState(false);
 
   // Load reference data
   useEffect(() => {
@@ -88,16 +90,18 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
       params.append('status', 'done');
     }
 
+    console.log('🔍 Fetching schedules from:', `${url}?${params}`);
     fetch(`${url}?${params}`)
       .then(res => res.json())
       .then(data => {
+        console.log('📥 API response:', data);
         if (data.success) {
-          // Chỉ lấy các lịch đã hoàn thành (có cả subjectId, lecturerId, locationId)
-          const completedSchedules = data.data.filter((schedule: ScheduleItem) => 
-            schedule.subjectId && schedule.lecturerId && schedule.locationId
-          ).map((s: ScheduleItem) => ({ ...s, id: makeScheduleId(s) }));
+          // Lấy tất cả lịch từ API và thêm id
+          const completedSchedules = data.data.map((s: ScheduleItem) => ({ ...s, id: makeScheduleId(s) }));
+          console.log('✅ Loaded schedules:', completedSchedules.length, 'items');
           setSchedules(completedSchedules);
         } else {
+          console.log('❌ API error:', data.error);
           setError(data.error || 'Lỗi khi tải dữ liệu');
         }
       })
@@ -127,11 +131,30 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
 
   const getSessionLabel = (session: string) => {
     const labels = {
-      morning: 'Morning',
-      afternoon: 'Afternoon', 
-      evening: 'Evening'
+      morning: 'Sáng',
+      afternoon: 'Chiều', 
+      evening: 'Tối'
     };
     return labels[session as keyof typeof labels] || session;
+  };
+
+  const formatDateToVietnamese = (dateString: string) => {
+    const date = parseISO(dateString);
+    const dayOfWeek = format(date, 'EEEE');
+    const day = format(date, 'dd');
+    const month = format(date, 'MM');
+    
+    const dayNames = {
+      'Monday': 'Thứ Hai',
+      'Tuesday': 'Thứ Ba', 
+      'Wednesday': 'Thứ Tư',
+      'Thursday': 'Thứ Năm',
+      'Friday': 'Thứ Sáu',
+      'Saturday': 'Thứ Bảy',
+      'Sunday': 'Chủ Nhật'
+    };
+    
+    return `${dayNames[dayOfWeek as keyof typeof dayNames]}, ngày ${day} tháng ${month}`;
   };
 
   const getTeamName = (teamId: number) => {
@@ -147,6 +170,7 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
       transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
       opacity: isDragging ? 0.5 : 1,
       cursor: 'grab',
+      zIndex: isDragging ? 1000 : 'auto',
     };
 
     return (
@@ -163,6 +187,8 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
       background: isOver ? '#e0e7ff' : undefined,
       padding: '4px',
       borderRadius: '4px',
+      border: isOver ? '2px dashed #3b82f6' : '2px solid transparent',
+      transition: 'all 0.2s ease',
     };
 
     return (
@@ -180,6 +206,7 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
       transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
       opacity: isDragging ? 0.5 : 1,
       cursor: 'grab',
+      zIndex: isDragging ? 1000 : 'auto',
     };
 
     return (
@@ -196,6 +223,8 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
       background: isOver ? '#e0e7ff' : undefined,
       padding: '4px',
       borderRadius: '4px',
+      border: isOver ? '2px dashed #3b82f6' : '2px solid transparent',
+      transition: 'all 0.2s ease',
     };
 
     return (
@@ -222,25 +251,29 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
     if (from.type !== to.type) return;
 
     setSchedules(prev => {
-      const newSchedules = [...prev];
+      // Clone mảng mới để React nhận biết thay đổi
+      const newSchedules = prev.map(s => ({ ...s }));
+
       const fromIdx = newSchedules.findIndex(s => s.id === from.scheduleId);
       const toIdx = newSchedules.findIndex(s => s.id === to.scheduleId);
 
-      if (fromIdx === -1 || toIdx === -1) return newSchedules;
+      if (fromIdx === -1 || toIdx === -1) return prev;
 
       // Chỉ swap nếu cùng session
-      if (newSchedules[fromIdx].session !== newSchedules[toIdx].session) return newSchedules;
+      if (newSchedules[fromIdx].session !== newSchedules[toIdx].session) return prev;
 
-      // Swap lecturerId hoặc locationId
       if (from.type === 'lecturer') {
-        [newSchedules[fromIdx].lecturerId, newSchedules[toIdx].lecturerId] = [newSchedules[toIdx].lecturerId, newSchedules[fromIdx].lecturerId];
+        const temp = newSchedules[fromIdx].lecturerId;
+        newSchedules[fromIdx].lecturerId = newSchedules[toIdx].lecturerId;
+        newSchedules[toIdx].lecturerId = temp;
       } else if (from.type === 'location') {
-        [newSchedules[fromIdx].locationId, newSchedules[toIdx].locationId] = [newSchedules[toIdx].locationId, newSchedules[fromIdx].locationId];
+        const temp = newSchedules[fromIdx].locationId;
+        newSchedules[fromIdx].locationId = newSchedules[toIdx].locationId;
+        newSchedules[toIdx].locationId = temp;
       }
 
-      if (onScheduleUpdate) {
-        onScheduleUpdate(newSchedules);
-      }
+      setDragSuccess(true);
+      setTimeout(() => setDragSuccess(false), 2000);
 
       return newSchedules;
     });
@@ -265,6 +298,13 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
 
   // Get unique teams
   const uniqueTeams = Array.from(new Set(schedules.map(s => s.teamId))).sort();
+  
+  console.log('📊 Render debug:', {
+    schedulesCount: schedules.length,
+    groupedDatesCount: Object.keys(groupedByDate).length,
+    sortedDates: sortedDates,
+    uniqueTeams: uniqueTeams
+  });
 
   if (loading) {
     return (
@@ -292,18 +332,37 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
 
   return (
     <div className="bg-white rounded-lg shadow-sm border m-4">
-      {/* Success Notification */}
+      {/* Success Notifications */}
       {saveSuccess && (
         <div className="bg-green-100 border-l-4 border-green-500 p-4 mb-4 animate-pulse">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
+            <div className="flex-1">
               <p className="text-sm text-green-700 font-medium">
-                ✅ Lưu thành công! Lịch giảng dạy đã được cập nhật.
+                Lưu thành công! Lịch giảng dạy đã được cập nhật.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-4">
+          <div className="flex items-center">
+            <div className="flex-1">
+              <p className="text-sm text-red-700 font-medium">
+                Lỗi: {error}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {dragSuccess && (
+        <div className="bg-blue-100 border-l-4 border-blue-500 p-4 mb-4 animate-pulse">
+          <div className="flex items-center">
+            <div className="flex-1">
+              <p className="text-sm text-blue-700 font-medium">
+                Hoán đổi thành công! Nhớ lưu thay đổi để cập nhật lịch.
               </p>
             </div>
           </div>
@@ -314,25 +373,62 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
         <h3 className="text-lg font-semibold text-gray-900">
           THỜI KHÓA BIỂU ĐÃ HOÀN THÀNH
         </h3>
-        <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-          LƯU THAY ĐỔI
+        <button 
+          className={`px-4 py-2 rounded-md text-sm font-medium ${
+            loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
+          } text-white`}
+          disabled={loading}
+          onClick={async () => {
+            try {
+              setLoading(true);
+              setError(null);
+              console.log('Saving schedules:', schedules);
+              console.log('Schedules count:', schedules.length);
+              
+              if (schedules.length === 0) {
+                setError('Không có dữ liệu để lưu');
+                return;
+              }
+              
+              const res = await fetch('/api/save-schedules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ schedules })
+              });
+              
+              const data = await res.json();
+              console.log('Save response:', data);
+              
+              if (!data.success) throw new Error(data.error || 'Lỗi khi lưu file');
+              
+              setSaveSuccess(true);
+              setTimeout(() => setSaveSuccess(false), 3000);
+            } catch (err: any) {
+              console.error('Save error:', err);
+              setError(err.message || 'Lỗi khi lưu file');
+            } finally {
+              setLoading(false);
+            }
+          }}
+        >
+          {loading ? 'ĐANG LƯU...' : 'LƯU THAY ĐỔI'}
         </button>
       </div>
       
       <div className="overflow-x-auto p-4">
         <DndContext onDragEnd={handleDragEnd}>
-          <table className="w-full">
+          <table className="w-full border-collapse border-2 border-gray-300">
             <thead className="bg-blue-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                  Date
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                  NGÀY THÁNG
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                  Session
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                  BUỔI HỌC
                 </th>
                 {uniqueTeams.map(teamId => (
-                  <th key={teamId} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                    Team {getTeamName(teamId)}
+                  <th key={teamId} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                    {getTeamName(teamId)}
                   </th>
                 ))}
               </tr>
@@ -349,25 +445,25 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
                   return (
                     <tr key={`${date}-${session}`} className="hover:bg-gray-50">
                       {isFirstSession && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r" rowSpan={3}>
-                          {format(parseISO(date), 'EEE, MMM d')}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-300" rowSpan={3}>
+                          {formatDateToVietnamese(date)}
                         </td>
                       )}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-r">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-r border-gray-300">
                         {getSessionLabel(session)}
                       </td>
                       {uniqueTeams.map(teamId => {
                         const schedule = sessionData[teamId];
                         if (!schedule) {
                           return (
-                            <td key={teamId} className="px-6 py-4 text-sm border-r">
+                            <td key={teamId} className="px-6 py-4 text-sm border-r border-gray-300">
                               <div className="schedule-cell-empty">Trống</div>
                             </td>
                           );
                         }
                         
                         return (
-                          <td key={teamId} className="px-6 py-4 text-sm border-r">
+                          <td key={teamId} className="px-6 py-4 text-sm border-r border-gray-300">
                             <div className="schedule-cell">
                               <div className="field-row">
                                 <span className="label">Học phần:</span>
@@ -411,44 +507,16 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
         </svg>
         Kéo thả giảng viên hoặc địa điểm để hoán đổi giữa các lớp
       </div>
-      <div className="flex justify-end px-6 py-4">
-        <button
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-          onClick={async () => {
-            try {
-              setLoading(true);
-              setError(null);
-              const res = await fetch('/api/save-schedules', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ schedules })
-              });
-              const data = await res.json();
-              if (!data.success) throw new Error(data.error || 'Lỗi khi lưu file');
-              
-              // Hiển thị success notification
-              setSaveSuccess(true);
-              setTimeout(() => setSaveSuccess(false), 3000);
-            } catch (err: any) {
-              setError(err.message || 'Lỗi khi lưu file');
-            } finally {
-              setLoading(false);
-            }
-          }}
-        >
-          LƯU THAY ĐỔI
-        </button>
-      </div>
 
       <style>{`
         .schedule-cell {
           display: flex;
           flex-direction: column;
-          align-items: center;
-          justify-content: center;
+          align-items: flex-start;
+          justify-content: flex-start;
           height: 100%;
           min-height: 50px;
-          text-align: center;
+          text-align: left;
           padding: 4px 2px;
           gap: 0px;
         }
@@ -469,7 +537,7 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
         .field-row {
           display: flex;
           align-items: center;
-          justify-content: center;
+          justify-content: flex-start;
           gap: 2px;
           width: 100%;
           margin-bottom: 0px;
@@ -487,7 +555,7 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
           color: #1e40af;
           font-size: 11px;
           font-weight: 600;
-          text-align: center;
+          text-align: left;
           word-wrap: break-word;
           flex: 1;
           font-family: inherit;
@@ -501,37 +569,45 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
         .lecturer-badge {
           background-color: #dbeafe;
           color: #1e40af;
-          padding: 1px 3px;
-          border-radius: 2px;
+          padding: 2px 4px;
+          border-radius: 4px;
           cursor: grab;
           font-weight: 600;
           font-size: 11px;
           border: 1px solid #1e40af;
           flex: 1;
-          text-align: center;
+          text-align: left;
           font-family: inherit;
+          transition: all 0.2s ease;
+          user-select: none;
         }
         
         .lecturer-badge:hover {
           background-color: #bfdbfe;
+          transform: scale(1.05);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         .location-badge {
           background-color: #dbeafe;
           color: #1e40af;
-          padding: 1px 3px;
-          border-radius: 2px;
+          padding: 2px 4px;
+          border-radius: 4px;
           cursor: grab;
           font-weight: 600;
           font-size: 11px;
           border: 1px solid #1e40af;
           flex: 1;
-          text-align: center;
+          text-align: left;
           font-family: inherit;
+          transition: all 0.2s ease;
+          user-select: none;
         }
         
         .location-badge:hover {
           background-color: #bfdbfe;
+          transform: scale(1.05);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
       `}</style>
     </div>

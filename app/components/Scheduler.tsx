@@ -4,7 +4,7 @@ import ReactDOM from 'react-dom/client';
 
 interface SchedulerProps {
   onScheduleGenerated?: (schedule: any, filePath: string) => void;
-  onScheduleSuccess?: (courseId: number) => void;
+  onScheduleSuccess?: (courseId: number, actionType?: 'generate' | 'assign') => void;
 }
 
 export default function Scheduler({ onScheduleGenerated, onScheduleSuccess }: SchedulerProps) {
@@ -92,11 +92,24 @@ export default function Scheduler({ onScheduleGenerated, onScheduleSuccess }: Sc
       setMessage('Vui lòng chọn khóa học trước');
       return;
     }
+
+    // Lấy thông tin course để kiểm tra status
+    const selectedCourseData = courses.find(c => c.id === selectedCourse);
+    const courseStatus = selectedCourseData?.status;
+
+    console.log('Course status:', courseStatus);
     
     if (hasDateChanges()) {
       setShowConfirmOverlay(true);
     } else {
-      await generateSchedule();
+      // Phân biệt chức năng dựa trên status
+      if (courseStatus === 'Undone') {
+        await generateSchedule();
+      } else if (courseStatus === 'Processing') {
+        await assignResources();
+      } else {
+        setMessage('Khóa học này đã hoàn thành hoặc không thể xử lý');
+      }
     }
   };
 
@@ -168,11 +181,11 @@ export default function Scheduler({ onScheduleGenerated, onScheduleSuccess }: Sc
       }));
       
       // Hiển thị thông báo thành công
-      setMessage('✅ Lịch đã được sắp xếp thành công! Lịch mới đã được thêm vào "Thời khóa biểu đã sắp môn học".');
+      setMessage('Lịch đã được sắp xếp thành công! Lịch mới đã được thêm vào "Thời khóa biểu đã sắp môn học".');
       
       // Gọi callback để thông báo thành công
       if (onScheduleSuccess && selectedCourse) {
-        onScheduleSuccess(selectedCourse);
+        onScheduleSuccess(selectedCourse, 'generate');
       }
       
       return;
@@ -184,9 +197,78 @@ export default function Scheduler({ onScheduleGenerated, onScheduleSuccess }: Sc
     }
   };
 
+  const assignResources = async () => {
+    console.log('assignResources called');
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const requestBody: any = { courseId: selectedCourse };
+      
+      // Chỉ gửi dates nếu có thay đổi
+      if (hasDateChanges()) {
+        requestBody.startDate = startDate;
+        requestBody.endDate = endDate;
+      }
+
+      console.log('Calling assign resources API with requestBody:', requestBody);
+      const res = await fetch('/api/assign-resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+      console.log('API response status:', res.status);
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        setMessage('Lỗi khi parse JSON: ' + jsonErr);
+        return;
+      }
+      
+      console.log('Assign resources API response:', data);
+      
+      if (data.success) {
+        console.log('✅ Assign resources successful, calling onScheduleSuccess with assign type');
+        setMessage('Đã sắp xếp giảng viên và địa điểm thành công!');
+        
+        // Chuyển sang tab "Thời khóa biểu đã hoàn tất" thay vì mở trang mới
+        if (selectedCourse && onScheduleSuccess) {
+          console.log('🔄 Calling onScheduleSuccess with courseId:', selectedCourse, 'actionType: assign');
+          onScheduleSuccess(selectedCourse, 'assign');
+        } else {
+          console.log('❌ Missing selectedCourse or onScheduleSuccess callback');
+        }
+      } else {
+        console.log('❌ Assign resources failed:', data.error);
+        setMessage('Có lỗi xảy ra khi sắp xếp giảng viên và địa điểm: ' + (data.error || 'Unknown error'));
+      }
+      
+      return;
+    } catch (error) {
+      alert('Error assigning resources: ' + error);
+      setMessage('Có lỗi xảy ra khi sắp xếp giảng viên và địa điểm');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleConfirmDateChanges = async () => {
     setShowConfirmOverlay(false);
-    await generateSchedule();
+    
+    // Lấy thông tin course để kiểm tra status
+    const selectedCourseData = courses.find(c => c.id === selectedCourse);
+    const courseStatus = selectedCourseData?.status;
+
+    // Phân biệt chức năng dựa trên status
+    if (courseStatus === 'Undone') {
+      await generateSchedule();
+    } else if (courseStatus === 'Processing') {
+      await assignResources();
+    } else {
+      setMessage('Khóa học này đã hoàn thành hoặc không thể xử lý');
+    }
   };
 
   const handleCancelDateChanges = () => {
@@ -256,7 +338,18 @@ export default function Scheduler({ onScheduleGenerated, onScheduleSuccess }: Sc
             onClick={handleCreate}
             disabled={loading}
           >
-            {loading ? 'Đang xử lý...' : hasDateChanges() ? 'Cập nhật & Xem lịch' : 'Xem lịch'}
+            {loading ? 'Đang xử lý...' : (() => {
+              const selectedCourseData = courses.find(c => c.id === selectedCourse);
+              const courseStatus = selectedCourseData?.status;
+              
+              if (hasDateChanges()) {
+                return 'Cập nhật & ' + (courseStatus === 'Undone' ? 'Sắp môn' : courseStatus === 'Processing' ? 'Sắp giảng viên & địa điểm' : 'Xem lịch');
+              } else {
+                if (courseStatus === 'Undone') return 'Sắp môn học';
+                if (courseStatus === 'Processing') return 'Sắp giảng viên & địa điểm';
+                return 'Xem lịch';
+              }
+            })()}
           </button>
         </div>
       </div>

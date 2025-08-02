@@ -74,11 +74,30 @@ const ManualEditTimetable: React.FC<ManualEditTimetableProps> = ({
 
   const getSessionLabel = (session: string) => {
     const labels = {
-      morning: 'Morning',
-      afternoon: 'Afternoon', 
-      evening: 'Evening'
+      morning: 'Sáng',
+      afternoon: 'Chiều', 
+      evening: 'Tối'
     };
     return labels[session as keyof typeof labels] || session;
+  };
+
+  const formatDateToVietnamese = (dateString: string) => {
+    const date = parseISO(dateString);
+    const dayOfWeek = format(date, 'EEEE');
+    const day = format(date, 'dd');
+    const month = format(date, 'MM');
+    
+    const dayNames = {
+      'Monday': 'Thứ Hai',
+      'Tuesday': 'Thứ Ba', 
+      'Wednesday': 'Thứ Tư',
+      'Thursday': 'Thứ Năm',
+      'Friday': 'Thứ Sáu',
+      'Saturday': 'Thứ Bảy',
+      'Sunday': 'Chủ Nhật'
+    };
+    
+    return `${dayNames[dayOfWeek as keyof typeof dayNames]}, ngày ${day} tháng ${month}`;
   };
 
   const getTeamName = (teamId: number) => {
@@ -169,20 +188,20 @@ const ManualEditTimetable: React.FC<ManualEditTimetableProps> = ({
       </div>
       
       <div className="overflow-x-auto">
-        <table className="w-full">
+                 <table className="w-full border-collapse border-2 border-gray-300">
           <thead className="bg-blue-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                Session
-              </th>
-              {uniqueTeams.map(teamId => (
-                <th key={teamId} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                  Team {getTeamName(teamId)}
-                </th>
-              ))}
+                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                 NGÀY THÁNG
+               </th>
+               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                 BUỔI HỌC
+               </th>
+                             {uniqueTeams.map(teamId => (
+                 <th key={teamId} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                   {getTeamName(teamId)}
+                 </th>
+               ))}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -197,18 +216,18 @@ const ManualEditTimetable: React.FC<ManualEditTimetableProps> = ({
                 return (
                   <tr key={`${date}-${session}`} className="hover:bg-gray-50">
                     {isFirstSession && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r" rowSpan={3}>
-                        {format(parseISO(date), 'EEE, MMM d')}
-                      </td>
+                                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-300" rowSpan={3}>
+                       {formatDateToVietnamese(date)}
+                     </td>
                     )}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-r">
-                      {getSessionLabel(session)}
-                    </td>
+                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-r border-gray-300">
+                       {getSessionLabel(session)}
+                     </td>
                     {uniqueTeams.map(teamId => {
                       const schedule = sessionData[teamId];
                       
                       return (
-                        <td key={teamId} className="px-6 py-4 text-sm border-r">
+                        <td key={teamId} className="px-6 py-4 text-sm border-r border-gray-300">
                           <div className="space-y-2">
                             <div>
                               <span className="text-blue-600 font-medium">Học phần:</span>
