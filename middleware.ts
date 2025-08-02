@@ -24,7 +24,8 @@ const schedulerOnlyRoutes = [
 // Public routes (no authentication required)
 const publicRoutes = [
   '/',
-  '/login'
+  '/login',
+  '/export-excel'
 ];
 
 // Auth routes (only need session token, no Basic Auth required)
