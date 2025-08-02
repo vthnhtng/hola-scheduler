@@ -1,0 +1,12 @@
+[
+  {
+    "week": 1,
+    "teamId": 1,
+    "subjectId": 1,
+    "date": "2025-05-19",
+    "dayOfWeek": "Mon",
+    "session": "morning",
+    "lecturerId": 1,
+    "locationId": null
+  }
+]

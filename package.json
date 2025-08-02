@@ -17,6 +17,8 @@
 		"@types/xlsx": "^0.0.35",
 		"bootstrap": "^5.3.3",
 		"date-fns": "^4.1.0",
+		"exceljs": "^4.4.0",
+		"fs": "^0.0.1-security",
 		"migrate": "^2.1.0",
 		"next": "^15.1.7",
 		"node": "^23.8.0",
