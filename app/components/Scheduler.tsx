@@ -4,9 +4,10 @@ import ReactDOM from 'react-dom/client';
 
 interface SchedulerProps {
   onScheduleGenerated?: (schedule: any, filePath: string) => void;
+  onScheduleSuccess?: (courseId: number, actionType?: 'generate' | 'assign') => void;
 }
 
-export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
+export default function Scheduler({ onScheduleGenerated, onScheduleSuccess }: SchedulerProps) {
   const [courses, setCourses] = useState<any[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
   const [startDate, setStartDate] = useState('');
@@ -14,22 +15,27 @@ export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
   const [originalStartDate, setOriginalStartDate] = useState('');
   const [originalEndDate, setOriginalEndDate] = useState('');
   const [message, setMessage] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [coursesLoaded, setCoursesLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showConfirmOverlay, setShowConfirmOverlay] = useState(false);
 
-  const fetchCourses = async () => {
-    if (coursesLoaded) return;
+  const fetchCourses = async (forceRefresh = false) => {
+    if (coursesLoaded && !forceRefresh) return;
     try {
+      console.log('Fetching courses...');
       const res = await fetch('/api/courses?page=1&limit=9999');
       const data = await res.json();
       if (Array.isArray(data.data)) {
         setCourses(data.data);
+        console.log('Courses updated:', data.data.length, 'items');
       } else {
         setCourses([]);
       }
       setCoursesLoaded(true);
     } catch (e) {
+      console.error('Error fetching courses:', e);
       setCourses([]);
     }
   };
@@ -37,6 +43,23 @@ export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
   const handleSelectFocus = () => {
     fetchCourses();
   };
+
+  // Listen for refresh events
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'refreshCourses' && e.newValue === 'true') {
+        console.log('Refreshing courses due to storage event');
+        fetchCourses(true);
+        localStorage.removeItem('refreshCourses');
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   const handleSelectCourse = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const courseId = parseInt(e.target.value);
@@ -62,20 +85,42 @@ export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
     return hasChanges;
   };
 
+  const showToastMessage = (msg: string, type: 'success' | 'error' = 'success') => {
+    setMessage(msg);
+    setToastType(type);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
+
   const handleCreate = async () => {
     console.log('handleCreate called');
     console.log('selectedCourse:', selectedCourse);
     console.log('hasDateChanges():', hasDateChanges());
     
     if (!selectedCourse) {
-      setMessage('Vui lòng chọn khóa học trước');
+      showToastMessage('Vui lòng chọn khóa học trước', 'error');
       return;
     }
+
+    // Lấy thông tin course để kiểm tra status
+    const selectedCourseData = courses.find(c => c.id === selectedCourse);
+    const courseStatus = selectedCourseData?.status;
+
+    console.log('Course status:', courseStatus);
     
     if (hasDateChanges()) {
       setShowConfirmOverlay(true);
     } else {
-      await generateSchedule();
+      // Phân biệt chức năng dựa trên status
+      if (courseStatus === 'Undone') {
+        await generateSchedule();
+      } else if (courseStatus === 'Processing') {
+        await assignResources();
+      } else if (courseStatus === 'Done') {
+        await deleteSchedule();
+             } else {
+         showToastMessage('Khóa học này không thể xử lý', 'error');
+       }
     }
   };
 
@@ -109,45 +154,171 @@ export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
         return;
       }
       
-      // Log toàn bộ response để debug
-      console.log('Full API response:', data);
-      console.log('Response has success:', data.success);
-      console.log('Response data:', data.data);
+             // Log toàn bộ response để debug
+       console.log('Full API response:', data);
+       console.log('Response has success:', data.success);
+       console.log('Response data:', data.data);
+       
+       // Kiểm tra cả data trực tiếp và data.data
+       let scheduleData = data.scheduleData || (data.data && data.data.scheduleData);
+       let fileContents = data.fileContents || (data.data && data.data.fileContents);
+       
+       console.log('scheduleData found:', scheduleData);
+       console.log('fileContents found:', fileContents);
+       
+       // Nếu không có scheduleData, thử lấy từ fileContents
+       if (!scheduleData && fileContents) {
+         const fileKeys = Object.keys(fileContents);
+         console.log('fileContents keys:', fileKeys);
+         if (fileKeys.length > 0) {
+           const fileName = fileKeys[0];
+           scheduleData = fileContents[fileName];
+           console.log('Using fileContents for scheduleData:', fileName, scheduleData);
+         }
+       }
+       
+       console.log('Final scheduleData to save:', scheduleData);
+       
+       if (!scheduleData || !Array.isArray(scheduleData) || scheduleData.length === 0) {
+         showToastMessage('Không có dữ liệu lịch được tạo. API response structure: ' + JSON.stringify(Object.keys(data)), 'error');
+         console.error('No schedule data found. Full response:', data);
+         return;
+       }
       
-      // Kiểm tra cả data trực tiếp và data.data
-      let scheduleData = data.scheduleData || (data.data && data.data.scheduleData);
-      let fileContents = data.fileContents || (data.data && data.data.fileContents);
+      // Thêm courseId vào từng item trong scheduleData
+      const scheduleDataWithCourseId = scheduleData.map((item: any) => ({
+        ...item,
+        courseId: selectedCourse
+      }));
       
-      console.log('scheduleData found:', scheduleData);
-      console.log('fileContents found:', fileContents);
+             // Hiển thị thông báo thành công
+       showToastMessage('Lịch đã được sắp xếp thành công! Lịch mới đã được thêm vào "Thời khóa biểu đã sắp môn học".', 'success');
       
-      // Nếu không có scheduleData, thử lấy từ fileContents
-      if (!scheduleData && fileContents) {
-        const fileKeys = Object.keys(fileContents);
-        console.log('fileContents keys:', fileKeys);
-        if (fileKeys.length > 0) {
-          const fileName = fileKeys[0];
-          scheduleData = fileContents[fileName];
-          console.log('Using fileContents for scheduleData:', fileName, scheduleData);
-        }
+      // Gọi callback để thông báo thành công
+      if (onScheduleSuccess && selectedCourse) {
+        onScheduleSuccess(selectedCourse, 'generate');
       }
       
-      console.log('Final scheduleData to save:', scheduleData);
+      return;
+         } catch (error) {
+       alert('Error generating schedule: ' + error);
+       showToastMessage('Có lỗi xảy ra khi tạo lịch', 'error');
+     } finally {
+      setLoading(false);
+    }
+  };
+
+  const assignResources = async () => {
+    console.log('assignResources called');
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const requestBody: any = { courseId: selectedCourse };
       
-      if (!scheduleData || !Array.isArray(scheduleData) || scheduleData.length === 0) {
-        setMessage('Không có dữ liệu lịch được tạo. API response structure: ' + JSON.stringify(Object.keys(data)));
-        console.error('No schedule data found. Full response:', data);
+      // Chỉ gửi dates nếu có thay đổi
+      if (hasDateChanges()) {
+        requestBody.startDate = startDate;
+        requestBody.endDate = endDate;
+      }
+
+      console.log('Calling assign resources API with requestBody:', requestBody);
+      const res = await fetch('/api/assign-resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+      console.log('API response status:', res.status);
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        showToastMessage('Lỗi khi parse JSON: ' + jsonErr, 'error');
         return;
       }
       
-      // Lưu dữ liệu vào localStorage và mở popup chỉnh sửa
-      localStorage.setItem('manualEditScheduleData', JSON.stringify(scheduleData));
-      console.log('Saved to localStorage:', scheduleData.length, 'items');
-      window.open('/manual-edit', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+      console.log('Assign resources API response:', data);
+      
+      if (data.success) {
+        console.log('✅ Assign resources successful, calling onScheduleSuccess with assign type');
+        showToastMessage('Đã sắp xếp giảng viên và địa điểm thành công!', 'success');
+        
+        // Chuyển sang tab "Thời khóa biểu đã hoàn tất" thay vì mở trang mới
+        if (selectedCourse && onScheduleSuccess) {
+          console.log('🔄 Calling onScheduleSuccess with courseId:', selectedCourse, 'actionType: assign');
+          onScheduleSuccess(selectedCourse, 'assign');
+        } else {
+          console.log('❌ Missing selectedCourse or onScheduleSuccess callback');
+        }
+      } else {
+        console.log('❌ Assign resources failed:', data.error);
+        showToastMessage('Có lỗi xảy ra khi sắp xếp giảng viên và địa điểm: ' + (data.error || 'Unknown error'), 'error');
+      }
+      
       return;
     } catch (error) {
-      alert('Error generating schedule: ' + error);
-      setMessage('Có lỗi xảy ra khi tạo lịch');
+      alert('Error assigning resources: ' + error);
+      showToastMessage('Có lỗi xảy ra khi sắp xếp giảng viên và địa điểm', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteSchedule = async () => {
+    console.log('deleteSchedule called');
+    setLoading(true);
+    showToastMessage('');
+
+    try {
+      const requestBody: any = { courseId: selectedCourse };
+      
+      // Chỉ gửi dates nếu có thay đổi
+      if (hasDateChanges()) {
+        requestBody.startDate = startDate;
+        requestBody.endDate = endDate;
+      }
+
+      console.log('Calling delete schedule API with requestBody:', requestBody);
+      const res = await fetch('/api/delete-schedules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+      console.log('API response status:', res.status);
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        setMessage('Lỗi khi parse JSON: ' + jsonErr);
+        return;
+      }
+      
+      console.log('Delete schedule API response:', data);
+      
+      if (data.success) {
+        console.log('✅ Delete schedule successful');
+        showToastMessage('Đã xóa lịch thành công!', 'success');
+        
+        // Refresh courses để cập nhật status
+        await fetchCourses(true);
+        
+        // Reset form
+        setSelectedCourse(null);
+        setStartDate('');
+        setEndDate('');
+        setOriginalStartDate('');
+        setOriginalEndDate('');
+      } else {
+        console.log('❌ Delete schedule failed:', data.error);
+        showToastMessage('Có lỗi xảy ra khi xóa lịch: ' + (data.error || 'Unknown error'), 'error');
+      }
+      
+      return;
+    } catch (error) {
+      console.error('Error deleting schedule:', error);
+      showToastMessage('Có lỗi xảy ra khi xóa lịch', 'error');
     } finally {
       setLoading(false);
     }
@@ -155,7 +326,19 @@ export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
 
   const handleConfirmDateChanges = async () => {
     setShowConfirmOverlay(false);
-    await generateSchedule();
+    
+    // Lấy thông tin course để kiểm tra status
+    const selectedCourseData = courses.find(c => c.id === selectedCourse);
+    const courseStatus = selectedCourseData?.status;
+
+    // Phân biệt chức năng dựa trên status
+    if (courseStatus === 'Undone') {
+      await generateSchedule();
+    } else if (courseStatus === 'Processing') {
+      await assignResources();
+    } else {
+      showToastMessage('Khóa học này đã hoàn thành hoặc không thể xử lý', 'error');
+    }
   };
 
   const handleCancelDateChanges = () => {
@@ -175,13 +358,8 @@ export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
   // Ensure the function returns JSX
   return (
     <>
-    <div className="p-8 max-w-4xl mx-auto bg-white rounded shadow">
-      <h2 className="text-xl font-bold text-center mb-4">Chọn khóa học sắp xếp</h2>
-        {message && (
-          <div className={`mb-4 ${message.includes('thành công') ? 'text-green-600' : 'text-red-600'}`}>
-            {message}
-          </div>
-        )}
+         <div className="p-8 max-w-4xl mx-auto bg-white rounded shadow">
+       <h2 className="text-xl font-bold text-center mb-4">Chọn khóa học sắp xếp</h2>
       <div className="mb-4">
         <label>Chọn khóa học:</label>
         <select
@@ -225,7 +403,19 @@ export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
             onClick={handleCreate}
             disabled={loading}
           >
-            {loading ? 'Đang xử lý...' : hasDateChanges() ? 'Cập nhật & Xem lịch' : 'Xem lịch'}
+            {loading ? 'Đang xử lý...' : (() => {
+              const selectedCourseData = courses.find(c => c.id === selectedCourse);
+              const courseStatus = selectedCourseData?.status;
+              
+              if (hasDateChanges()) {
+                return 'Cập nhật & ' + (courseStatus === 'Undone' ? 'Sắp môn' : courseStatus === 'Processing' ? 'Sắp giảng viên & địa điểm' : courseStatus === 'Done' ? 'Xóa lịch' : 'Xem lịch');
+              } else {
+                if (courseStatus === 'Undone') return 'Sắp môn học';
+                if (courseStatus === 'Processing') return 'Sắp giảng viên & địa điểm';
+                if (courseStatus === 'Done') return 'Xóa lịch';
+                return 'Xem lịch';
+              }
+            })()}
           </button>
         </div>
       </div>
@@ -276,8 +466,29 @@ export default function Scheduler({ onScheduleGenerated }: SchedulerProps) {
         </button>
       </div>
     </div>
-        </div>
-      )}
-    </>
-  );
-}
+                 </div>
+       )}
+
+       {/* Toast Notification */}
+       {showToast && (
+         <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
+           toastType === 'success' 
+             ? 'bg-green-500 text-white' 
+             : 'bg-red-500 text-white'
+         }`}>
+           <div className="flex items-center">
+             <div className="flex-1">
+               <p className="text-sm font-medium">{message}</p>
+             </div>
+             <button 
+               onClick={() => setShowToast(false)}
+               className="ml-4 text-white hover:text-gray-200"
+             >
+               ✕
+             </button>
+           </div>
+         </div>
+       )}
+     </>
+   );
+ }

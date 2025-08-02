@@ -152,6 +152,19 @@ export async function POST(request: NextRequest) {
       console.log('Total schedule items for UI:', scheduleData.length); // Debug log
       console.log('Final scheduleData:', scheduleData);
 
+      // Update course status to Processing if generation was successful
+      if (result.processedFiles.length > 0) {
+        try {
+          await prisma.course.update({
+            where: { id: courseIdInt },
+            data: { status: 'Processing' }
+          });
+          console.log('Course status updated to Processing');
+        } catch (statusError) {
+          console.error('Failed to update course status:', statusError);
+        }
+      }
+
       // Log activity
       await logApiActivity(user.id, 'POST', '/api/generate-schedules', {
         courseId,
@@ -160,7 +173,8 @@ export async function POST(request: NextRequest) {
         teamsCount: course.teams.length,
         processedFiles: result.processedFiles.length,
         errors: result.errors.length,
-        datesUpdated: !!(startDate || endDate)
+        datesUpdated: !!(startDate || endDate),
+        statusUpdated: result.processedFiles.length > 0
       });
 
       const response = createSuccessResponse({
