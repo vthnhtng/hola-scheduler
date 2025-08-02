@@ -2,43 +2,31 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { DateRange, TimetableData } from '@/types/TimeTableTypes';
-import { ApiResponseHandler } from '@/model/time-table/ApiResponseHandler';
 import { format } from 'date-fns';
-import { DndContext, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import LoadingOverlay from "./LoadingOverlay";
 
-function DraggableDroppableCell({ id, children }: { id: string, children: React.ReactNode }) {
-  const { setNodeRef: setDroppableRef, isOver } = useDroppable({ id });
-  const { attributes, listeners, setNodeRef: setDraggableRef, transform, isDragging } = useDraggable({ id });
-
-  const setRef = (node: HTMLElement | null) => {
-    setDroppableRef(node);
-    setDraggableRef(node);
-  };
-
-  const style = {
-    background: isOver ? '#e0e7ff' : undefined,
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    opacity: isDragging ? 0.5 : 1,
-    cursor: 'grab',
-  };
-
-  return (
-    <td ref={setRef} style={style} {...attributes} {...listeners}>
-      {children}
-    </td>
-  );
-}
-
 function TimeTable() {
-    // Thêm state cho date picker
+    // State cho date picker và filters
     const [startDate, setStartDate] = useState<string>("");
     const [endDate, setEndDate] = useState<string>("");
+    const [selectedTeam, setSelectedTeam] = useState<string>("");
+    const [selectedLecturer, setSelectedLecturer] = useState<string>("");
+    const [hasInitialLoad, setHasInitialLoad] = useState<boolean>(false);
+    
     const [teams, setTeams] = useState<string[]>([]);
     const [timetableData, setTimetableData] = useState<TimetableData[]>([]);
+    const [filteredData, setFilteredData] = useState<TimetableData[]>([]);
     const [hasExistingSchedules, setHasExistingSchedules] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [dateRange, setDateRange] = useState<DateRange>();
+    const [error, setError] = useState<string | null>(null);
+    
+    // Reference data
+    const [lecturers, setLecturers] = useState<any[]>([]);
+    const [courses, setCourses] = useState<any[]>([]);
+    const [locations, setLocations] = useState<any[]>([]);
+    const [editingCell, setEditingCell] = useState<string | null>(null);
+    const [editData, setEditData] = useState<{lecturerId: string, locationId: string}>({lecturerId: '', locationId: ''});
     
     const tableRef = useRef<HTMLDivElement>(null);
     const headerRef = useRef<HTMLTableRowElement>(null);
@@ -49,27 +37,72 @@ function TimeTable() {
         console.log('TimeTable render', timetableData);
     }, [timetableData]);
 
-    // Hàm fetch dữ liệu từ API mới
+    // Load reference data
+    useEffect(() => {
+        Promise.all([
+            fetch("/api/lecturers").then(res => res.json()).then(res => res.data || []),
+            fetch("/api/courses").then(res => res.json()).then(res => res.data || []),
+            fetch("/api/locations").then(res => res.json()).then(res => res.data || [])
+        ]).then(([lecturersData, coursesData, locationsData]) => {
+            setLecturers(lecturersData);
+            setCourses(coursesData);
+            setLocations(locationsData);
+        }).catch(console.error);
+    }, []);
+
+    // Set default dates to current month
+    useEffect(() => {
+        const today = new Date();
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const defaultStartDate = startOfMonth.toISOString().split('T')[0];
+        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        const defaultEndDate = endOfMonth.toISOString().split('T')[0];
+        
+        setStartDate(defaultStartDate);
+        setEndDate(defaultEndDate);
+    }, []);
+
+    // Hàm fetch dữ liệu từ API
     const fetchSchedule = async () => {
-        if (!startDate || !endDate) return;
+        if (!startDate || !endDate) {
+            setError('Vui lòng chọn ngày bắt đầu và kết thúc');
+            return;
+        }
+        
         setIsLoading(true);
+        setError(null);
+        
         try {
-            const url = `/api/get-schedules-by-time?startDate=${startDate}&endDate=${endDate}`;
+            const params = new URLSearchParams({
+                startDate,
+                endDate,
+                status: 'done' // Chỉ xem lịch done
+            });
+            
+            if (selectedTeam) params.append('courseId', selectedTeam);
+            
+            const url = `/api/get-schedules-by-time?${params}`;
+            console.log('Fetching from:', url);
+            
             const res = await fetch(url);
             const data = await res.json();
+            
+            if (res.ok) {
             if (!data) {
                 setTimetableData([]);
                 setTeams([]);
                 setDateRange(undefined);
                 setHasExistingSchedules(false);
-                setIsLoading(false);
+                    setError('Không tìm thấy lịch học trong khoảng thời gian này');
                 return;
             }
-            // Xử lý dữ liệu trả về (giả sử data là mảng các tuần)
-            // Gộp tất cả các entry lại thành 1 mảng lớn
+                
+                console.log('API Response:', data);
+                
             let allData: TimetableData[] = [];
             let allTeams: string[] = [];
             let minDate = startDate, maxDate = endDate;
+                
             data.forEach((week: any) => {
                 if (week.timetableData) {
                     allData = allData.concat(week.timetableData);
@@ -80,11 +113,30 @@ function TimeTable() {
                     if (!maxDate || week.dateRange.to > maxDate) maxDate = week.dateRange.to;
                 }
             });
+                
             setTimetableData(allData);
-            setTeams([...new Set(allTeams)]);
-            setDateRange(minDate && maxDate ? { from: new Date(minDate), to: new Date(maxDate) } : undefined);
-            setHasExistingSchedules(true);
+                setTeams([...new Set(allTeams)].sort());
+                setDateRange(minDate && maxDate ? { 
+                    from: new Date(minDate), 
+                    to: new Date(maxDate) 
+                } : undefined);
+                setHasExistingSchedules(allData.length > 0);
+                
+                console.log('Processed data:', {
+                    timetableData: allData.length,
+                    teams: [...new Set(allTeams)],
+                    dateRange: { from: minDate, to: maxDate }
+                });
+            } else {
+                setError(data.error || 'Lỗi khi tải dữ liệu');
+                setTimetableData([]);
+                setTeams([]);
+                setDateRange(undefined);
+                setHasExistingSchedules(false);
+            }
         } catch (error) {
+            console.error('Error fetching schedule:', error);
+            setError('Lỗi kết nối khi tải dữ liệu');
             setTimetableData([]);
             setTeams([]);
             setDateRange(undefined);
@@ -94,242 +146,436 @@ function TimeTable() {
         }
     };
 
-    const handleDragEnd = (event: DragEndEvent) => {
-        console.log('handleDragEnd called', event);
-        const { active, over } = event;
-        if (!over || active.id === over.id) return;
+    // Initial load when default dates are set
+    useEffect(() => {
+        // Only auto-load on first time when default dates are ready
+        if (startDate && endDate && !hasInitialLoad) {
+            fetchSchedule();
+            setHasInitialLoad(true);
+        }
+    }, [startDate, endDate]); // Run when dates are initially set
 
-        const parseId = (id: string) => {
-            // id dạng: yyyy-mm-dd-session-teamId
-            const parts = id.split('-');
-            const date = parts.slice(0, 3).join('-'); // yyyy-mm-dd
-            const session = parts[3];
-            const team = parts.slice(4).join('-');
-            return { date, session, team };
-        };
+    // Function to delete schedule
+    const deleteSchedule = async (date: string, session: string, teamId: string) => {
+        if (!confirm('Bạn có chắc muốn xóa lịch này?')) {
+            return;
+        }
 
-        const from = parseId(String(active.id));
-        const to = parseId(String(over.id));
+        try {
+            const response = await fetch('/api/schedule/delete', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    date,
+                    session,
+                    teamId,
+                    status: 'done' // Chỉ xóa lịch done
+                })
+            });
 
-        console.log('Drag from:', from, 'to:', to);
-
-        setTimetableData((prev) => {
-            // Deep clone để chắc chắn React nhận ra thay đổi
-            const newData = prev.map(item => ({ ...item, class: { ...item.class } }));
-
-            const fromIdx = newData.findIndex(
-                item =>
-                    item.date === from.date &&
-                    item.session === from.session &&
-                    item.teamId.toString() === from.team.toString()
-            );
-            const toIdx = newData.findIndex(
-                item =>
-                    item.date === to.date &&
-                    item.session === to.session &&
-                    item.teamId.toString() === to.team.toString()
-            );
-
-            console.log('fromIdx:', fromIdx, 'toIdx:', toIdx);
-
-            const fromData = fromIdx !== -1 ? newData[fromIdx] : null;
-            const toData = toIdx !== -1 ? newData[toIdx] : null;
-
-            console.log('fromData:', fromData, 'toData:', toData);
-
-            // Kiểm tra xem ô nguồn có dữ liệu không
-            const hasFromData = fromData && fromData.class && fromData.class.subject && fromData.class.subject.trim() !== '';
-            
-            // Nếu ô nguồn không có dữ liệu, không làm gì
-            if (!hasFromData) {
-                console.log('Source cell is empty, no action needed');
-                return newData;
-            }
-
-            // Nếu ô đích không tồn tại, tạo mới
-            if (toIdx === -1) {
-                newData.push({
-                    date: to.date,
-                    session: to.session as "morning" | "afternoon" | "evening",
-                    teamId: to.team,
-                    class: { ...fromData!.class },
-                });
-                
-                // Xóa dữ liệu từ ô nguồn
-                if (fromIdx !== -1) {
-                    newData[fromIdx] = {
-                        ...newData[fromIdx],
-                        class: { subject: '', lecturer: '', location: '' },
-                    };
-                }
-                
-                console.log('Created new cell and cleared source');
-                return newData;
-            }
-
-            // Nếu ô đích tồn tại
-            const hasToData = toData && toData.class && toData.class.subject && toData.class.subject.trim() !== '';
-
-            if (hasToData) {
-                // Swap: cả hai ô đều có dữ liệu
-                const tempClass = { ...fromData!.class };
-                newData[fromIdx] = {
-                    ...newData[fromIdx],
-                    class: { ...toData!.class },
-                };
-                newData[toIdx] = {
-                    ...newData[toIdx],
-                    class: tempClass,
-                };
-                console.log('Swapped data between cells');
+            if (response.ok) {
+                // Refresh data after deletion
+                fetchSchedule();
+                alert('Đã xóa lịch thành công!');
             } else {
-                // Move: ô đích trống
-                newData[toIdx] = {
-                    ...newData[toIdx],
-                    class: { ...fromData!.class },
-                };
-                newData[fromIdx] = {
-                    ...newData[fromIdx],
-                    class: { subject: '', lecturer: '', location: '' },
-                };
-                console.log('Moved data to empty cell');
+                alert('Có lỗi khi xóa lịch');
             }
-
-            console.log('Updated timetableData:', newData);
-            return newData;
-        });
+        } catch (error) {
+            console.error('Error deleting schedule:', error);
+            alert('Có lỗi khi xóa lịch');
+        }
     };
 
+    // Edit functions
+    const startEdit = (cellId: string, lecturerId: string, locationId: string) => {
+        setEditingCell(cellId);
+        setEditData({ lecturerId, locationId });
+    };
+
+    const saveEdit = async (date: string, session: string, teamId: string) => {
+        try {
+            // Find the item to update
+            const itemIndex = filteredData.findIndex(item =>
+                item.date === date &&
+                item.session === session &&
+                item.teamId.toString() === teamId.toString()
+            );
+
+            if (itemIndex === -1) {
+                setError('Không tìm thấy lịch cần cập nhật');
+                return;
+            }
+
+            // Update the item
+            const updatedData = [...filteredData];
+            const lecturer = lecturers.find(l => l.id.toString() === editData.lecturerId);
+            const location = locations.find(l => l.id.toString() === editData.locationId);
+
+            updatedData[itemIndex] = {
+                ...updatedData[itemIndex],
+                class: {
+                    ...updatedData[itemIndex].class,
+                    lecturer: lecturer?.fullName || lecturer?.name || 'TBA',
+                    location: location?.name || location?.locationName || 'TBA'
+                }
+            };
+
+            setFilteredData(updatedData);
+            setEditingCell(null);
+            setEditData({ lecturerId: '', locationId: '' });
+
+            // TODO: Save to backend
+            console.log('Updated schedule:', updatedData[itemIndex]);
+        } catch (error) {
+            console.error('Error updating schedule:', error);
+            setError('Có lỗi xảy ra khi cập nhật lịch');
+        }
+    };
+
+    const cancelEdit = () => {
+        setEditingCell(null);
+        setEditData({ lecturerId: '', locationId: '' });
+    };
+
+    // Apply client-side filters
+    useEffect(() => {
+        let filtered = [...timetableData];
+
+        // Filter by lecturer
+        if (selectedLecturer) {
+            const lecturer = lecturers.find(l => l.id.toString() === selectedLecturer);
+            if (lecturer) {
+                filtered = filtered.filter(item => 
+                    item.class.lecturer === lecturer.fullName || 
+                    item.class.lecturer === lecturer.name
+                );
+            }
+        }
+
+        setFilteredData(filtered);
+    }, [timetableData, selectedLecturer, lecturers]);
+
     const renderTableRows = () => {
-        console.log('renderTableRows', timetableData);
-        const rows: React.ReactElement[] = [];
+        if (!dateRange) return null;
+        const uniqueDates = [...new Set(filteredData.map(item => item.date))].sort();
+        const sessions = ['Morning', 'Afternoon', 'Evening'] as const;
+        const sessionKeys = ['morning', 'afternoon', 'evening'] as const;
         
-        if (!dateRange) return rows;
-
-        const uniqueDates = [...new Set(timetableData.map(item => item.date))].sort();
-
-        uniqueDates.forEach((date) => {
-            sessionKeys.forEach((sessionKey, sessionIndex) => {
+        return uniqueDates.flatMap((date) =>
+            sessionKeys.map((sessionKey, sessionIndex) => {
                 const sessionName = sessions[sessionIndex];
-
-                rows.push(
-                    <tr key={`${date}-${sessionKey}`} className={`${sessionIndex % 2 === 0 ? 'bg-white' : 'bg-gray-100'}`}>
+                return (
+                    <tr key={`${date}-${sessionKey}`} className={sessionIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                         {sessionIndex === 0 && (
-                            <td 
-                                rowSpan={3} 
-                                className="w-20 h-16 px-2 py-2 border border-gray-300 text-center font-medium bg-gray-100 align-middle text-sm text-gray-700"
-                            >
+                            <td rowSpan={3} className="w-28 h-16 px-2 py-2 border border-gray-400 text-center font-medium bg-gray-100 align-middle text-base text-gray-700">
                                 {format(new Date(date), 'EEE, MMM d')}
                             </td>
                         )}
-                        <td className="w-20 h-16 px-2 py-2 border border-gray-300 text-center font-medium bg-gray-50 align-middle text-sm text-gray-700">
+                        <td className="w-24 h-16 px-2 py-2 border border-gray-400 text-center font-medium bg-gray-50 align-middle text-base text-gray-700">
                             {sessionName}
                         </td>
                         {teams.map((team) => {
-                            const teamId = team.split('-').pop(); // chỉ lấy số cuối
+                            const teamId = team;
                             const cellId = `${date}-${sessionKey}-${teamId}`;
-                            const classData = timetableData.find(item => 
-                                item.date === date && 
+                            const classData = filteredData.find(item =>
+                                item.date === date &&
                                 item.session === sessionKey &&
                                 item.teamId.toString() === (teamId || '').toString()
                             );
                             return (
-                                <DraggableDroppableCell key={cellId} id={cellId}>
-                                    {classData && classData.class && classData.class.subject ? (
-                                        <div className="space-y-1">
-                                            <div className="font-medium text-blue-600 text-sm">
-                                                Subject: {classData.class.subject}
-                                            </div>
-                                            <div className="text-xs text-gray-600">
-                                                Lecturer: {classData.class.lecturer || 'TBA'}
-                                            </div>
-                                            <div className="text-xs text-gray-600">
-                                                Location: {classData.class.location || 'TBA'}
-                                            </div>
-                                        </div>
+                                <td key={cellId} className="border border-gray-400 p-2">
+                                    {(!classData ||
+                                        (!classData.class.subject && !classData.class.lecturer && !classData.class.location) ||
+                                        ([classData?.class?.subject, classData?.class?.lecturer, classData?.class?.location].every(v => !v || v === 'TBA'))
+                                    ) ? (
+                                        <span className="manual-edit-empty">Trống</span>
                                     ) : (
-                                        <span className="text-gray-400">-</span>
+                                        <div className="manual-edit-cell relative">
+                                            <span className="label">Học phần:</span>
+                                            <span className="value">
+                                                {classData.class.subject || "TBA"}
+                                            </span>
+                                            
+                                            {editingCell === cellId ? (
+                                                // Edit mode
+                                                <div className="edit-controls">
+                                                    <span className="label">Giảng viên:</span>
+                                                    <select
+                                                        value={editData.lecturerId}
+                                                        onChange={(e) => setEditData({...editData, lecturerId: e.target.value})}
+                                                        className="w-full text-xs border border-gray-300 rounded px-1 py-1"
+                                                    >
+                                                        <option value="">Chọn giảng viên</option>
+                                                        {lecturers.map(lecturer => (
+                                                            <option key={lecturer.id} value={lecturer.id}>
+                                                                {lecturer.fullName || lecturer.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    
+                                                    <span className="label">Địa điểm:</span>
+                                                    <select
+                                                        value={editData.locationId}
+                                                        onChange={(e) => setEditData({...editData, locationId: e.target.value})}
+                                                        className="w-full text-xs border border-gray-300 rounded px-1 py-1"
+                                                    >
+                                                        <option value="">Chọn địa điểm</option>
+                                                        {locations.map(location => (
+                                                            <option key={location.id} value={location.id}>
+                                                                {location.name || location.locationName}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    
+                                                    <div className="flex space-x-1 mt-2">
+                                                        <button
+                                                            onClick={() => saveEdit(date, sessionKey, teamId)}
+                                                            className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600"
+                                                        >
+                                                            Lưu
+                                                        </button>
+                                                        <button
+                                                            onClick={cancelEdit}
+                                                            className="bg-gray-500 text-white px-2 py-1 rounded text-xs hover:bg-gray-600"
+                                                        >
+                                                            Hủy
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                // View mode
+                                                <>
+                                                    <span className="label">Giảng viên:</span>
+                                                    <span className="value">
+                                                        {classData.class.lecturer || "TBA"}
+                                                    </span>
+                                                    <span className="label">Địa điểm:</span>
+                                                    <span className="value">
+                                                        {classData.class.location || "TBA"}
+                                                    </span>
+                                                    
+                                                    {/* Action buttons */}
+                                                    <div className="absolute top-1 right-1 flex space-x-1">
+                                                        <button
+                                                            onClick={() => startEdit(cellId, '', '')}
+                                                            className="bg-blue-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-blue-600"
+                                                            title="Chỉnh sửa"
+                                                        >
+                                                            ✏️
+                                                        </button>
+                                                        <button
+                                                            onClick={() => deleteSchedule(date, sessionKey, teamId)}
+                                                            className="bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-red-600"
+                                                            title="Xóa lịch"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
                                     )}
-                                </DraggableDroppableCell>
+                                </td>
                             );
                         })}
                     </tr>
                 );
-            });
-        });
-        
-        return rows;
+            })
+        );
+    };
+
+    const clearAllFilters = () => {
+        setSelectedTeam("");
+        setSelectedLecturer("");
+        // Reset dates to current month
+        const today = new Date();
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const defaultStartDate = startOfMonth.toISOString().split('T')[0];
+        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        const defaultEndDate = endOfMonth.toISOString().split('T')[0];
+        setStartDate(defaultStartDate);
+        setEndDate(defaultEndDate);
+        setHasInitialLoad(false);
     };
 
     if (isLoading) {
         return (
             <>
-                <LoadingOverlay show={true} text="Đang tải dữ liệu..." />
+                <LoadingOverlay show={true} text="Đang tải dữ liệu lịch học..." />
             </>
         );
     }
 
-    return (
-        <div className="w-full bg-white rounded-lg shadow-lg" ref={tableRef}>
-            <div className="p-6">
-                <h2 className="page-title" style={{ fontSize: '2rem' }}>LỊCH GIẢNG DẠY</h2>
-                {/* Bảng chọn ngày */}
-                <div className="flex items-center gap-4 mb-4">
-                    <label className="flex items-center gap-2 text-sm">
-                        Từ ngày:
-                        <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="border rounded px-2 py-1" />
-                    </label>
-                    <label className="flex items-center gap-2 text-sm">
-                        Đến ngày:
-                        <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="border rounded px-2 py-1" />
-                    </label>
-                    <button onClick={fetchSchedule} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Xem lịch</button>
+        return (
+        <div style={{ padding: 24 }}>
+            <LoadingOverlay show={isLoading} />
+            <div className="flex items-center justify-between mb-6">
+                <h2 className="font-sans font-bold text-4xl text-gray-900 tracking-wide">XEM LỊCH GIẢNG DẠY</h2>
+                <button onClick={fetchSchedule} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-sans font-semibold text-base shadow">TẢI LẠI</button>
+            </div>
+
+            {/* Bộ lọc */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Từ ngày:
+                        </label>
+                        <input 
+                            type="date" 
+                            value={startDate} 
+                            onChange={e => setStartDate(e.target.value)} 
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Đến ngày:
+                        </label>
+                        <input 
+                            type="date" 
+                            value={endDate} 
+                            onChange={e => setEndDate(e.target.value)} 
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Khóa học:
+                        </label>
+                        <select
+                            value={selectedTeam}
+                            onChange={e => setSelectedTeam(e.target.value)}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        >
+                            <option value="">Tất cả khóa học</option>
+                            {courses.map(course => (
+                                <option key={course.id} value={course.id}>
+                                    {course.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Giảng viên:
+                        </label>
+                        <select
+                            value={selectedLecturer}
+                            onChange={e => setSelectedLecturer(e.target.value)}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        >
+                            <option value="">Tất cả giảng viên</option>
+                            {lecturers.map(lecturer => (
+                                <option key={lecturer.id} value={lecturer.id}>
+                                    {lecturer.fullName || lecturer.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
                 
-                {hasExistingSchedules && (
-                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                        <p className="text-sm text-blue-700">
-                            <strong>Thông báo:</strong> Đang sử dụng lịch đã được tạo trước đó. 
-                            Nếu muốn tạo lịch mới, vui lòng xóa file lịch cũ trong thư mục schedules/scheduled.
-                        </p>
-                    </div>
-                )}
-                
-                {dateRange && (
-                    <div className="mb-4 text-sm text-gray-600">
-                        <strong>Schedule Period:</strong> {' '}
-                        {dateRange.from.toLocaleDateString()} - {dateRange.to.toLocaleDateString()}
-                    </div>
-                )}
-
-                <div className="overflow-x-auto">
-                    <DndContext onDragEnd={handleDragEnd}>
-                        <table className="w-full table-fixed border-collapse border border-gray-300">
-                            <thead>
-                                <tr ref={headerRef} className="bg-gray-100">
-                                    <th className="w-20 h-12 px-2 py-2 border border-gray-300 text-center font-medium text-gray-700 text-sm bg-gray-100">
-                                        Date
-                                    </th>
-                                    <th className="w-20 h-12 px-2 py-2 border border-gray-300 text-center font-medium text-gray-700 text-sm bg-gray-100">
-                                        Session
-                                    </th>
-                                    {teams.map((team) => (
-                                        <th 
-                                            key={team} 
-                                            className="w-24 h-12 px-2 py-2 border border-gray-300 text-center font-medium text-gray-700 text-sm bg-gray-100"
-                                        >
-                                            Team {team}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {renderTableRows()}
-                            </tbody>
-                        </table>
-                    </DndContext>
+                {/* Nút tìm kiếm */}
+                <div className="mt-4 flex justify-center space-x-4">
+                    <button 
+                        onClick={fetchSchedule} 
+                        disabled={!startDate || !endDate}
+                        className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                    >
+                        Xem lịch
+                    </button>
+                    <button 
+                        onClick={clearAllFilters}
+                        className="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 transition-colors font-medium"
+                    >
+                        Reset
+                    </button>
                 </div>
             </div>
+
+            {/* Thông báo lỗi */}
+            {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                    <p className="text-sm text-red-700">{error}</p>
+                </div>
+            )}
+
+            {/* Bảng lịch dạng timetable */}
+            {filteredData.length > 0 ? (
+                <div className="overflow-x-auto">
+                    <table className="w-full table-fixed border-collapse border border-gray-400 shadow-lg bg-white">
+                        <thead>
+                            <tr className="bg-blue-100">
+                                <th className="border border-gray-400 p-3 text-center text-base font-semibold text-blue-900">Date</th>
+                                <th className="border border-gray-400 p-3 text-center text-base font-semibold text-blue-900">Session</th>
+                                {teams.map((team) => (
+                                    <th key={team} className="border border-gray-400 p-3 text-center text-base font-semibold text-blue-900">Team {team}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {renderTableRows()}
+                        </tbody>
+                    </table>
+                </div>
+            ) : !isLoading && !error ? (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+                    <div className="text-gray-600">
+                        <div className="text-4xl mb-4">📅</div>
+                        <div className="text-lg font-medium mb-2">Không có lịch học</div>
+                        <div className="text-sm">
+                            {selectedLecturer 
+                                ? 'Không tìm thấy lịch học phù hợp với bộ lọc đã chọn'
+                                : 'Hãy chọn khoảng thời gian để xem lịch'
+                            }
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
+            <style>{`
+                .manual-edit-cell {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
+                    min-height: 80px;
+                    text-align: center;
+                    border: 1px solid #cbd5e1;
+                    background: #f8fafc;
+                    border-radius: 6px;
+                    padding: 8px 0;
+                    font-size: 13px;
+                }
+                .manual-edit-cell span.label {
+                    font-weight: 600;
+                    color: #2563eb;
+                    display: block;
+                    font-size: 11px;
+                }
+                .manual-edit-cell span.value {
+                    color: #111827;
+                    display: block;
+                    font-size: 13px;
+                    margin-bottom: 2px;
+                }
+                .manual-edit-empty {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 100%;
+                    height: 100%;
+                    color: #9ca3af;
+                    font-style: italic;
+                    text-align: center;
+                    font-size: 15px;
+                    font-weight: 500;
+                    padding: 12px 0;
+                }
+            `}</style>
         </div>
     );
 }
