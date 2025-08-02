@@ -69,7 +69,7 @@ function assignLecturerAndLocationForSessions(sessions: any[], lecturers: any[],
       console.log(`\n🔍 Assigning lecturer for Team ${session.teamId} - Subject ${subject.name} (${subject.category})`);
       
       // Get team info for team leader priority
-      const team = course.teams.find(t => t.id === session.teamId);
+      const team = course.teams.find((t: any) => t.id === session.teamId);
       const teamLeaderId = team?.teamLeaderId;
       
       let assignedLecturerId: number | null = null;
@@ -79,7 +79,7 @@ function assignLecturerAndLocationForSessions(sessions: any[], lecturers: any[],
       console.log('Priority 1: Checking if team leader has specialization...');
       for (let i = 0; i < lecturerQueue.length; i++) {
         const lecturer = lecturerQueue[i];
-        const hasSpecialization = lecturer.specializations?.some(spec => spec.SubjectIdReference.id === session.subjectId);
+        const hasSpecialization = lecturer.specializations?.some((spec: any) => spec.SubjectIdReference.id === session.subjectId);
         const withinMaxSessions = lecturer.assignedSessionsCount < lecturer.maxSessionsPerWeek;
         const isTeamLeader = lecturer.id === teamLeaderId;
         
@@ -96,7 +96,7 @@ function assignLecturerAndLocationForSessions(sessions: any[], lecturers: any[],
         console.log('Priority 2: Searching for specialized lecturer...');
         for (let i = 0; i < lecturerQueue.length; i++) {
           const lecturer = lecturerQueue[i];
-          const hasSpecialization = lecturer.specializations?.some(spec => spec.SubjectIdReference.id === session.subjectId);
+          const hasSpecialization = lecturer.specializations?.some((spec: any) => spec.SubjectIdReference.id === session.subjectId);
           const withinMaxSessions = lecturer.assignedSessionsCount < lecturer.maxSessionsPerWeek;
           
           if (hasSpecialization && withinMaxSessions) {
@@ -158,7 +158,7 @@ function assignLecturerAndLocationForSessions(sessions: any[], lecturers: any[],
       
       // Try to find a suitable location with subject compatibility first
       for (const item of availableLocationQueue) {
-        const hasSubject = item.location.subjects?.some(sub => sub.SubjectIdReference.id === session.subjectId);
+        const hasSubject = item.location.subjects?.some((sub: any) => sub.SubjectIdReference.id === session.subjectId);
         if (hasSubject) {
           assignedLocationId = item.location.id;
           console.log(`✓ Found suitable location: ${item.location.name}`);
