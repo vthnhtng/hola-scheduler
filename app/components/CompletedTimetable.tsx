@@ -112,7 +112,8 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
       .finally(() => setLoading(false));
   }, [courseId, teamId, startDate, endDate]);
 
-  const getSubjectName = (subjectId: number) => {
+  const getSubjectName = (subjectId: number | null) => {
+    if (!subjectId) return 'Trống';
     const subject = subjects.find(s => s.id === subjectId);
     return subject?.name || subject?.subjectName || `Subject ${subjectId}`;
   };
@@ -294,10 +295,26 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
     return acc;
   }, {} as Record<string, { date: string; sessions: Record<string, Record<number, ScheduleItem>> }>);
 
-  const sortedDates = Object.keys(groupedByDate).sort();
-
   // Get unique teams
   const uniqueTeams = Array.from(new Set(schedules.map(s => s.teamId))).sort();
+
+  // Helper function để check ngày có content hay không
+  const isDateEmpty = (date: string) => {
+    const dateData = groupedByDate[date];
+    if (!dateData) return true;
+    
+    const sessions = ['morning', 'afternoon', 'evening'];
+    return sessions.every(session => {
+      const sessionData = dateData.sessions[session] || {};
+      return uniqueTeams.every(teamId => {
+        const schedule = sessionData[teamId];
+        return !schedule || !schedule.subjectId;
+      });
+    });
+  };
+
+  const filteredDates = Object.keys(groupedByDate).filter(date => !isDateEmpty(date));
+  const sortedDates = filteredDates.sort();
   
   console.log('📊 Render debug:', {
     schedulesCount: schedules.length,
@@ -454,7 +471,7 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
                       </td>
                       {uniqueTeams.map(teamId => {
                         const schedule = sessionData[teamId];
-                        if (!schedule) {
+                        if (!schedule || !schedule.subjectId) {
                           return (
                             <td key={teamId} className="px-6 py-4 text-sm border-r border-gray-300">
                               <div className="schedule-cell-empty">Trống</div>

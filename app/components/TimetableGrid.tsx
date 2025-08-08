@@ -114,7 +114,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
       .finally(() => setLoading(false));
   }, [courseId, teamId, startDate, endDate, status, initialData]);
 
-  const getSubjectName = (subjectId: number) => {
+  const getSubjectName = (subjectId: number | null) => {
+    if (!subjectId) return 'Trống';
     const subject = subjects.find(s => s.id === subjectId);
     return subject?.name || subject?.subjectName || `Subject ${subjectId}`;
   };
@@ -254,10 +255,26 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     return acc;
   }, {} as Record<string, { date: string; sessions: Record<string, Record<number, ScheduleItem>> }>);
 
-  const sortedDates = Object.keys(groupedByDate).sort();
-
   // Get unique teams
   const uniqueTeams = Array.from(new Set(schedules.map(s => s.teamId))).sort();
+
+  // Helper function để check ngày có content hay không
+  const isDateEmpty = (date: string) => {
+    const dateData = groupedByDate[date];
+    if (!dateData) return true;
+    
+    const sessions = ['morning', 'afternoon', 'evening'];
+    return sessions.every(session => {
+      const sessionData = dateData.sessions[session] || {};
+      return uniqueTeams.every(teamId => {
+        const schedule = sessionData[teamId];
+        return !schedule || !schedule.subjectId;
+      });
+    });
+  };
+
+  const filteredDates = Object.keys(groupedByDate).filter(date => !isDateEmpty(date));
+  const sortedDates = filteredDates.sort();
 
   if (loading) {
     return (
@@ -335,10 +352,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                        const schedule = sessionData[teamId];
                        const cellId = `${date}-${session}-${teamId}`;
                        
-                       if (!schedule) {
+                       if (!schedule || !schedule.subjectId) {
                          return (
                            <DroppableCell key={teamId} id={cellId} teamId={teamId}>
-                             <div className="text-center">-</div>
+                             <div className="text-center text-gray-500 italic">Trống</div>
                            </DroppableCell>
                          );
                        }

@@ -18,11 +18,6 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
-
-        console.log('Received data length:', data.length);
-        console.log('Sample data item:', data[0]);
-
-        // Validate data structure
         if (data.length > 0) {
             const requiredFields = ['week', 'teamId', 'subjectId', 'date', 'dayOfWeek', 'session'];
             const sampleItem = data[0];
@@ -38,7 +33,6 @@ export async function POST(request: NextRequest) {
 
         // Create workbook and worksheet
         const workbook = XLSX.utils.book_new();
-        console.log('Workbook created successfully');
         const worksheet = XLSX.utils.aoa_to_sheet([]);
 
         const teams = ['C1 (Nghĩaaasiu)', 'C2 (Nghĩa)', 'C3 (Đức)', 'C4 (TG.Tùng)', 'C5 (Việt Anh)', 'C6 (Đức)', 'C7 (TG.Lâm)'];
@@ -120,29 +114,16 @@ export async function POST(request: NextRequest) {
         });
 
         // Create worksheet from data
-        console.log('Creating worksheet with data rows:', dataRows.length);
-        const ws = XLSX.utils.aoa_to_sheet(dataRows);
-        console.log('Worksheet created successfully');
-
-        // Set column widths
+        const ws = XLSX.utils.aoa_to_sheet(dataRows);
         ws['!cols'] = [
             { width: 12 }, // Ngày
             { width: 8 },  // Buổi
             ...teams.map(() => ({ width: 15 })) // Teams
-        ];
-        console.log('Column widths set');
-
-        // Add worksheet to workbook
-        XLSX.utils.book_append_sheet(workbook, ws, 'Schedule');
-        console.log('Worksheet added to workbook');
-
-        // Create output directory if it doesn't exist
+        ];
+        XLSX.utils.book_append_sheet(workbook, ws, 'Schedule');
         const outputDir = path.join(process.cwd(), 'public', 'exports');
-        console.log('Output directory:', outputDir);
-
         try {
             if (!fs.existsSync(outputDir)) {
-                console.log('Creating directory:', outputDir);
                 fs.mkdirSync(outputDir, { recursive: true });
             }
         } catch (dirError) {
@@ -153,16 +134,11 @@ export async function POST(request: NextRequest) {
         // Generate unique filename with timestamp
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const filename = `schedule-export-${timestamp}.xlsx`;
-        const filepath = path.join(outputDir, filename);
-
-        console.log('File path:', filepath);
-
-        // Write file to disk
+        const filepath = path.join(outputDir, filename);
         try {
             // Use buffer approach instead of direct file writing
             const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
             fs.writeFileSync(filepath, buffer);
-            console.log('File written successfully');
         } catch (writeError) {
             console.error('Error writing file:', writeError);
             throw new Error(`Failed to write file: ${writeError}`);

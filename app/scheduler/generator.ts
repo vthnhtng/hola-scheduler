@@ -1,7 +1,6 @@
 import { PrismaClient, Program, Category, Lecturer, Location } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
-import { Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -199,84 +198,89 @@ export async function generateSchedulesForTeams(teams: Team[], startDate: Date):
     if (teams.length === 0) return [];
 
     const subjectMap = await buildSubjectMap();
-    const breaksPerWeekOptions = [3, 4];
     const holidays = await getHolidayDates(startDate, new Date(startDate.getFullYear(), 11, 31));
-
-    // Prepare separate queue for each team
-    const teamQueues = [];
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 20);
+    const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    let breakDays = holidays.size;
+    let currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+        if (currentDate.getDay() === 0) breakDays++;
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    const teamQueues: {
+        team: Team;
+        subjectQueue: Subject[];
+        schedule: Record<string, DaySchedule>;
+        breakCount: number;
+        totalBreaks: number;
+    }[] = [];
     for (const team of teams) {
-        // Get curriculum for each team
         const curriculum = await prisma.curriculum.findFirst({
             where: { program: team.program },
             include: { subjects: true },
         });
         if (!curriculum) throw new Error(`No curriculum found for program ${team.program}`);
-
-        // Map and filter valid subjects
         const subjectRefs = curriculum.subjects
             .map(cs => subjectMap.get(cs.subjectId))
             .filter((s): s is Subject => !!s);
-
-        // Shuffle first, then topological sort
+        const totalSlots = (totalDays - breakDays) * 3;
+        const requiredBreaks = Math.max(0, totalSlots - subjectRefs.length);
         const shuffledSubjects = shuffleSubjects(subjectRefs);
         const sortedSubjects = await topologicalSort(shuffledSubjects, subjectMap);
-
-        teamQueues.push({
-            team,
-            subjectQueue: [...sortedSubjects],
-            schedule: {} as Record<string, DaySchedule>, // key is dateString
-            globalSchedule: new Map<string, Subject>(),
-            breakCount: 0,
-            totalBreaks: breaksPerWeekOptions[Math.floor(Math.random() * breaksPerWeekOptions.length)],
-        });
-    }
-
-    let anyQueueHasSubject = true;
-    let currentDate = new Date(startDate);
-
-    while (anyQueueHasSubject) {
-        const dateString = currentDate.toISOString().split('T')[0];
-        const dayOfWeek = currentDate.toLocaleDateString('en-US', { weekday: 'short' }) as DayOfWeek;
-        // Map JS short weekday to DayOfWeek
-        const dayMap: Record<string, DayOfWeek> = {
-            Sun: 'Sun', Mon: 'Mon', Tue: 'Tue', Wed: 'Wed', Thu: 'Thu', Fri: 'Fri', Sat: 'Sat'
-        };
-        const day = dayMap[dayOfWeek];
-
-        if (!holidays.has(dateString) && day !== 'Sun') {
-            for (const tq of teamQueues) {
-                if (tq.subjectQueue.length === 0) continue;
-                if (!tq.schedule[dateString]) tq.schedule[dateString] = {};
-                let previousSubject: Subject | null = null;
-                for (const slot of daySlotOrder) {
-                    if (shouldSkipSlot(day, slot)) continue;
-                    if (tq.schedule[dateString][slot]) continue;
-                    // Assign subject if available
-                    let inserted = false;
-                    for (let i = 0; i < tq.subjectQueue.length; i++) {
-                        const candidate = tq.subjectQueue[i];
-                        if (isValidSubjectForSlot(candidate, previousSubject, tq.globalSchedule)) {
-                            tq.schedule[dateString][slot] = candidate;
-                            previousSubject = candidate;
-                            tq.globalSchedule.set(`${tq.team.id}-${dateString}-${slot}`, candidate);
-                            tq.subjectQueue.splice(i, 1);
-                            inserted = true;
-                            break;
-                        }
-                    }
-                    if (!inserted) {
-                        tq.schedule[dateString][slot] = 'BREAK';
-                    }
+        const schedule: Record<string, DaySchedule> = {};
+        let subjectQueue = [...sortedSubjects];
+        let breakCount = 0;
+        let previousSubject: Subject | null = null;
+        let currentDate = new Date(startDate);
+        if (currentDate.getDay() === 0) {
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        while ((subjectQueue.length > 0 || breakCount < requiredBreaks) && currentDate <= endDate) {
+            const dateKey = currentDate.toISOString().split('T')[0];
+            const dayOfWeek = currentDate.toLocaleDateString('en-US', { weekday: 'short' }) as DayOfWeek;
+            const dayMap: Record<string, DayOfWeek> = {
+                Sun: 'Sun', Mon: 'Mon', Tue: 'Tue', Wed: 'Wed', Thu: 'Thu', Fri: 'Fri', Sat: 'Sat'
+            };
+            const day = dayMap[dayOfWeek];
+            if (day === 'Sun') {
+                currentDate.setDate(currentDate.getDate() + 1);
+                continue;
+            }
+            if (holidays.has(dateKey)) {
+                currentDate.setDate(currentDate.getDate() + 1);
+                continue;
+            }
+            if (!schedule[dateKey]) schedule[dateKey] = {};
+            for (const slot of daySlotOrder) {
+                if (shouldSkipSlot(day, slot)) continue;
+                if (schedule[dateKey][slot]) continue;
+                if ((day === 'Sat' || (slot === 'evening' && breakCount < requiredBreaks)) && breakCount < requiredBreaks) {
+                    schedule[dateKey][slot] = 'BREAK';
+                    breakCount++;
+                    continue;
+                }
+                let idx = subjectQueue.findIndex(s => !previousSubject || s.category !== previousSubject.category);
+                if (idx === -1) idx = 0;
+                if (subjectQueue.length > 0) {
+                    const subject = subjectQueue.splice(idx, 1)[0];
+                    schedule[dateKey][slot] = subject;
+                    previousSubject = subject;
+                } else if (breakCount < requiredBreaks) {
+                    schedule[dateKey][slot] = 'BREAK';
+                    breakCount++;
                 }
             }
+            currentDate.setDate(currentDate.getDate() + 1);
         }
-        // Check if any team still has subjects
-        anyQueueHasSubject = teamQueues.some(tq => tq.subjectQueue.length > 0);
-        // Move to next day
-        currentDate.setDate(currentDate.getDate() + 1);
+        teamQueues.push({
+            team,
+            subjectQueue: [],
+            schedule,
+            breakCount,
+            totalBreaks: requiredBreaks,
+        });
     }
-    // Convert schedule to expected format (by week if needed, or keep by date string)
-    // Here, we keep by date string for simplicity
     return teamQueues.map(tq => ({ classId: tq.team.id, schedule: tq.schedule }));
 }
 
@@ -432,15 +436,13 @@ async function writeSchedulesToFile(startDate: Date, endDate: Date, schedules: C
                 weekStart.setDate(firstMondayAfter.getDate() + (week - 2) * 7);
                 
                 weekEnd = new Date(weekStart);
-                weekEnd.setDate(weekStart.getDate() + 5); // Monday + 5 = Saturday
+                weekEnd.setDate(weekStart.getDate() + 5); 
             }
             
             const fileName = `week_${weekStart.toISOString().split('T')[0]}_${weekEnd.toISOString().split('T')[0]}.json`;
             const filePath = path.join(teamDir, fileName);
             
-            console.log('Writing schedule file for team', teamId, ':', filePath); // Debug log
             fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
-            console.log('File written successfully for team', teamId, ':', fileName); // Debug log
         }
     }
 }

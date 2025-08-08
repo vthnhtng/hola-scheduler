@@ -17,11 +17,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    console.log('📁 Processing schedules:', schedules.length);
-    console.log('📋 Sample schedule:', schedules[0]);
-
-    // 1. Xóa tất cả file cũ trong thư mục done
     const baseDir = path.join(process.cwd(), 'resource', 'schedules');
     await cleanupOldFiles(baseDir);
 
@@ -43,23 +38,17 @@ export async function POST(request: NextRequest) {
       const allSchedulesHaveResources = schedules.every(schedule => 
         schedule.lecturerId && schedule.locationId
       );
-
-      console.log('🔍 Course ID:', courseId, 'All schedules have resources:', allSchedulesHaveResources);
-
       if (allSchedulesHaveResources) {
         try {
           await prisma.course.update({
             where: { id: courseId },
             data: { status: 'Done' }
           });
-          console.log('✅ Course status updated to Done');
         } catch (statusError) {
           console.error('❌ Failed to update course status:', statusError);
         }
       }
     }
-
-    console.log('🎉 All files processed successfully!');
     return NextResponse.json({ 
       success: true, 
       message: `Processed ${schedules.length} schedules into ${saveResults.length} files`,
@@ -78,10 +67,7 @@ export async function POST(request: NextRequest) {
 
 // Hàm xóa tất cả file cũ
 async function cleanupOldFiles(baseDir: string) {
-  try {
-    console.log('🗑️ Cleaning up old files...');
-    
-    // Tìm tất cả thư mục team
+  try {
     const teamDirs = await fs.readdir(baseDir);
     
     for (const teamDir of teamDirs) {
@@ -103,12 +89,9 @@ async function cleanupOldFiles(baseDir: string) {
           }
         } catch (error) {
           // Thư mục done không tồn tại, bỏ qua
-          console.log('📁 No done directory for:', teamDir);
         }
       }
     }
-    
-    console.log('✅ Cleanup completed');
   } catch (error) {
     console.error('❌ Error during cleanup:', error);
     throw error;
@@ -174,8 +157,6 @@ async function saveNewFiles(teamWeekMap: Record<string, Record<string, any[]>>, 
           
           // Ghi file
           await fs.writeFile(fullPath, JSON.stringify(weekSchedules, null, 2), 'utf8');
-          console.log('✅ Saved:', filePath);
-          
           return { filePath, success: true };
         } catch (error) {
           console.error('❌ Failed to save:', filePath, error);

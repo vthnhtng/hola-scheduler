@@ -5,9 +5,10 @@ import ReactDOM from 'react-dom/client';
 interface SchedulerProps {
   onScheduleGenerated?: (schedule: any, filePath: string) => void;
   onScheduleSuccess?: (courseId: number, actionType?: 'generate' | 'assign') => void;
+  onDeleteSuccess?: () => void;
 }
 
-export default function Scheduler({ onScheduleGenerated, onScheduleSuccess }: SchedulerProps) {
+export default function Scheduler({ onScheduleGenerated, onScheduleSuccess, onDeleteSuccess }: SchedulerProps) {
   const [courses, setCourses] = useState<any[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
   const [startDate, setStartDate] = useState('');
@@ -191,9 +192,6 @@ export default function Scheduler({ onScheduleGenerated, onScheduleSuccess }: Sc
         courseId: selectedCourse
       }));
       
-             // Hiển thị thông báo thành công
-       showToastMessage('Lịch đã được sắp xếp thành công! Lịch mới đã được thêm vào "Thời khóa biểu đã sắp môn học".', 'success');
-      
       // Gọi callback để thông báo thành công
       if (onScheduleSuccess && selectedCourse) {
         onScheduleSuccess(selectedCourse, 'generate');
@@ -242,7 +240,6 @@ export default function Scheduler({ onScheduleGenerated, onScheduleSuccess }: Sc
       
       if (data.success) {
         console.log('✅ Assign resources successful, calling onScheduleSuccess with assign type');
-        showToastMessage('Đã sắp xếp giảng viên và địa điểm thành công!', 'success');
         
         // Chuyển sang tab "Thời khóa biểu đã hoàn tất" thay vì mở trang mới
         if (selectedCourse && onScheduleSuccess) {
@@ -299,7 +296,11 @@ export default function Scheduler({ onScheduleGenerated, onScheduleSuccess }: Sc
       
       if (data.success) {
         console.log('✅ Delete schedule successful');
-        showToastMessage('Đã xóa lịch thành công!', 'success');
+        
+        // Trigger notification through parent
+        if (onDeleteSuccess) {
+          onDeleteSuccess();
+        }
         
         // Refresh courses để cập nhật status
         await fetchCourses(true);

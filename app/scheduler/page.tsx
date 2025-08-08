@@ -230,6 +230,10 @@ export default function SchedulerPage() {
                                     <Scheduler 
                                         onScheduleGenerated={handleScheduleGenerated} 
                                         onScheduleSuccess={handleScheduleSuccess}
+                                        onDeleteSuccess={() => {
+                                            setSuccessMessage('Đã xóa lịch thành công!');
+                                            setShowSuccessNotification(true);
+                                        }}
                                     />
                                 </div>
                             </div>
@@ -389,6 +393,10 @@ export default function SchedulerPage() {
                                     onScheduleUpdate={(updatedSchedules) => {
                                         console.log('Processing schedules updated:', updatedSchedules);
                                         // Có thể thêm logic lưu cập nhật vào database
+                                    }}
+                                    onShowNotification={(message) => {
+                                        setSuccessMessage(message);
+                                        setShowSuccessNotification(true);
                                     }}
                                 />
                             </div>

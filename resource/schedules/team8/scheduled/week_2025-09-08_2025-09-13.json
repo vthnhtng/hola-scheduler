@@ -1,0 +1,172 @@
+[
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": 5,
+    "date": "2025-09-08",
+    "dayOfWeek": "Mon",
+    "session": "morning",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": 15,
+    "date": "2025-09-08",
+    "dayOfWeek": "Mon",
+    "session": "afternoon",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": null,
+    "date": "2025-09-08",
+    "dayOfWeek": "Mon",
+    "session": "evening",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": 2,
+    "date": "2025-09-09",
+    "dayOfWeek": "Tue",
+    "session": "morning",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": 17,
+    "date": "2025-09-09",
+    "dayOfWeek": "Tue",
+    "session": "afternoon",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": null,
+    "date": "2025-09-09",
+    "dayOfWeek": "Tue",
+    "session": "evening",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": 3,
+    "date": "2025-09-10",
+    "dayOfWeek": "Wed",
+    "session": "morning",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": 19,
+    "date": "2025-09-10",
+    "dayOfWeek": "Wed",
+    "session": "afternoon",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": null,
+    "date": "2025-09-10",
+    "dayOfWeek": "Wed",
+    "session": "evening",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": 9,
+    "date": "2025-09-11",
+    "dayOfWeek": "Thu",
+    "session": "morning",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": 18,
+    "date": "2025-09-11",
+    "dayOfWeek": "Thu",
+    "session": "afternoon",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": null,
+    "date": "2025-09-11",
+    "dayOfWeek": "Thu",
+    "session": "evening",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": 10,
+    "date": "2025-09-12",
+    "dayOfWeek": "Fri",
+    "session": "morning",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": 20,
+    "date": "2025-09-12",
+    "dayOfWeek": "Fri",
+    "session": "afternoon",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": null,
+    "date": "2025-09-12",
+    "dayOfWeek": "Fri",
+    "session": "evening",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": null,
+    "date": "2025-09-13",
+    "dayOfWeek": "Sat",
+    "session": "morning",
+    "lecturerId": null,
+    "locationId": null
+  },
+  {
+    "week": 2,
+    "teamId": 8,
+    "subjectId": null,
+    "date": "2025-09-13",
+    "dayOfWeek": "Sat",
+    "session": "afternoon",
+    "lecturerId": null,
+    "locationId": null
+  }
+]

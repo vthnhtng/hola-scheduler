@@ -50,7 +50,8 @@ export class DataMapper {
   /**
    * Get subject name by ID
    */
-  getSubjectName(id: number): string {
+  getSubjectName(id: number | null): string {
+    if (!id) return 'Trống';
     return this.subjectMapping[id] || `Subject ${id}`;
   }
 

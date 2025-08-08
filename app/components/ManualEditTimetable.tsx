@@ -55,7 +55,8 @@ const ManualEditTimetable: React.FC<ManualEditTimetableProps> = ({
     }).catch(console.error);
   }, []);
 
-  const getSubjectName = (subjectId: number) => {
+  const getSubjectName = (subjectId: number | null) => {
+    if (!subjectId) return 'Trống';
     const subject = subjects.find(s => s.id === subjectId);
     return subject?.name || subject?.subjectName || `Subject ${subjectId}`;
   };
@@ -138,10 +139,26 @@ const ManualEditTimetable: React.FC<ManualEditTimetableProps> = ({
     return acc;
   }, {} as Record<string, { date: string; sessions: Record<string, Record<number, ScheduleItem>> }>);
 
-  const sortedDates = Object.keys(groupedByDate).sort();
-
   // Get unique teams
   const uniqueTeams = Array.from(new Set(schedules.map(s => s.teamId))).sort();
+
+  // Helper function để check ngày có content hay không
+  const isDateEmpty = (date: string) => {
+    const dateData = groupedByDate[date];
+    if (!dateData) return true;
+    
+    const sessions = ['morning', 'afternoon', 'evening'];
+    return sessions.every(session => {
+      const sessionData = dateData.sessions[session] || {};
+      return uniqueTeams.every(teamId => {
+        const schedule = sessionData[teamId];
+        return !schedule || !schedule.subjectId;
+      });
+    });
+  };
+
+  const filteredDates = Object.keys(groupedByDate).filter(date => !isDateEmpty(date));
+  const sortedDates = filteredDates.sort();
 
   const handleSave = () => {
     if (onSave) {

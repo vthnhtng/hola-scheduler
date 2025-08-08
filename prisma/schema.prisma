@@ -152,6 +152,13 @@ model LecturerStatistic {
   @@map("lecturer_statistics")
 }
 
+model SessionUnavailable {
+  sessionId            String   @id @db.VarChar(50)
+  unavailableLecturers Json
+  unavailableLocations Json
+  @@map("session_unavailable")
+}
+
 enum Program {
   DH
   CD

@@ -57,6 +57,7 @@ interface ProcessingTimetableProps {
   startDate?: string;
   endDate?: string;
   onScheduleUpdate?: (schedules: ScheduleItem[]) => void;
+  onShowNotification?: (message: string) => void;
 }
 
 const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
@@ -64,7 +65,8 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
   teamId,
   startDate,
   endDate,
-  onScheduleUpdate
+  onScheduleUpdate,
+  onShowNotification
 }) => {
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
@@ -157,7 +159,8 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
     }
   }, [schedules]);
 
-  const getSubjectName = (subjectId: number) => {
+  const getSubjectName = (subjectId: number | null) => {
+    if (!subjectId) return 'Trống';
     const subject = subjects.find(s => s.id === subjectId);
     return subject?.name || subject?.subjectName || `Subject ${subjectId}`;
   };
@@ -171,6 +174,13 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
   const getLocationName = (locationId: number | null) => {
     if (!locationId) return 'TBA';
     const location = locations.find(l => l.id === locationId);
+    
+    // Debug logging for location lookup
+    if (!location && locationId) {
+      console.warn(`Location ID ${locationId} not found in locations array. Available IDs:`, 
+        locations.map(l => l.id).join(', '));
+    }
+    
     return location?.name || location?.locationName || `Location ${locationId}`;
   };
 
@@ -549,6 +559,9 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
     return acc;
   }, {} as Record<string, { date: string; sessions: Record<string, Record<number, ScheduleItem>> }>);
 
+  // Get unique teams
+  const uniqueTeams = Array.from(new Set(schedules.map(s => s.teamId))).sort();
+
   // Tạo danh sách tất cả các ngày trong khoảng thời gian (bao gồm cả Chủ nhật)
   const createFullDateRange = () => {
     if (schedules.length === 0) return [];
@@ -566,13 +579,26 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
     return allDatesInRange;
   };
 
+  // Helper function để check ngày có content hay không
+  const isDateEmpty = (date: string) => {
+    const dateData = groupedByDate[date];
+    if (!dateData) return true;
+    
+    const sessions = ['morning', 'afternoon', 'evening'];
+    return sessions.every(session => {
+      const sessionData = dateData.sessions[session] || {};
+      return uniqueTeams.every(teamId => {
+        const schedule = sessionData[teamId];
+        return !schedule || !schedule.subjectId;
+      });
+    });
+  };
+
   // Kết hợp ngày gốc, ngày mở rộng và tất cả ngày trong khoảng thời gian
   const baseDates = createFullDateRange();
   const allDates = [...new Set([...baseDates, ...Object.keys(groupedByDate), ...extendedDates])];
-  const sortedDates = allDates.sort();
-
-  // Get unique teams
-  const uniqueTeams = Array.from(new Set(schedules.map(s => s.teamId))).sort();
+  const filteredDates = allDates.filter(date => !isDateEmpty(date));
+  const sortedDates = filteredDates.sort();
 
   console.log('Grouped schedules:', groupedByDate);
   console.log('Sorted dates:', sortedDates);
@@ -609,18 +635,7 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
      <div className="bg-white rounded-lg shadow-sm border m-4">
        
 
-       {/* Success Notification */}
-       {saveSuccess && (
-         <div className="bg-green-100 border-l-4 border-green-500 p-4 mb-4 animate-pulse">
-           <div className="flex items-center">
-             <div className="flex-1">
-               <p className="text-sm text-green-700 font-medium">
-                 Lưu thành công! Thời khóa biểu đang được cập nhật ...
-               </p>
-             </div>
-           </div>
-         </div>
-       )}
+       
 
       <div className="px-6 py-4 border-b flex justify-between items-center">
         <h3 className="text-lg font-semibold text-gray-900">
@@ -643,10 +658,13 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
                    body: JSON.stringify({ schedules })
                  });
                  const data = await res.json();
-                 if (!data.success) throw new Error(data.error || 'Lỗi khi lưu file');
-                 
-                                   // Show success notification
-                  setSaveSuccess(true);
+                                 if (!data.success) throw new Error(data.error || 'Lỗi khi lưu file');
+                
+                // Show success notification through parent
+                if (onShowNotification) {
+                  onShowNotification('Lưu thành công! Thời khóa biểu đang được cập nhật...');
+                }
+                setSaveSuccess(true);
                   
                   // Tự động xóa ngày mở rộng không sử dụng sau khi lưu
                   setTimeout(() => {
@@ -858,11 +876,11 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
                             </div>
                                                      ) : (
                              <div 
-                               className={`${!schedule ? "schedule-cell-empty" : "schedule-cell"} ${isSundayDate ? "sunday-cell" : "clickable"}`}
+                               className={`${!schedule || !schedule.subjectId ? "schedule-cell-empty" : "schedule-cell"} ${isSundayDate ? "sunday-cell" : "clickable"}`}
                                onClick={() => !isSundayDate && handleCellEdit(cellId, schedule)}
                              >
-                                                             {!schedule ? (
-                                 <div>{isSundayDate ? "Chủ nhật" : "Lịch trống"}</div>
+                                                             {!schedule || !schedule.subjectId ? (
+                                 <div>{isSundayDate ? "Chủ nhật" : "Trống"}</div>
                                ) : (
                                 <>
                                   <div className="field-row">

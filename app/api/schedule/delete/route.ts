@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
+import { updateUnavailableAfterDelete } from '../../assign/updateUnavailableResources';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -33,9 +34,12 @@ export async function DELETE(request: NextRequest) {
             !(item.date === date && item.session === session)
           );
           
-          // Nếu có thay đổi, ghi lại file
+          // Nếu có thay đổi, ghi lại file và cập nhật SessionUnavailable
           if (updatedData.length !== scheduleData.length) {
             await fs.writeFile(filePath, JSON.stringify(updatedData, null, 2));
+            
+            // Cập nhật SessionUnavailable cho ngày bị ảnh hướng
+            await updateUnavailableAfterDelete(undefined, [date], [Number(teamId)]);
             
             return NextResponse.json({ 
               success: true, 

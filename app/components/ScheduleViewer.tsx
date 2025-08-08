@@ -96,7 +96,8 @@ const ScheduleViewer: React.FC<ScheduleViewerProps> = ({
       .finally(() => setLoading(false));
   }, [courseId, teamId, startDate, endDate, status]);
 
-  const getSubjectName = (subjectId: number) => {
+  const getSubjectName = (subjectId: number | null) => {
+    if (!subjectId) return 'Trống';
     const subject = subjects.find(s => s.id === subjectId);
     return subject?.name || subject?.subjectName || `Subject ${subjectId}`;
   };

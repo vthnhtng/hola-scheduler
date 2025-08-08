@@ -195,15 +195,6 @@ export async function POST(request: NextRequest) {
 
       console.log('==== [API] /api/generate-schedules response ====', response);
       console.log('Sending response:', response); // Debug log
-      console.log('Response data structure:', {
-        hasCourse: !!response.data?.course,
-        hasTeamsCount: !!response.data?.teamsCount,
-        hasFileContents: !!response.data?.fileContents,
-        hasScheduleData: !!response.data?.scheduleData,
-        fileContentsKeys: Object.keys(response.data?.fileContents || {}),
-        fileContentsCount: Object.keys(response.data?.fileContents || {}).length,
-        scheduleDataCount: response.data?.scheduleData?.length || 0
-      }); // Debug log
       return response;
 
     } catch (err) {
