@@ -179,7 +179,7 @@ export default function SchedulerPage() {
             <Header />
             <main className="d-flex">
                 <SideBar />
-                <div style={{ width: '100%', minHeight: '100vh', background: '#f9fafb' }}>
+                <div style={{ width: '100%', minHeight: '100vh', background: '#f9fafb', flex: 1 }}>
                     <div className="px-4 py-3 max-w-6xl mx-auto">
                         <h2 className="page-title" style={{ fontSize: '2rem', marginBottom: '1rem' }}>
                             SẮP XẾP LỊCH GIẢNG DẠY
@@ -188,7 +188,7 @@ export default function SchedulerPage() {
                         {/* Tab Navigation */}
                         <div className="mb-6">
                             <div className="border-b border-gray-200">
-                                <nav className="-mb-px flex space-x-8">
+                                <nav className="-mb-px flex flex-wrap space-x-4 md:space-x-8">
                                     <button
                                         onClick={() => setActiveTab('generate')}
                                         className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -436,14 +436,56 @@ export default function SchedulerPage() {
             <style jsx global>{`
                 main.d-flex {
                     align-items: flex-start !important;
+                    display: flex !important;
+                    min-height: 100vh;
                 }
                 .sidebar {
-                    height: auto !important;
+                    height: 100vh !important;
                     min-height: 100vh;
+                    flex-shrink: 0;
                 }
                 .px-4.py-3.bg-gray-50 {
                     height: auto !important;
                     min-height: unset !important;
+                }
+                
+                /* Responsive improvements */
+                @media (max-width: 768px) {
+                    main.d-flex {
+                        flex-direction: column;
+                    }
+                    .sidebar {
+                        width: 100% !important;
+                        height: auto !important;
+                        min-height: auto;
+                    }
+                    .sidebar.open {
+                        width: 100% !important;
+                    }
+                    .sidebar.collapsed {
+                        width: 100% !important;
+                    }
+                }
+                
+                /* Table responsive improvements */
+                .overflow-x-auto {
+                    -webkit-overflow-scrolling: touch;
+                }
+                
+                /* Ensure table borders are preserved during scroll */
+                table {
+                    border-collapse: separate;
+                    border-spacing: 0;
+                }
+                
+                th, td {
+                    border: 1px solid #d1d5db;
+                    position: relative;
+                }
+                
+                /* Fix sticky header borders */
+                th.sticky {
+                    border-right: 2px solid #d1d5db;
                 }
             `}</style>
         </>

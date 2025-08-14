@@ -6,8 +6,8 @@
     "date": "2025-09-08",
     "dayOfWeek": "Mon",
     "session": "morning",
-    "lecturerId": null,
-    "locationId": null
+    "lecturerId": 7,
+    "locationId": 13
   },
   {
     "week": 2,
@@ -16,8 +16,8 @@
     "date": "2025-09-08",
     "dayOfWeek": "Mon",
     "session": "afternoon",
-    "lecturerId": null,
-    "locationId": null
+    "lecturerId": 4,
+    "locationId": 5
   },
   {
     "week": 2,
@@ -36,8 +36,8 @@
     "date": "2025-09-09",
     "dayOfWeek": "Tue",
     "session": "morning",
-    "lecturerId": null,
-    "locationId": null
+    "lecturerId": 8,
+    "locationId": 7
   },
   {
     "week": 2,
@@ -46,8 +46,8 @@
     "date": "2025-09-09",
     "dayOfWeek": "Tue",
     "session": "afternoon",
-    "lecturerId": null,
-    "locationId": null
+    "lecturerId": 5,
+    "locationId": 11
   },
   {
     "week": 2,
@@ -66,8 +66,8 @@
     "date": "2025-09-10",
     "dayOfWeek": "Wed",
     "session": "morning",
-    "lecturerId": null,
-    "locationId": null
+    "lecturerId": 8,
+    "locationId": 11
   },
   {
     "week": 2,
@@ -76,8 +76,8 @@
     "date": "2025-09-10",
     "dayOfWeek": "Wed",
     "session": "afternoon",
-    "lecturerId": null,
-    "locationId": null
+    "lecturerId": 4,
+    "locationId": 10
   },
   {
     "week": 2,
@@ -96,8 +96,8 @@
     "date": "2025-09-11",
     "dayOfWeek": "Thu",
     "session": "morning",
-    "lecturerId": null,
-    "locationId": null
+    "lecturerId": 8,
+    "locationId": 11
   },
   {
     "week": 2,
@@ -106,8 +106,8 @@
     "date": "2025-09-11",
     "dayOfWeek": "Thu",
     "session": "afternoon",
-    "lecturerId": null,
-    "locationId": null
+    "lecturerId": 2,
+    "locationId": 11
   },
   {
     "week": 2,
@@ -126,8 +126,8 @@
     "date": "2025-09-12",
     "dayOfWeek": "Fri",
     "session": "morning",
-    "lecturerId": null,
-    "locationId": null
+    "lecturerId": 9,
+    "locationId": 13
   },
   {
     "week": 2,
@@ -136,8 +136,8 @@
     "date": "2025-09-12",
     "dayOfWeek": "Fri",
     "session": "afternoon",
-    "lecturerId": null,
-    "locationId": null
+    "lecturerId": 3,
+    "locationId": 3
   },
   {
     "week": 2,

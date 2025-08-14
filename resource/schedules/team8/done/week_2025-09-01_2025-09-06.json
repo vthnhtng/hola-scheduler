@@ -7,7 +7,7 @@
     "dayOfWeek": "Mon",
     "session": "morning",
     "lecturerId": null,
-    "locationId": null
+    "locationId": 12
   },
   {
     "week": 1,
@@ -17,7 +17,7 @@
     "dayOfWeek": "Mon",
     "session": "afternoon",
     "lecturerId": null,
-    "locationId": null
+    "locationId": 10
   },
   {
     "week": 1,
@@ -37,7 +37,7 @@
     "dayOfWeek": "Wed",
     "session": "morning",
     "lecturerId": null,
-    "locationId": null
+    "locationId": 11
   },
   {
     "week": 1,
@@ -47,7 +47,7 @@
     "dayOfWeek": "Wed",
     "session": "afternoon",
     "lecturerId": null,
-    "locationId": null
+    "locationId": 11
   },
   {
     "week": 1,
@@ -67,7 +67,7 @@
     "dayOfWeek": "Thu",
     "session": "morning",
     "lecturerId": null,
-    "locationId": null
+    "locationId": 10
   },
   {
     "week": 1,
@@ -77,7 +77,7 @@
     "dayOfWeek": "Thu",
     "session": "afternoon",
     "lecturerId": null,
-    "locationId": null
+    "locationId": 13
   },
   {
     "week": 1,
@@ -97,7 +97,7 @@
     "dayOfWeek": "Fri",
     "session": "morning",
     "lecturerId": null,
-    "locationId": null
+    "locationId": 9
   },
   {
     "week": 1,
@@ -107,7 +107,7 @@
     "dayOfWeek": "Fri",
     "session": "afternoon",
     "lecturerId": null,
-    "locationId": null
+    "locationId": 13
   },
   {
     "week": 1,

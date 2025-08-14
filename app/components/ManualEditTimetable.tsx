@@ -204,21 +204,22 @@ const ManualEditTimetable: React.FC<ManualEditTimetableProps> = ({
         </button>
       </div>
       
-      <div className="overflow-x-auto">
-                 <table className="w-full border-collapse border-2 border-gray-300">
+             <div className="overflow-x-auto">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse border-2 border-gray-400 min-w-max">
           <thead className="bg-blue-50">
             <tr>
-                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
-                 NGÀY THÁNG
-               </th>
-               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
-                 BUỔI HỌC
-               </th>
-                             {uniqueTeams.map(teamId => (
-                 <th key={teamId} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
-                   {getTeamName(teamId)}
-                 </th>
-               ))}
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-400 border-b border-gray-400 sticky left-0 z-10 bg-blue-50">
+                NGÀY THÁNG
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-400 border-b border-gray-400 sticky left-[120px] z-10 bg-blue-50">
+                BUỔI HỌC
+              </th>
+              {uniqueTeams.map(teamId => (
+                <th key={teamId} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-400 border-b border-gray-400">
+                  {getTeamName(teamId)}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -233,18 +234,18 @@ const ManualEditTimetable: React.FC<ManualEditTimetableProps> = ({
                 return (
                   <tr key={`${date}-${session}`} className="hover:bg-gray-50">
                     {isFirstSession && (
-                                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-300" rowSpan={3}>
+                                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-400 border-b border-gray-400 sticky left-0 z-10 bg-white" rowSpan={3}>
                        {formatDateToVietnamese(date)}
                      </td>
                     )}
-                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-r border-gray-300">
+                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-r border-gray-400 border-b border-gray-400 sticky left-[120px] z-10 bg-white">
                        {getSessionLabel(session)}
                      </td>
                     {uniqueTeams.map(teamId => {
                       const schedule = sessionData[teamId];
                       
                       return (
-                        <td key={teamId} className="px-6 py-4 text-sm border-r border-gray-300">
+                        <td key={teamId} className="px-6 py-4 text-sm border-r border-gray-400 border-b border-gray-400">
                           <div className="space-y-2">
                             <div>
                               <span className="text-blue-600 font-medium">Học phần:</span>
@@ -301,6 +302,7 @@ const ManualEditTimetable: React.FC<ManualEditTimetableProps> = ({
             })}
           </tbody>
         </table>
+        </div>
       </div>
       <div className="px-6 py-2 text-gray-400">
         <svg className="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">

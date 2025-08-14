@@ -174,6 +174,11 @@ function Sidebar() {
                     border-right: 1px solid #dee2e6;
                     transition: width 0.3s ease;
                     overflow: hidden;
+                    min-height: 100vh;
+                    height: 100vh;
+                    position: sticky;
+                    top: 0;
+                    width: 100%;
                 }
 
                 .sidebar.open {
@@ -192,10 +197,13 @@ function Sidebar() {
                     white-space: nowrap;
                     color: #212529;
                     background-color: transparent;
+                    text-decoration: none;
                 }
 
                 .nav-link:hover {
                     background-color: #e9ecef;
+                    color: #212529;
+                    text-decoration: none;
                 }
 
                 .nav-link.active {
@@ -230,7 +238,7 @@ function Sidebar() {
                 `}
             </style>
 
-            <div className={`sidebar ${isOpen ? "open" : "collapsed"}`} style={{ height: pathname === '/holidays' ? '680px' : '900px' }}>
+            <div className={`sidebar ${isOpen ? "open" : "collapsed"}`}>
                 <ul className="nav flex-column">
                     <li className="nav-item">
                         <button

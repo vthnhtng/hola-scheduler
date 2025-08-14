@@ -169,13 +169,25 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
     
     const style = {
       transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-      opacity: isDragging ? 0.5 : 1,
-      cursor: 'grab',
+      opacity: isDragging ? 0.7 : 1,
+      cursor: isDragging ? 'grabbing' : 'grab',
+      background: isDragging ? '#f3f4f6' : undefined,
+      border: isDragging ? '2px dashed #6b7280' : undefined,
+      borderRadius: isDragging ? '4px' : undefined,
+      transition: 'all 0.2s ease',
       zIndex: isDragging ? 1000 : 'auto',
+      position: isDragging ? 'relative' : 'static',
+      boxShadow: isDragging ? '0 4px 12px rgba(0, 0, 0, 0.15)' : undefined,
     };
 
     return (
-      <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="inline-block">
+      <div 
+        ref={setNodeRef} 
+        style={style} 
+        {...attributes} 
+        {...listeners} 
+        className={`inline-block ${isDragging ? 'no-select' : ''}`}
+      >
         {children}
       </div>
     );
@@ -188,7 +200,7 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
       background: isOver ? '#e0e7ff' : undefined,
       padding: '4px',
       borderRadius: '4px',
-      border: isOver ? '2px dashed #3b82f6' : '2px solid transparent',
+      border: isOver ? '2px solid #3b82f6' : '2px solid transparent',
       transition: 'all 0.2s ease',
     };
 
@@ -205,13 +217,25 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
     
     const style = {
       transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-      opacity: isDragging ? 0.5 : 1,
-      cursor: 'grab',
+      opacity: isDragging ? 0.7 : 1,
+      cursor: isDragging ? 'grabbing' : 'grab',
+      background: isDragging ? '#f3f4f6' : undefined,
+      border: isDragging ? '2px dashed #6b7280' : undefined,
+      borderRadius: isDragging ? '4px' : undefined,
+      transition: 'all 0.2s ease',
       zIndex: isDragging ? 1000 : 'auto',
+      position: isDragging ? 'relative' : 'static',
+      boxShadow: isDragging ? '0 4px 12px rgba(0, 0, 0, 0.15)' : undefined,
     };
 
     return (
-      <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="inline-block">
+      <div 
+        ref={setNodeRef} 
+        style={style} 
+        {...attributes} 
+        {...listeners} 
+        className={`inline-block ${isDragging ? 'no-select' : ''}`}
+      >
         {children}
       </div>
     );
@@ -224,7 +248,7 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
       background: isOver ? '#e0e7ff' : undefined,
       padding: '4px',
       borderRadius: '4px',
-      border: isOver ? '2px dashed #3b82f6' : '2px solid transparent',
+      border: isOver ? '2px solid #3b82f6' : '2px solid transparent',
       transition: 'all 0.2s ease',
     };
 
@@ -432,19 +456,20 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
         </button>
       </div>
       
-      <div className="overflow-x-auto p-4">
+             <div className="overflow-x-auto p-4">
         <DndContext onDragEnd={handleDragEnd}>
-          <table className="w-full border-collapse border-2 border-gray-300">
+          <div className="overflow-x-auto border border-gray-300 rounded-lg">
+            <table className="w-full border-collapse">
             <thead className="bg-blue-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 border-b border-gray-300 sticky left-0 z-10 bg-blue-50 min-w-[80px] max-w-[90px]">
                   NGÀY THÁNG
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 border-b border-gray-300 sticky left-[90px] z-10 bg-blue-50 min-w-[60px] max-w-[70px]">
                   BUỔI HỌC
                 </th>
                 {uniqueTeams.map(teamId => (
-                  <th key={teamId} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                  <th key={teamId} className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 border-b border-gray-300 min-w-[120px] max-w-[140px]">
                     {getTeamName(teamId)}
                   </th>
                 ))}
@@ -453,62 +478,68 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
             <tbody className="bg-white divide-y divide-gray-200">
               {sortedDates.map(date => {
                 const dateData = groupedByDate[date];
-                const sessions = ['morning', 'afternoon', 'evening'] as const;
-                
-                return sessions.map((session, sessionIndex) => {
+
+                return ['morning', 'afternoon', 'evening'].map((session, sessionIndex) => {
                   const sessionData = dateData.sessions[session] || {};
-                  const isFirstSession = sessionIndex === 0;
-                  
+
                   return (
                     <tr key={`${date}-${session}`} className="hover:bg-gray-50">
-                      {isFirstSession && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-300" rowSpan={3}>
-                          {formatDateToVietnamese(date)}
+                      {sessionIndex === 0 ? (
+                        <td 
+                          rowSpan={3} 
+                          className="px-3 py-2 text-xs text-gray-900 border-r border-gray-300 border-b border-gray-300 sticky left-0 z-10 bg-white align-top"
+                        >
+                          <div className="font-medium">{format(parseISO(date), 'dd/MM/yyyy')}</div>
+                          <div className="text-gray-500">{format(parseISO(date), 'EEEE')}</div>
                         </td>
-                      )}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-r border-gray-300">
-                        {getSessionLabel(session)}
+                      ) : null}
+                      <td className="px-3 py-2 text-xs text-gray-900 border-r border-gray-300 border-b border-gray-300 sticky left-[120px] z-10 bg-white font-medium">
+                        {session === 'morning' ? 'Sáng' : session === 'afternoon' ? 'Chiều' : 'Tối'}
                       </td>
                       {uniqueTeams.map(teamId => {
                         const schedule = sessionData[teamId];
-                        if (!schedule || !schedule.subjectId) {
+                        const cellId = `${date}-${session}-${teamId}`;
+                        
+                        const cellContent = (
+                          <div className="p-2 text-xs">
+                            {schedule ? (
+                              <>
+                                {schedule.subjectId && (
+                                  <div className="font-medium text-blue-600 mb-1">
+                                    {getSubjectName(schedule.subjectId)}
+                                  </div>
+                                )}
+                                {schedule.lecturerId && (
+                                  <div className="text-gray-600 mb-1">
+                                    {getLecturerName(schedule.lecturerId)}
+                                  </div>
+                                )}
+                                {schedule.locationId && (
+                                  <div className="text-gray-500">
+                                    {getLocationName(schedule.locationId)}
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <div className="text-gray-400 italic">Trống</div>
+                            )}
+                          </div>
+                        );
+
+                        // Chỉ cho phép kéo thả nếu có subjectId (đã sắp môn)
+                        if (schedule?.subjectId) {
                           return (
-                            <td key={teamId} className="px-6 py-4 text-sm border-r border-gray-300">
-                              <div className="schedule-cell-empty">Trống</div>
+                            <td key={teamId} className="px-6 py-4 text-sm border-r border-gray-400 border-b border-gray-400">
+                              {cellContent}
+                            </td>
+                          );
+                        } else {
+                          return (
+                            <td key={teamId} className="px-6 py-4 text-sm border-r border-gray-400 border-b border-gray-400">
+                              {cellContent}
                             </td>
                           );
                         }
-                        
-                        return (
-                          <td key={teamId} className="px-6 py-4 text-sm border-r border-gray-300">
-                            <div className="schedule-cell">
-                              <div className="field-row">
-                                <span className="label">Học phần:</span>
-                                <span className="value subject-name">{getSubjectName(schedule.subjectId)}</span>
-                              </div>
-                              <div className="field-row">
-                                <span className="label">Giảng viên:</span>
-                                <DroppableLecturer id={`lecturer-${schedule.id}`} teamId={teamId}>
-                                  <DraggableLecturer id={`lecturer-${schedule.id}`} teamId={teamId}>
-                                    <span className="lecturer-badge">
-                                      {getLecturerName(schedule.lecturerId) || 'TBA'}
-                                    </span>
-                                  </DraggableLecturer>
-                                </DroppableLecturer>
-                              </div>
-                              <div className="field-row">
-                                <span className="label">Địa điểm:</span>
-                                <DroppableLocation id={`location-${schedule.id}`} teamId={teamId}>
-                                  <DraggableLocation id={`location-${schedule.id}`} teamId={teamId}>
-                                    <span className="location-badge">
-                                      {getLocationName(schedule.locationId) || 'TBA'}
-                                    </span>
-                                  </DraggableLocation>
-                                </DroppableLocation>
-                              </div>
-                            </div>
-                          </td>
-                        );
                       })}
                     </tr>
                   );
@@ -516,7 +547,8 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
               })}
             </tbody>
           </table>
-        </DndContext>
+        </div>
+      </DndContext>
       </div>
       <div className="px-6 py-2 text-gray-400">
         <svg className="w-4 h-4 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20">

@@ -505,13 +505,13 @@ function TimeTable() {
             {/* Bảng lịch dạng timetable */}
             {filteredData.length > 0 ? (
                 <div className="overflow-x-auto">
-                    <table className="w-full table-fixed border-collapse border border-gray-400 shadow-lg bg-white">
+                    <table className="w-full border-collapse border border-gray-400 shadow-lg bg-white">
                         <thead>
                             <tr className="bg-blue-100">
-                                <th className="border border-gray-400 p-3 text-center text-base font-semibold text-blue-900">Date</th>
-                                <th className="border border-gray-400 p-3 text-center text-base font-semibold text-blue-900">Session</th>
+                                <th className="border border-gray-400 p-2 text-center text-sm font-semibold text-blue-900 min-w-[80px]">Date</th>
+                                <th className="border border-gray-400 p-2 text-center text-sm font-semibold text-blue-900 min-w-[60px]">Session</th>
                                 {teams.map((team) => (
-                                    <th key={team} className="border border-gray-400 p-3 text-center text-base font-semibold text-blue-900">Team {team}</th>
+                                    <th key={team} className="border border-gray-400 p-2 text-center text-sm font-semibold text-blue-900 min-w-[120px]">Team {team}</th>
                                 ))}
                             </tr>
                         </thead>
