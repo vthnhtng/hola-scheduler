@@ -91,9 +91,8 @@ function LocationsPage() {
                     <p className="text-danger">Error: {error}</p>
                 ) : (!loading && (
                     <div className="d-flex flex-column justify-content-center align-items-center" style={{ flex: 1 }}>
-                        <div className="d-flex flex-column" style={{ width: 'calc(100% - 20px)', marginLeft: "20px" }}>
-                            <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
-                                <h2 className="page-title" style={{ fontSize: '2rem' }}>DANH SÁCH ĐỊA ĐIỂM HỌC</h2>
+                        <div className="d-flex justify-content-between align-items-center mb-4" style={{ width: "calc(100% - 40px)", maxWidth: "1200px", marginTop: "1rem" }}>
+                            <h2 className="page-title" style={{ fontSize: '2rem' }}>DANH SÁCH ĐỊA ĐIỂM HỌC</h2>
                                 <div className="d-flex gap-2" style={{ marginRight: "20px" }}>
                                     {isScheduler ? (
                                         <FormModal
@@ -118,22 +117,20 @@ function LocationsPage() {
                                     )}
                                 </div>
                             </div>
-                            <div
-                                className="d-flex flex-column"
-                                style={{
-                                    width: 'calc(100% - 20px)',
-                                    marginLeft: "20px"
-                                }}
-                            >
-                                <table className="table table-hover">
-                                    <thead className="table-light">
-                                        <tr>
-                                            <th>STT</th>
-                                            {locationAttributes.map((attribute, index) => (
-                                                <th key={index}>{attribute.label}</th>
-                                            ))}
-                                            <th>Thao tác</th>
-                                        </tr>
+                            <div className="bg-white rounded-lg shadow-sm border p-4" style={{ width: "calc(100% - 40px)", maxWidth: "1200px", marginTop: "0.25rem" }}>
+                                <div className="table-responsive" style={{ marginTop: '0' }}>
+                                    <table className="table table-hover" style={{ marginTop: '0' }}>
+                                    <thead>
+                                                                                                                                                                                                                                                     <tr style={{ height: '50px', verticalAlign: 'middle', backgroundColor: '#e9ecef' }}>
+                                             <th style={{ verticalAlign: 'middle', border: 'none', padding: '6px 8px' }}>STT</th>
+                                             {locationAttributes.map((attribute, index) => (
+                                                 <th key={index} style={{ verticalAlign: 'middle', border: 'none', padding: '6px 8px' }}>{attribute.label}</th>
+                                             ))}
+                                             <th style={{ verticalAlign: 'middle', border: 'none', padding: '6px 8px' }}>Thao tác</th>
+                                         </tr>
+                                                                                                                                                                                                                                                                                                                                               <tr style={{ height: '2px', backgroundColor: '#6c757d', border: 'none' }}>
+                                               <td colSpan={locationAttributes.length + 2} style={{ padding: 0, border: 'none', height: '2px', backgroundColor: '#6c757d' }}></td>
+                                           </tr>
                                     </thead>
                                     <tbody>
                                         {locations.length > 0 ? (
@@ -199,15 +196,15 @@ function LocationsPage() {
                                         )}
                                     </tbody>
                                 </table>
+                                </div>
                             </div>
-                        </div>
-                        <div className="d-flex justify-content-center align-items-center">
-                            <Pagination
-                                currentPage={pagination.currentPage}
-                                totalPages={pagination.totalPages}
-                                onPageChange={changePage}
-                            />
-                        </div>
+                            <div className="d-flex justify-content-center mt-4">
+                                <Pagination
+                                    currentPage={pagination.currentPage}
+                                    totalPages={pagination.totalPages}
+                                    onPageChange={changePage}
+                                />
+                            </div>
                     </div>
                 ))}
             </main>

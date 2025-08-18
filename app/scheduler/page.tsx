@@ -179,8 +179,8 @@ export default function SchedulerPage() {
             <Header />
             <main className="d-flex">
                 <SideBar />
-                <div style={{ width: '100%', minHeight: '100vh', background: '#f9fafb', flex: 1 }}>
-                    <div className="px-4 py-3 max-w-6xl mx-auto">
+                <div style={{ width: '100%', minHeight: '100vh', background: '#f8f9fa', flex: 1 }}>
+                    <div className="px-4 py-3 max-w-6xl mx-auto min-h-[calc(100vh-20px)]" style={{ background: '#f8f9fa' }}>
                         <h2 className="page-title" style={{ fontSize: '2rem', marginBottom: '1rem' }}>
                             SẮP XẾP LỊCH GIẢNG DẠY
                         </h2>

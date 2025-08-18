@@ -78,10 +78,9 @@ function Sidebar() {
                         border-right: 1px solid #dee2e6;
                         transition: width 0.3s ease;
                         overflow: hidden;
-                    }
-
-                    .sidebar.open {
+                        height: 100vh;
                         width: 250px;
+                        flex-shrink: 0;
                     }
 
                     .sidebar.collapsed {
@@ -133,7 +132,7 @@ function Sidebar() {
                     }
                     `}
                 </style>
-                <div className={`sidebar ${isOpen ? "open" : "collapsed"}`} style={{ height: '100vh' }}>
+                <div className={`sidebar ${isOpen ? "" : "collapsed"}`}>
                     <ul className="nav flex-column">
                         <li className="nav-item">
                             <button
@@ -174,15 +173,12 @@ function Sidebar() {
                     border-right: 1px solid #dee2e6;
                     transition: width 0.3s ease;
                     overflow: hidden;
-                    min-height: 100vh;
-                    height: 100vh;
+                    min-height: 150vh;
+                    height: 150vh;
                     position: sticky;
                     top: 0;
-                    width: 100%;
-                }
-
-                .sidebar.open {
                     width: 250px;
+                    flex-shrink: 0;
                 }
 
                 .sidebar.collapsed {
@@ -207,9 +203,9 @@ function Sidebar() {
                 }
 
                 .nav-link.active {
-                    background-color: #e2e6ea;
+                    background-color: #0d6efd;
                     font-weight: bold;
-                    color: #0d6efd !important;
+                    color: white !important;
                 }
 
                 .toggle-button {
@@ -238,7 +234,7 @@ function Sidebar() {
                 `}
             </style>
 
-            <div className={`sidebar ${isOpen ? "open" : "collapsed"}`}>
+            <div className={`sidebar ${isOpen ? "" : "collapsed"}`}>
                 <ul className="nav flex-column">
                     <li className="nav-item">
                         <button

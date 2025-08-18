@@ -365,8 +365,11 @@ const CompletedTimetable: React.FC<CompletedTimetableProps> = ({
 
   if (schedules.length === 0) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-        <div className="text-gray-600">Không có thời khóa biểu đã hoàn thành</div>
+      <div className="bg-white rounded-lg shadow-sm border m-4 min-h-[calc(100vh-20px)] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-gray-600 text-lg mb-2">Không có thời khóa biểu đã hoàn thành</div>
+          <div className="text-gray-400 text-sm">Vui lòng tạo lịch mới hoặc chọn bộ lọc khác</div>
+        </div>
       </div>
     );
   }

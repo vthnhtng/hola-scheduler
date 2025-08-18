@@ -2,6 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===== CONSISTENT THEME COLORS ===== */
+:root {
+  /* Primary Colors */
+  --primary-blue: #0d6efd;
+  --primary-green: #059669;
+  --primary-dark: #1e293b;
+  
+  /* Background Colors */
+  --bg-light: #f8f9fa;
+  --bg-white: #ffffff;
+  --bg-gray-light: #f1f5f9;
+  --bg-gray-lighter: #f9fafb;
+  
+  /* Text Colors */
+  --text-dark: #1e293b;
+  --text-gray: #475569;
+  --text-light: #64748b;
+  --text-muted: #6b7280;
+  
+  /* Border Colors */
+  --border-light: #e2e8f0;
+  --border-gray: #d1d5db;
+  --border-dark: #dee2e6;
+  
+  /* Status Colors */
+  --success: #10b981;
+  --error: #ef4444;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+}
+
+/* ===== CUSTOM STYLES ===== */
+/* Set global background color for all pages */
+body {
+  background-color: var(--bg-light) !important;
+}
+
+html {
+  background-color: var(--bg-light) !important;
+}
+
+/* Ensure all main containers inherit the light gray background */
+main,
+main.d-flex,
+#__next,
+#root {
+  background-color: var(--bg-light) !important;
+}
+
 /* Custom styles for timetable */
 .writing-mode-vertical-rl {
   writing-mode: vertical-rl;
@@ -20,9 +69,9 @@
   transform: scale(1.02);
 }
 
-/* Custom gradient backgrounds */
+/* Custom solid backgrounds */
 .bg-gradient-soft {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-blue);
 }
 
 /* Table cell hover effects */
@@ -48,13 +97,13 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(45deg, #c1c1c1, #a1a1a1);
+  background: #c1c1c1;
   border-radius: 4px;
   transition: background 0.2s ease;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(45deg, #a1a1a1, #888);
+  background: #a1a1a1;
 }
 
 /* Prevent text selection during drag */
@@ -241,7 +290,7 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 1.5rem;
-  color: #222;
+  color: var(--text-dark);
 } 
 
 .table-team tr, .table-team td, .table-team th {
@@ -277,21 +326,21 @@ body[data-page='teams'] .sidebar {
 .responsive-table th,
 .responsive-table td {
   padding: 8px 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-gray);
   text-align: left;
   font-size: 0.875rem;
   line-height: 1.25rem;
 }
 
 .responsive-table th {
-  background-color: #f3f4f6;
+  background-color: var(--bg-gray-light);
   font-weight: 600;
-  color: #374151;
+  color: var(--text-gray);
   white-space: nowrap;
 }
 
 .responsive-table tbody tr:hover {
-  background-color: #f9fafb;
+  background-color: var(--bg-gray-lighter);
 }
 
 /* Sticky columns for large tables */
@@ -299,7 +348,7 @@ body[data-page='teams'] .sidebar {
   position: sticky;
   left: 0;
   z-index: 10;
-  background-color: #f3f4f6;
+  background-color: var(--bg-gray-light);
   min-width: 80px;
   max-width: 90px;
 }
@@ -308,7 +357,7 @@ body[data-page='teams'] .sidebar {
   position: sticky;
   left: 90px;
   z-index: 10;
-  background-color: #f3f4f6;
+  background-color: var(--bg-gray-light);
   min-width: 60px;
   max-width: 70px;
 }
@@ -359,8 +408,8 @@ body[data-page='teams'] .sidebar {
 
 /* Improved sidebar styles */
 .sidebar {
-  background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%) !important;
-  border-right: 2px solid #dee2e6 !important;
+  background: var(--bg-light) !important;
+  border-right: 2px solid var(--border-dark) !important;
   box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
 }
 
@@ -371,12 +420,12 @@ body[data-page='teams'] .sidebar {
 }
 
 .sidebar .nav-link:hover {
-  background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%) !important;
+  background: #e9ecef !important;
   transform: translateX(4px) !important;
 }
 
 .sidebar .nav-link.active {
-  background: linear-gradient(135deg, #0d6efd 0%, #0056b3 100%) !important;
+  background: var(--primary-blue) !important;
   color: white !important;
   box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3) !important;
 }

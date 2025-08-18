@@ -25,7 +25,7 @@ interface ScheduleItem {
   };
 }
 
-// DraggableDroppableCell component with improved visual feedback
+// DraggableDroppableCell component giống ManualEdit
 function DraggableDroppableCell({ id, children }: { id: string, children: React.ReactNode }) {
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({ id });
   const { attributes, listeners, setNodeRef: setDraggableRef, transform, isDragging } = useDraggable({ id });
@@ -36,19 +36,16 @@ function DraggableDroppableCell({ id, children }: { id: string, children: React.
   };
   
   const style = {
+    background: isOver ? '#e0e7ff' : undefined,
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    zIndex: isDragging ? 1000 : 'auto',
-    position: isDragging ? ('relative' as const) : ('static' as const),
+    opacity: isDragging ? 0.5 : 1,
+    cursor: 'grab',
+    border: isOver ? '2px solid #3b82f6' : undefined,
+    borderRadius: isOver ? '4px' : undefined,
   };
   
   return (
-    <td 
-      ref={setRef} 
-      style={style} 
-      {...attributes} 
-      {...listeners} 
-      className={`${isDragging ? 'dragging' : ''} ${isOver ? 'droppable' : ''}`}
-    >
+    <td ref={setRef} style={style} {...attributes} {...listeners} className="px-6 py-4 text-sm border-r border-gray-300">
       {children}
     </td>
   );
@@ -60,7 +57,6 @@ interface ProcessingTimetableProps {
   startDate?: string;
   endDate?: string;
   onScheduleUpdate?: (schedules: ScheduleItem[]) => void;
-  onShowNotification?: (message: string) => void;
 }
 
 const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
@@ -68,8 +64,7 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
   teamId,
   startDate,
   endDate,
-  onScheduleUpdate,
-  onShowNotification
+  onScheduleUpdate
 }) => {
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
@@ -162,8 +157,7 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
     }
   }, [schedules]);
 
-  const getSubjectName = (subjectId: number | null) => {
-    if (!subjectId) return 'Trống';
+  const getSubjectName = (subjectId: number) => {
     const subject = subjects.find(s => s.id === subjectId);
     return subject?.name || subject?.subjectName || `Subject ${subjectId}`;
   };
@@ -177,13 +171,6 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
   const getLocationName = (locationId: number | null) => {
     if (!locationId) return 'TBA';
     const location = locations.find(l => l.id === locationId);
-    
-    // Debug logging for location lookup
-    if (!location && locationId) {
-      console.warn(`Location ID ${locationId} not found in locations array. Available IDs:`, 
-        locations.map(l => l.id).join(', '));
-    }
-    
     return location?.name || location?.locationName || `Location ${locationId}`;
   };
 
@@ -562,9 +549,6 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
     return acc;
   }, {} as Record<string, { date: string; sessions: Record<string, Record<number, ScheduleItem>> }>);
 
-  // Get unique teams
-  const uniqueTeams = Array.from(new Set(schedules.map(s => s.teamId))).sort();
-
   // Tạo danh sách tất cả các ngày trong khoảng thời gian (bao gồm cả Chủ nhật)
   const createFullDateRange = () => {
     if (schedules.length === 0) return [];
@@ -582,26 +566,13 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
     return allDatesInRange;
   };
 
-  // Helper function để check ngày có content hay không
-  const isDateEmpty = (date: string) => {
-    const dateData = groupedByDate[date];
-    if (!dateData) return true;
-    
-    const sessions = ['morning', 'afternoon', 'evening'];
-    return sessions.every(session => {
-      const sessionData = dateData.sessions[session] || {};
-      return uniqueTeams.every(teamId => {
-        const schedule = sessionData[teamId];
-        return !schedule || !schedule.subjectId;
-      });
-    });
-  };
-
   // Kết hợp ngày gốc, ngày mở rộng và tất cả ngày trong khoảng thời gian
   const baseDates = createFullDateRange();
   const allDates = [...new Set([...baseDates, ...Object.keys(groupedByDate), ...extendedDates])];
-  const filteredDates = allDates.filter(date => !isDateEmpty(date));
-  const sortedDates = filteredDates.sort();
+  const sortedDates = allDates.sort();
+
+  // Get unique teams
+  const uniqueTeams = Array.from(new Set(schedules.map(s => s.teamId))).sort();
 
   console.log('Grouped schedules:', groupedByDate);
   console.log('Sorted dates:', sortedDates);
@@ -612,7 +583,7 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
 
   if (loading) {
     return (
-      <div className="loading-state">
+      <div className="flex justify-center items-center py-8">
         <div className="text-gray-600">Đang tải dữ liệu...</div>
       </div>
     );
@@ -620,36 +591,49 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
 
   if (error) {
     return (
-      <div className="error-state">
-        <div>{error}</div>
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="text-red-700">{error}</div>
       </div>
     );
   }
 
   if (schedules.length === 0) {
     return (
-      <div className="empty-state">
-        <div>Không có lịch nào đang chờ sắp giảng viên</div>
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+        <div className="text-gray-600">Không có lịch nào đang chờ sắp giảng viên</div>
       </div>
     );
   }
 
      return (
-     <div className="bg-white rounded-lg shadow-lg border border-gray-200 m-4 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex flex-col">
-          <h3 className="text-xl font-bold text-gray-900 mb-1">
-            THỜI KHÓA BIỂU ĐÃ SẮP MÔN HỌC
-          </h3>
-          <div className="text-sm text-gray-600">
+     <div className="bg-white rounded-lg shadow-sm border m-4">
+       
+
+       {/* Success Notification */}
+       {saveSuccess && (
+         <div className="bg-green-100 border-l-4 border-green-500 p-4 mb-4 animate-pulse">
+           <div className="flex items-center">
+             <div className="flex-1">
+               <p className="text-sm text-green-700 font-medium">
+                 Lưu thành công! Thời khóa biểu đang được cập nhật ...
+               </p>
+             </div>
+           </div>
+         </div>
+       )}
+
+      <div className="px-6 py-4 border-b flex justify-between items-center">
+        <h3 className="text-lg font-semibold text-gray-900">
+          THỜI KHÓA BIỂU ĐÃ SẮP MÔN HỌC
+        </h3>
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-500">
             {schedules.length} lịch cần sắp giảng viên
           </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            className="save-changes-btn"
-            disabled={saving}
-            onClick={async () => {
+                     <button
+             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+             disabled={saving}
+             onClick={async () => {
                try {
                  setSaving(true);
                  setError(null);
@@ -659,13 +643,10 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
                    body: JSON.stringify({ schedules })
                  });
                  const data = await res.json();
-                                 if (!data.success) throw new Error(data.error || 'Lỗi khi lưu file');
-                
-                // Show success notification through parent
-                if (onShowNotification) {
-                  onShowNotification('Lưu thành công! Thời khóa biểu đang được cập nhật...');
-                }
-                setSaveSuccess(true);
+                 if (!data.success) throw new Error(data.error || 'Lỗi khi lưu file');
+                 
+                                   // Show success notification
+                  setSaveSuccess(true);
                   
                   // Tự động xóa ngày mở rộng không sử dụng sau khi lưu
                   setTimeout(() => {
@@ -727,379 +708,309 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
         </div>
       </div>
       
-      <div className="timetable-container p-4">
-        {/* Button thêm ngày ở đầu lịch */}
-        <div className="flex justify-center mb-4">
-          <button
-            onClick={addDayAtBeginning}
-            className="add-day-btn"
-          >
-            <span className="text-lg">+</span>
-            Thêm ngày ở đầu lịch
-          </button>
-        </div>
-        
-        <DndContext onDragEnd={handleDragEnd}>
-          <table className="timetable-table">
-            <thead className="timetable-header">
-              <tr>
-                <th>NGÀY THÁNG</th>
-                <th>BUỔI HỌC</th>
-                {uniqueTeams.map(teamId => (
-                  <th key={teamId}>
-                    {getTeamName(teamId)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="timetable-body">
-              {sortedDates.map(date => {
-                const dateData = groupedByDate[date];
-
-                return ['morning', 'afternoon', 'evening'].map((session, sessionIndex) => {
-                  const sessionData = dateData.sessions[session] || {};
-
-                  return (
-                    <tr key={`${date}-${session}`} className={extendedDates.includes(date) ? 'extended-date-row' : ''}>
-                      {sessionIndex === 0 ? (
-                        <td 
-                          rowSpan={3} 
-                          className="date-cell"
-                        >
-                          <div className="date">{format(parseISO(date), 'dd/MM/yyyy')}</div>
-                          <div className="day">{format(parseISO(date), 'EEEE')}</div>
-                        </td>
-                      ) : null}
-                      <td className="session-cell">
-                        {session === 'morning' ? 'Sáng' : session === 'afternoon' ? 'Chiều' : 'Tối'}
-                      </td>
-                      {uniqueTeams.map(teamId => {
-                        const schedule = sessionData[teamId];
-                        const cellId = `${date}-${session}-${teamId}`;
-                        
-                        // Check if it's Sunday
-                        const isSundayDate = isSunday(date);
-                        
-                        if (isSundayDate) {
-                          return (
-                            <td key={teamId} className="sunday-cell">
-                              Chủ nhật
-                            </td>
-                          );
-                        }
-                        
-                        const cellContent = (
-                          <div className="cell-content">
-                            {schedule ? (
-                              <>
-                                {schedule.subjectId && (
-                                  <div className="subject-name">
-                                    {getSubjectName(schedule.subjectId)}
-                                  </div>
-                                )}
-                                {schedule.lecturerId && (
-                                  <div className="lecturer-name">
-                                    {getLecturerName(schedule.lecturerId)}
-                                  </div>
-                                )}
-                                {schedule.locationId && (
-                                  <div className="location-name">
-                                    {getLocationName(schedule.locationId)}
-                                  </div>
-                                )}
-                              </>
-                            ) : (
-                              <div className="schedule-cell-empty">Trống</div>
-                            )}
-                          </div>
-                        );
-
-                        // Chỉ cho phép kéo thả nếu có subjectId (đã sắp môn)
-                        if (schedule?.subjectId) {
-                          return (
-                            <DraggableDroppableCell key={teamId} id={cellId}>
-                              <div className="schedule-cell">
-                                {cellContent}
+                      <div className="p-4">
+           {/* Button thêm ngày ở đầu lịch */}
+           <div className="flex justify-center mb-4">
+             <button
+               onClick={addDayAtBeginning}
+               className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2"
+             >
+               <span>+</span>
+               Thêm ngày ở đầu lịch
+             </button>
+           </div>
+           
+           <div className="overflow-x-auto border border-gray-300 rounded-lg">
+             <DndContext onDragEnd={handleDragEnd}>
+               <table className="border-collapse border-2 border-gray-300" style={{ width: '800px', tableLayout: 'fixed' }}>
+          <thead className="bg-blue-50">
+            <tr>
+                             <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 sticky left-0 bg-blue-50 z-10" style={{ width: '150px' }}>
+                 NGÀY THÁNG
+               </th>
+               <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300 sticky left-0 bg-blue-50 z-10" style={{ width: '100px' }}>
+                 BUỔI HỌC
+               </th>
+                             {uniqueTeams.length > 0 ? (
+                 uniqueTeams.map(teamId => (
+                   <th key={teamId} className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300" style={{ width: `${(800 - 250) / uniqueTeams.length}px` }}>
+                     {getTeamName(teamId)}
+                   </th>
+                 ))
+               ) : (
+                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300" style={{ width: '550px' }}>
+                   ĐẠI ĐỘI
+                 </th>
+               )}
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+                         {sortedDates.map(date => {
+               const dateData = groupedByDate[date] || { date, sessions: {} };
+               const isExtendedDate = extendedDates.includes(date);
+               const isSundayDate = isSunday(date);
+              
+              // Nếu là ngày Chủ nhật, chỉ hiển thị 1 dòng
+              if (isSundayDate) {
+                return (
+                  <tr key={`${date}-sunday`} className={`hover:bg-gray-50 ${isExtendedDate ? 'extended-date-row' : ''}`}>
+                                                                 <td className={`px-3 py-4 whitespace-nowrap text-sm border-r border-gray-300 ${isExtendedDate ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'} sticky left-0 z-10`} style={{ backgroundColor: isExtendedDate ? '#dbeafe' : 'white', width: '150px' }}>
+                         {formatDateToVietnamese(date)}
+                         {isExtendedDate && <span className="ml-1 text-xs text-blue-500">(Mở rộng)</span>}
+                       </td>
+                                         <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-600 border-r sticky left-0 bg-white z-10" style={{ width: '100px' }}>
+                       Chủ nhật
+                     </td>
+                                         {uniqueTeams.length > 0 ? (
+                       uniqueTeams.map(teamId => {
+                         const cellId = `${date}-sunday-${teamId}`;
+                         
+                         return (
+                           <DraggableDroppableCell key={teamId} id={cellId}>
+                             <div className="sunday-cell" style={{ width: '100%' }}>
+                               <div>Chủ nhật</div>
+                             </div>
+                           </DraggableDroppableCell>
+                         );
+                       })
+                     ) : (
+                       <td colSpan={1} className="sunday-cell" style={{ width: '550px' }}>
+                         <div>Chủ nhật</div>
+                       </td>
+                     )}
+                  </tr>
+                );
+              }
+             
+              // Nếu không phải ngày Chủ nhật, hiển thị 3 dòng như bình thường
+              const sessions = ['morning', 'afternoon', 'evening'] as const;
+             
+              return sessions.map((session, sessionIndex) => {
+                const sessionData = dateData.sessions[session] || {};
+                const isFirstSession = sessionIndex === 0;
+                
+                return (
+                  <tr key={`${date}-${session}`} className={`hover:bg-gray-50 ${isExtendedDate ? 'extended-date-row' : ''}`}>
+                                         {isFirstSession && (
+                       <td className={`px-3 py-4 whitespace-nowrap text-sm border-r border-gray-300 ${isExtendedDate ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'} sticky left-0 z-10`} rowSpan={3} style={{ backgroundColor: isExtendedDate ? '#dbeafe' : 'white', width: '150px' }}>
+                         {formatDateToVietnamese(date)}
+                         {isExtendedDate && <span className="ml-1 text-xs text-blue-500">(Mở rộng)</span>}
+                       </td>
+                     )}
+                                                                <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-600 border-r border-gray-300 sticky left-0 bg-white z-10" style={{ width: '100px' }}>
+                       {getSessionLabel(session)}
+                     </td>
+                                         {uniqueTeams.length > 0 ? (
+                       uniqueTeams.map(teamId => {
+                         const schedule = sessionData[teamId];
+                         const cellId = `${date}-${session}-${teamId}`;
+                         const isSundayDate = isSunday(date);
+                         
+                         return (
+                           <DraggableDroppableCell key={teamId} id={cellId}>
+                          {editingCell === cellId ? (
+                            <div className="schedule-cell-edit">
+                              <div className="edit-field">
+                                <label>Học phần:</label>
+                                <select
+                                  value={editData.subjectId}
+                                  onChange={(e) => setEditData(prev => ({ ...prev, subjectId: e.target.value }))}
+                                  className="edit-select"
+                                >
+                                  <option value="">Chọn môn học</option>
+                                  {subjects.map((subject) => (
+                                    <option key={subject.id} value={subject.id}>
+                                      {subject.name || subject.subjectName}
+                                    </option>
+                                  ))}
+                                </select>
                               </div>
-                            </DraggableDroppableCell>
-                          );
-                        } else {
-                          return (
-                            <DraggableDroppableCell key={teamId} id={cellId}>
-                              <div className="schedule-cell">
-                                {cellContent}
+                              <div className="edit-field">
+                                <label>Giảng viên:</label>
+                                <select
+                                  value={editData.lecturerId}
+                                  onChange={(e) => setEditData(prev => ({ ...prev, lecturerId: e.target.value }))}
+                                  className="edit-select"
+                                >
+                                  <option value="">Chọn giảng viên</option>
+                                  {lecturers.map((lecturer) => (
+                                    <option key={lecturer.id} value={lecturer.id}>
+                                      {lecturer.name || lecturer.fullName}
+                                    </option>
+                                  ))}
+                                </select>
                               </div>
-                            </DraggableDroppableCell>
-                          );
-                        }
-                      })}
-                    </tr>
-                  );
-                });
-              })}
-            </tbody>
-          </table>
-        </DndContext>
-
-        {/* Button thêm ngày ở cuối lịch */}
-        <div className="flex justify-center mt-4">
-          <button
-            onClick={addDayAtEnd}
-            className="add-day-btn"
-          >
-            <span className="text-lg">+</span>
-            Thêm ngày ở cuối lịch
-          </button>
-        </div>
-      </div>
+                              <div className="edit-field">
+                                <label>Địa điểm:</label>
+                                <select
+                                  value={editData.locationId}
+                                  onChange={(e) => setEditData(prev => ({ ...prev, locationId: e.target.value }))}
+                                  className="edit-select"
+                                >
+                                  <option value="">Chọn địa điểm</option>
+                                  {locations.map((location) => (
+                                    <option key={location.id} value={location.id}>
+                                      {location.name || location.locationName}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="edit-buttons">
+                                <button
+                                  onClick={() => handleSaveEdit(cellId, date, session, teamId)}
+                                  className="save-btn"
+                                >
+                                  ✓
+                                </button>
+                                <button
+                                  onClick={handleCancelEdit}
+                                  className="cancel-btn"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            </div>
+                                                     ) : (
+                             <div 
+                               className={`${!schedule ? "schedule-cell-empty" : "schedule-cell"} ${isSundayDate ? "sunday-cell" : "clickable"}`}
+                               onClick={() => !isSundayDate && handleCellEdit(cellId, schedule)}
+                             >
+                                                                                            {!schedule ? (
+                                 <div>{isSundayDate ? "Chủ nhật" : "Lịch trống"}</div>
+                               ) : (
+                                 <div className="subject-name">
+                                   {getSubjectName(schedule.subjectId)}
+                                 </div>
+                               )}
+                            </div>
+                          )}
+                                                 </DraggableDroppableCell>
+                       );
+                     })
+                                        ) : (
+                       <td colSpan={1} className="schedule-cell-empty" style={{ width: '550px' }}>
+                         <div>Lịch trống</div>
+                       </td>
+                     )}
+                  </tr>
+                );
+              });
+            })}
+          </tbody>
+                              </table>
+       </DndContext>
+     </div>
+     
+     {/* Button thêm ngày ở cuối lịch */}
+     <div className="flex justify-center mt-4">
+       <button
+         onClick={addDayAtEnd}
+         className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2"
+       >
+         <span>+</span>
+         Thêm ngày ở cuối lịch
+       </button>
+     </div>
+   </div>
 
 
       <style>{`
-        /* Responsive container */
-        .timetable-container {
-          width: 100%;
-          max-width: 100%;
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
-        }
-        
-        /* Table responsive styles */
-        .timetable-table {
-          width: 100%;
-          min-width: 800px; /* Minimum width to prevent squashing */
-          border-collapse: collapse;
-          font-size: 14px;
-        }
-        
-        /* Header styles */
-        .timetable-header {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          position: sticky;
-          top: 0;
-          z-index: 20;
-        }
-        
-        .timetable-header th {
-          padding: 12px 8px;
-          text-align: left;
-          font-weight: 600;
-          font-size: 12px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          border-right: 1px solid rgba(255, 255, 255, 0.2);
-          white-space: nowrap;
-          min-width: 120px;
-        }
-        
-        .timetable-header th:first-child {
-          min-width: 100px;
-          position: sticky;
-          left: 0;
-          z-index: 21;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        .timetable-header th:nth-child(2) {
-          min-width: 80px;
-          position: sticky;
-          left: 100px;
-          z-index: 21;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        /* Body styles */
-        .timetable-body tr {
-          transition: background-color 0.2s ease;
-        }
-        
-        .timetable-body tr:hover {
-          background-color: #f8fafc;
-        }
-        
-        .timetable-body td {
-          padding: 8px;
-          border-right: 1px solid #e2e8f0;
-          border-bottom: 1px solid #e2e8f0;
-          vertical-align: top;
-          min-height: 60px;
-        }
-        
-        /* Sticky columns */
-        .timetable-body td:first-child {
-          position: sticky;
-          left: 0;
-          z-index: 10;
-          background: white;
-          font-weight: 600;
-          min-width: 100px;
-        }
-        
-        .timetable-body td:nth-child(2) {
-          position: sticky;
-          left: 100px;
-          z-index: 10;
-          background: white;
-          font-weight: 600;
-          min-width: 80px;
-        }
-        
-        /* Date cell styles */
-        .date-cell {
-          background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-          text-align: center;
-          font-size: 12px;
-        }
-        
-        .date-cell .date {
-          font-weight: 700;
-          color: #1e293b;
-          margin-bottom: 2px;
-        }
-        
-        .date-cell .day {
-          color: #64748b;
-          font-size: 11px;
-        }
-        
-        /* Session cell styles */
-        .session-cell {
-          background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-          text-align: center;
-          font-weight: 600;
-          color: #475569;
-          font-size: 12px;
-        }
-        
-        /* Schedule cell styles */
         .schedule-cell {
           display: flex;
           flex-direction: column;
-          align-items: flex-start;
-          justify-content: flex-start;
-          min-height: 60px;
-          padding: 8px;
-          gap: 4px;
-          background: white;
-          border-radius: 6px;
-          border: 1px solid #e2e8f0;
-          transition: all 0.2s ease;
-          cursor: grab;
-          position: relative;
-          overflow: hidden;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          min-height: 50px;
+          text-align: center;
+          padding: 4px 2px;
+          gap: 0px;
         }
         
-        .schedule-cell:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-          border-color: #3b82f6;
-        }
-        
-        .schedule-cell:active {
-          cursor: grabbing;
-        }
-        
-        .schedule-cell.dragging {
-          opacity: 0.7;
-          transform: rotate(2deg);
-          z-index: 1000;
-        }
-        
-        .schedule-cell.droppable {
-          background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-          border-color: #3b82f6;
-          border-width: 2px;
-        }
-        
-        /* Cell content styles */
-        .cell-content {
-          width: 100%;
-        }
-        
-        .subject-name {
-          font-weight: 700;
-          color: #1e40af;
-          font-size: 12px;
-          line-height: 1.3;
-          margin-bottom: 4px;
-          word-break: break-word;
-        }
-        
-        .lecturer-name {
-          color: #374151;
-          font-size: 11px;
-          font-weight: 500;
-          margin-bottom: 2px;
-        }
-        
-        .location-name {
-          color: #6b7280;
-          font-size: 10px;
-          font-weight: 400;
-        }
-        
-        /* Empty cell styles */
         .schedule-cell-empty {
           display: flex;
           align-items: center;
           justify-content: center;
-          min-height: 60px;
-          color: #9ca3af;
-          font-style: italic;
-          text-align: center;
-          font-size: 12px;
-          font-weight: 500;
-          border: 2px dashed #d1d5db;
-          border-radius: 6px;
-          background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-          transition: all 0.2s ease;
-          cursor: pointer;
-        }
-        
-        .schedule-cell-empty:hover {
-          border-color: #3b82f6;
-          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-          color: #1e40af;
-        }
-        
-        /* Sunday cell styles */
-        .sunday-cell {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 60px;
-          color: #dc2626;
+          height: 100%;
+          min-height: 50px;
+          color: #6b7280;
           font-style: italic;
           text-align: center;
           font-size: 12px;
           font-weight: 600;
-          border: 2px dashed #fca5a5;
-          border-radius: 6px;
-          background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-          transition: all 0.2s ease;
-          cursor: not-allowed;
-          opacity: 0.8;
+          border: 2px dashed #d1d5db;
+          border-radius: 4px;
+          background-color: #f9fafb;
+          transition: all 0.2s;
         }
         
-        .sunday-cell:hover {
-          border-color: #f87171;
-          background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-          color: #b91c1c;
+        .schedule-cell-empty:hover {
+          border-color: #3b82f6;
+          background-color: #eff6ff;
+          color: #1e40af;
         }
         
-        /* Edit mode styles */
+        .field-row {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 2px;
+          width: 100%;
+          margin-bottom: 0px;
+        }
+        
+        .label {
+          font-weight: 600;
+          color: #1e40af;
+          font-size: 11px;
+          white-space: nowrap;
+          font-family: inherit;
+        }
+        
+        .value {
+          color: #1e40af;
+          font-size: 11px;
+          font-weight: 600;
+          text-align: center;
+          word-wrap: break-word;
+          flex: 1;
+          font-family: inherit;
+        }
+        
+        .subject-name {
+          color: #1e40af;
+          font-weight: 700;
+        }
+        
+        .tba-text {
+          color: #1e40af;
+          font-weight: 600;
+          font-style: normal;
+        }
+        
+        .clickable {
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        
+        .clickable:hover {
+          background-color: #f3f4f6;
+          transform: scale(1.02);
+        }
+        
         .schedule-cell-edit {
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          min-height: 80px;
+          height: 100%;
+          min-height: 60px;
           text-align: center;
-          padding: 8px;
-          gap: 4px;
-          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          padding: 4px;
+          gap: 2px;
+          background-color: #fef3c7;
           border: 2px solid #f59e0b;
-          border-radius: 6px;
+          border-radius: 4px;
         }
         
         .edit-field {
@@ -1107,279 +1018,98 @@ const ProcessingTimetable: React.FC<ProcessingTimetableProps> = ({
           flex-direction: column;
           align-items: center;
           width: 100%;
-          margin-bottom: 4px;
+          margin-bottom: 1px;
         }
         
         .edit-field label {
           font-weight: 600;
-          color: #92400e;
-          font-size: 10px;
-          margin-bottom: 2px;
+          color: #1e40af;
+          font-size: 9px;
+          margin-bottom: 1px;
         }
         
         .edit-select {
           width: 100%;
-          font-size: 10px;
-          padding: 4px 6px;
+          font-size: 9px;
+          padding: 1px 2px;
           border: 1px solid #d1d5db;
-          border-radius: 4px;
+          border-radius: 2px;
           background-color: white;
-          outline: none;
-        }
-        
-        .edit-select:focus {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
         }
         
         .edit-buttons {
           display: flex;
-          gap: 4px;
-          margin-top: 4px;
+          gap: 2px;
+          margin-top: 2px;
         }
         
         .save-btn, .cancel-btn {
-          width: 20px;
-          height: 20px;
+          width: 16px;
+          height: 16px;
           border: none;
-          border-radius: 4px;
+          border-radius: 2px;
           font-size: 10px;
           font-weight: bold;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: all 0.2s ease;
         }
         
         .save-btn {
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          background-color: #10b981;
           color: white;
         }
         
         .cancel-btn {
-          background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+          background-color: #ef4444;
           color: white;
         }
         
         .save-btn:hover {
-          transform: scale(1.05);
-          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+          background-color: #059669;
         }
         
-        .cancel-btn:hover {
-          transform: scale(1.05);
-          box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
-        }
-        
-        /* Extended date styles */
-        .extended-date-row {
-          background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-          border-left: 4px solid #3b82f6;
-        }
-        
-        .extended-date-row:hover {
-          background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-        }
-        
-        /* Button styles */
-        .add-day-btn {
-          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-          color: white;
-          padding: 10px 16px;
-          border: none;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
-        }
-        
-        .add-day-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-        }
-        
-        .add-day-btn:active {
-          transform: translateY(0);
-        }
-        
-        /* Save button styles */
-        .save-changes-btn {
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-          color: white;
-          padding: 12px 24px;
-          border: none;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
-        }
-        
-        .save-changes-btn:hover:not(:disabled) {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-        }
-        
-        .save-changes-btn:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-          transform: none;
-        }
-        
-        /* Responsive breakpoints */
-        @media (max-width: 1024px) {
-          .timetable-table {
-            min-width: 700px;
+                 .cancel-btn:hover {
+           background-color: #dc2626;
+         }
+         
+                   /* Styles cho ngày mở rộng */
+          .extended-date-row {
+            background-color: #f0f9ff;
+            border-left: 4px solid #3b82f6;
           }
           
-          .timetable-header th,
-          .timetable-body td {
-            padding: 6px 4px;
-            font-size: 12px;
+          .extended-date-row:hover {
+            background-color: #e0f2fe;
           }
           
-          .schedule-cell {
-            padding: 6px;
-            min-height: 50px;
-          }
-          
-          .subject-name {
-            font-size: 11px;
-          }
-          
-          .lecturer-name {
-            font-size: 10px;
-          }
-          
-          .location-name {
-            font-size: 9px;
-          }
-        }
-        
-        @media (max-width: 768px) {
-          .timetable-container {
-            margin: 0 -16px;
-          }
-          
-          .timetable-table {
-            min-width: 600px;
-          }
-          
-          .timetable-header th,
-          .timetable-body td {
-            padding: 4px 2px;
-            font-size: 11px;
-          }
-          
-          .schedule-cell {
-            padding: 4px;
-            min-height: 45px;
-          }
-          
-          .subject-name {
-            font-size: 10px;
-          }
-          
-          .lecturer-name {
-            font-size: 9px;
-          }
-          
-          .location-name {
-            font-size: 8px;
-          }
-          
-          .add-day-btn {
-            padding: 8px 12px;
-            font-size: 12px;
-          }
-          
-          .save-changes-btn {
-            padding: 10px 16px;
-            font-size: 12px;
-          }
-        }
-        
-        @media (max-width: 480px) {
-          .timetable-table {
-            min-width: 500px;
-          }
-          
-          .timetable-header th,
-          .timetable-body td {
-            padding: 2px 1px;
-            font-size: 10px;
-          }
-          
-          .schedule-cell {
-            padding: 2px;
-            min-height: 40px;
-          }
-          
-          .subject-name {
-            font-size: 9px;
-          }
-          
-          .lecturer-name {
-            font-size: 8px;
-          }
-          
-          .location-name {
-            font-size: 7px;
-          }
-        }
-        
-        /* Loading and error states */
-        .loading-state {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          padding: 40px;
-          background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-          border-radius: 8px;
-        }
-        
-        .error-state {
-          background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-          border: 1px solid #fca5a5;
-          border-radius: 8px;
-          padding: 16px;
-          color: #dc2626;
-        }
-        
-        .empty-state {
-          background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-          border: 1px solid #d1d5db;
-          border-radius: 8px;
-          padding: 32px;
-          text-align: center;
-          color: #6b7280;
-        }
-        
-        /* Scrollbar styling */
-        .timetable-container::-webkit-scrollbar {
-          height: 8px;
-        }
-        
-        .timetable-container::-webkit-scrollbar-track {
-          background: #f1f5f9;
-          border-radius: 4px;
-        }
-        
-        .timetable-container::-webkit-scrollbar-thumb {
-          background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
-          border-radius: 4px;
-        }
-        
-        .timetable-container::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
-        }
+                     /* Styles cho ngày Chủ nhật */
+           .sunday-cell {
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             height: 100%;
+             min-height: 50px;
+             color: #dc2626;
+             font-style: italic;
+             text-align: center;
+             font-size: 12px;
+             font-weight: 600;
+             border: 2px dashed #fca5a5;
+             border-radius: 4px;
+             background-color: #fef2f2;
+             transition: all 0.2s;
+             cursor: not-allowed;
+             opacity: 0.7;
+           }
+           
+           .sunday-cell:hover {
+             border-color: #f87171;
+             background-color: #fee2e2;
+             color: #b91c1c;
+             transform: none;
+           }
       `}</style>
     </div>
   );

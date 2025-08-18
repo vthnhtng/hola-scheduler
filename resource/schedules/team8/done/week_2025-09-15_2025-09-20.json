@@ -2,22 +2,22 @@
   {
     "week": 3,
     "teamId": 8,
-    "subjectId": 4,
+    "subjectId": 20,
     "date": "2025-09-15",
     "dayOfWeek": "Mon",
     "session": "morning",
     "lecturerId": null,
-    "locationId": 8
+    "locationId": 13
   },
   {
     "week": 3,
     "teamId": 8,
-    "subjectId": 11,
+    "subjectId": 10,
     "date": "2025-09-15",
     "dayOfWeek": "Mon",
     "session": "afternoon",
     "lecturerId": null,
-    "locationId": 5
+    "locationId": 7
   },
   {
     "week": 3,

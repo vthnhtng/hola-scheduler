@@ -15,7 +15,7 @@ function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) 
     };
 
     return (
-        <nav aria-label="Page navigation" style={{ zIndex: 0, position: "relative" }}>
+        <nav aria-label="Page navigation" style={{ zIndex: 0, position: "relative", marginTop: "12px", marginBottom: "24px" }}>
             <ul className="pagination justify-content-center align-items-center">
                 <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
                     <button className="page-link" onClick={() => handlePageChange(currentPage - 1)} aria-label="Previous">

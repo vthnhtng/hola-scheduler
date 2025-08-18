@@ -117,32 +117,19 @@ function TeamsPage() {
       <Header />
 
       <main
-        className="d-flex"
+        className="d-flex justify-content-start align-items-start"
         style={{
           minHeight: '100vh',
-          backgroundColor: '#f5f6fa',
         }}
       >
         {/* Sidebar */}
-        <div
-          className="d-flex flex-column"
-          style={{
-            width: '250px',
-            minHeight: '100vh',
-            backgroundColor: '#f8f9fa',
-            padding: '20px 15px',
-            boxShadow: '1px 0 4px rgba(0,0,0,0.1)',
-          }}
-        >
-          <SideBar />
-        </div>
+        <SideBar />
 
         {/* Main Content */}
         <div
-          className="d-flex flex-column flex-grow-1 px-4"
+          className="d-flex flex-column flex-grow-1"
           style={{
             flex: 1,
-            backgroundColor: '#ffffff',
             paddingTop: '24px',
             paddingBottom: '24px',
           }}
@@ -152,8 +139,8 @@ function TeamsPage() {
           {(!loading && error) ? (
             <p className="text-danger mt-4">Lỗi: {error}</p>
           ) : (
-            <div className="d-flex flex-column flex-grow-1">
-              <div className="d-flex justify-content-between align-items-center mb-4">
+            <div className="d-flex flex-column justify-content-center align-items-center" style={{ flex: 1 }}>
+                             <div className="d-flex justify-content-between align-items-center mb-4" style={{ width: "calc(100% - 40px)", maxWidth: "1200px", marginTop: "1rem" }}>
                 <h2 className="fw-bold text-uppercase" style={{ fontSize: '2rem' }}>Danh sách đại đội</h2>
                 {isScheduler ? (
                   <FormModal
@@ -175,17 +162,21 @@ function TeamsPage() {
                 )}
               </div>
 
-              <div className="table-responsive">
-                <table className="table table-hover align-middle" style={{ borderCollapse: 'collapse' }}>
-                  <thead className="table-light">
-                    <tr style={{ height: '75px', verticalAlign: 'middle', backgroundColor: '#f1f1f1' }}>
-                      <th>STT</th>
-                      <th>Tên đại đội</th>
-                      <th>Chương trình</th>
-                      <th>Giảng viên phụ trách</th>
-                      <th>Thuộc khóa</th>
-                      <th>Thao tác</th>
-                    </tr>
+                             <div className="bg-white rounded-lg shadow-sm border p-4" style={{ width: "calc(100% - 40px)", maxWidth: "1200px", marginTop: "0.25rem" }}>
+                <div className="table-responsive" style={{ marginTop: '0' }}>
+                  <table className="table table-hover align-middle" style={{ borderCollapse: 'collapse', marginTop: '0' }}>
+                  <thead>
+                                                               <tr style={{ height: '50px', verticalAlign: 'middle', backgroundColor: '#e9ecef' }}>
+                        <th style={{ verticalAlign: 'middle', border: 'none', padding: '6px 8px' }}>STT</th>
+                        <th style={{ verticalAlign: 'middle', border: 'none', padding: '6px 8px' }}>Tên đại đội</th>
+                        <th style={{ verticalAlign: 'middle', border: 'none', padding: '6px 8px' }}>Chương trình</th>
+                        <th style={{ verticalAlign: 'middle', border: 'none', padding: '6px 8px' }}>Giảng viên phụ trách</th>
+                        <th style={{ verticalAlign: 'middle', border: 'none', padding: '6px 8px' }}>Thuộc khóa</th>
+                        <th style={{ verticalAlign: 'middle', border: 'none', padding: '6px 8px' }}>Thao tác</th>
+                      </tr>
+                                                                                                                                                                               <tr style={{ height: '2px', backgroundColor: '#6c757d', border: 'none' }}>
+                         <td colSpan={6} style={{ padding: 0, border: 'none', height: '2px', backgroundColor: '#6c757d' }}></td>
+                       </tr>
                   </thead>
                   <tbody>
                     {teams.length > 0 ? (
@@ -303,9 +294,9 @@ function TeamsPage() {
                     )}
                   </tbody>
                 </table>
+                </div>
               </div>
-
-              <div className="d-flex justify-content-center my-4">
+              <div className="d-flex justify-content-center mt-4">
                 <Pagination
                   currentPage={pagination.currentPage}
                   totalPages={pagination.totalPages}

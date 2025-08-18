@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import TimetableGrid from "../components/TimetableGrid";
 import SideBar from "../components/SideBar";
 import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 function TimetablePage() {
     const [courses, setCourses] = useState<any[]>([]);
@@ -150,6 +151,7 @@ function TimetablePage() {
                     </div>
                 </div>
             </main>
+            <Footer />
         </>
     );
 }

@@ -2,21 +2,21 @@
   {
     "week": 2,
     "teamId": 4,
-    "subjectId": 18,
+    "subjectId": 13,
     "date": "2025-09-08",
     "dayOfWeek": "Mon",
     "session": "morning",
     "lecturerId": 7,
-    "locationId": 13
+    "locationId": 7
   },
   {
     "week": 2,
     "teamId": 4,
-    "subjectId": 2,
+    "subjectId": 10,
     "date": "2025-09-08",
     "dayOfWeek": "Mon",
     "session": "afternoon",
-    "lecturerId": 4,
+    "lecturerId": 2,
     "locationId": 5
   },
   {
@@ -32,22 +32,22 @@
   {
     "week": 2,
     "teamId": 4,
-    "subjectId": 12,
+    "subjectId": 14,
     "date": "2025-09-09",
     "dayOfWeek": "Tue",
     "session": "morning",
-    "lecturerId": 8,
-    "locationId": 7
+    "lecturerId": 9,
+    "locationId": 9
   },
   {
     "week": 2,
     "teamId": 4,
-    "subjectId": 3,
+    "subjectId": 6,
     "date": "2025-09-09",
     "dayOfWeek": "Tue",
     "session": "afternoon",
     "lecturerId": 5,
-    "locationId": 11
+    "locationId": 10
   },
   {
     "week": 2,
@@ -62,22 +62,22 @@
   {
     "week": 2,
     "teamId": 4,
-    "subjectId": 13,
+    "subjectId": 17,
     "date": "2025-09-10",
     "dayOfWeek": "Wed",
     "session": "morning",
-    "lecturerId": 8,
+    "lecturerId": 9,
     "locationId": 11
   },
   {
     "week": 2,
     "teamId": 4,
-    "subjectId": 10,
+    "subjectId": 7,
     "date": "2025-09-10",
     "dayOfWeek": "Wed",
     "session": "afternoon",
     "lecturerId": 4,
-    "locationId": 10
+    "locationId": 1
   },
   {
     "week": 2,
@@ -96,17 +96,17 @@
     "date": "2025-09-11",
     "dayOfWeek": "Thu",
     "session": "morning",
-    "lecturerId": 8,
-    "locationId": 11
+    "lecturerId": 6,
+    "locationId": 12
   },
   {
     "week": 2,
     "teamId": 4,
-    "subjectId": 5,
+    "subjectId": 8,
     "date": "2025-09-11",
     "dayOfWeek": "Thu",
     "session": "afternoon",
-    "lecturerId": 2,
+    "lecturerId": 1,
     "locationId": 11
   },
   {
@@ -126,7 +126,7 @@
     "date": "2025-09-12",
     "dayOfWeek": "Fri",
     "session": "morning",
-    "lecturerId": 9,
+    "lecturerId": 10,
     "locationId": 13
   },
   {
@@ -136,8 +136,8 @@
     "date": "2025-09-12",
     "dayOfWeek": "Fri",
     "session": "afternoon",
-    "lecturerId": 3,
-    "locationId": 3
+    "lecturerId": 1,
+    "locationId": 2
   },
   {
     "week": 2,

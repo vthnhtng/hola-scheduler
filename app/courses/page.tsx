@@ -59,38 +59,42 @@ export default function CoursesPage() {
         {(!loading && error) ? (
           <p className="text-danger">Error: {error}</p>
         ) : (!loading && (
-          <div className="d-flex flex-column justify-content-center align-items-center" style={{ flex: 1 }}>
-            <div className="d-flex flex-column" style={{ width: "calc(100% - 20px)", marginLeft: "20px" }}>
-              <div className="d-flex justify-content-between align-items-center mb-3 mt-3">
-                <h2 className="fw-bold text-uppercase" style={{ fontSize: "2.2rem" }}>DANH SÁCH KHÓA HỌC</h2>
-                {isScheduler ? (
-                  <FormModal
-                    title="THÊM KHÓA HỌC"
-                    button={<button className="btn btn-success">THÊM KHÓA HỌC</button>}
-                    attributes={courseAttributes}
-                    record={null}
-                    formAction="/api/courses"
-                    formMethod="POST"
-                    onLoadingChange={setLoading}
-                  />
-                ) : (
-                  <button 
-                    className="btn btn-success" 
-                    disabled
-                    style={{ pointerEvents: 'none', opacity: 0.6 }}
-                  >
-                    THÊM KHÓA HỌC
-                  </button>
-                )}
-              </div>
-              <table className="table table-hover">
-                <thead className="table-light">
-                  <tr>
-                    <th>STT</th>
-                    {courseTableColumns.map((attr, idx) => <th key={idx}>{attr.label}</th>)}
-                    <th>Thao tác</th>
-                  </tr>
-                </thead>
+                     <div className="d-flex flex-column justify-content-center align-items-center" style={{ flex: 1 }}>
+                                                                                                               <div className="d-flex justify-content-between align-items-center mb-4" style={{ width: "calc(100% - 40px)", maxWidth: "1200px", marginTop: "1rem" }}>
+                <h2 className="fw-bold text-uppercase" style={{ fontSize: "2rem" }}>DANH SÁCH KHÓA HỌC</h2>
+               {isScheduler ? (
+                 <FormModal
+                   title="THÊM KHÓA HỌC"
+                   button={<button className="btn btn-success">THÊM KHÓA HỌC</button>}
+                   attributes={courseAttributes}
+                   record={null}
+                   formAction="/api/courses"
+                   formMethod="POST"
+                   onLoadingChange={setLoading}
+                 />
+               ) : (
+                 <button 
+                   className="btn btn-success" 
+                   disabled
+                   style={{ pointerEvents: 'none', opacity: 0.6 }}
+                 >
+                   THÊM KHÓA HỌC
+                 </button>
+               )}
+             </div>
+                                                                                                               <div className="bg-white rounded-lg shadow-sm border p-4" style={{ width: "calc(100% - 40px)", maxWidth: "1200px", marginTop: "0.25rem" }}>
+                               <div className="table-responsive" style={{ marginTop: '0' }}>
+                                    <table className="table table-hover" style={{ borderCollapse: 'collapse', marginTop: '0' }}>
+                 <thead>
+                                                           <tr style={{ height: '50px', verticalAlign: 'middle', backgroundColor: '#e9ecef' }}>
+                      <th style={{ verticalAlign: 'middle', border: 'none', padding: '6px 8px' }}>STT</th>
+                      {courseTableColumns.map((attr, idx) => <th key={idx} style={{ verticalAlign: 'middle', border: 'none', padding: '6px 8px' }}>{attr.label}</th>)}
+                      <th style={{ verticalAlign: 'middle', border: 'none', padding: '6px 8px' }}>Thao tác</th>
+                    </tr>
+                                                                                                                                                                       <tr style={{ height: '2px', backgroundColor: '#6c757d', border: 'none' }}>
+                         <td colSpan={courseTableColumns.length + 2} style={{ padding: 0, border: 'none', height: '2px', backgroundColor: '#6c757d' }}></td>
+                       </tr>
+                 </thead>
                 <tbody>
                   {courses.length > 0 ? (
                     <>
@@ -148,14 +152,17 @@ export default function CoursesPage() {
                       <td colSpan={courseTableColumns.length + 2}>Chưa có dữ liệu</td>
                     </tr>
                   )}
-                </tbody>
-              </table>
-            </div>
-            <Pagination
-              currentPage={pagination.currentPage}
-              totalPages={pagination.totalPages}
-              onPageChange={fetchCourses}
-            />
+                                 </tbody>
+               </table>
+                               </div>
+              </div>
+              <div className="d-flex justify-content-center mt-4">
+                <Pagination
+                  currentPage={pagination.currentPage}
+                  totalPages={pagination.totalPages}
+                  onPageChange={fetchCourses}
+                />
+              </div>
           </div>
         ))}
       </main>
