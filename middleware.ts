@@ -11,7 +11,8 @@ const protectedRoutes = [
   '/teams',
   '/users',
   '/holidays',
-  '/calendar'
+  '/calendar',
+  '/summary'
 ];
 
 // Routes only for scheduler role

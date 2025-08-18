@@ -6,6 +6,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { useAuth } from '../contexts/AuthContext';
 
+
 function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -70,10 +71,11 @@ function Login() {
     <>
       <Header />
       <main className="container-fluid bg-light content d-flex align-items-center justify-content-center" style={{ minHeight: 'calc(100vh - 200px)', paddingTop: 40, paddingBottom: 40 }}>
+          
         <div className="row justify-content-center w-100">
           <div className="col-md-4">
-            <div className="card p-4 card-container shadow-sm" style={{ minWidth: 350, maxWidth: 400, width: '100%' }}>
-              <h4 className="text-center mb-4 fw-bold fs-3">Đăng nhập</h4>
+            <div className="card  card-container shadow-sm" style={{ minWidth: 350, maxWidth: 400, width: '100%' }}>
+              <h4 className="text-center fw-bold fs-3 text-white p-3 bg-[#49bf67] w-100"  >Đăng nhập</h4>
               
               {error && (
                 <div className="alert alert-danger" role="alert">
@@ -81,9 +83,9 @@ function Login() {
                 </div>
               )}
               
-              <form onSubmit={handleSubmit}>
+              <form className='p-4' onSubmit={handleSubmit}>
                 <div className="mb-3">
-                  <label htmlFor="username" className="form-label">Tên truy cập</label>
+                  <label htmlFor="username" className="form-label font-bold">Tên truy cập</label>
                   <input 
                     type="text" 
                     className="form-control" 
@@ -97,7 +99,7 @@ function Login() {
                 </div>
                 
                 <div className="mb-3">
-                  <label htmlFor="password" className="form-label">Mật khẩu</label>
+                  <label htmlFor="password" className="form-label font-bold">Mật khẩu</label>
                   <input 
                     type="password" 
                     className="form-control" 
@@ -115,7 +117,8 @@ function Login() {
 
                 <button 
                   type="submit" 
-                  className="btn btn-dark w-100 mb-2"
+                  className="btn bg-[#49bf67] border-t-green-400 w-100 mb-2 text-white hover:bg-[#379e51]"
+
                   disabled={isLoading}
                 >
                   {isLoading ? (

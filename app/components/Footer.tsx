@@ -1,11 +1,11 @@
 'use client';
 // Khoimom chinh style footer
 import React from "react";
-import logo from "../assets/logo/VNU_GDQPAN_Logo.png";
+import logo from "../assets/logo/logo.png";
 
 function Footer() {
   return (
-    <footer className="footer bg-dark text-white py-3">
+    <footer className="footer bg-white text-[#27703A] py-3">
       <div className="container">
         <div className="row align-items-center">
 
@@ -32,7 +32,7 @@ function Footer() {
             </p>
             <p className="mb-0" style={{ fontSize: "0.75rem" }}>
               <b>Website:</b>{" "}
-              <a href="https://qpan.vnu.edu.vn/" className="text-white">
+              <a href="https://qpan.vnu.edu.vn/" className="text-black">
                 qpan.vnu.edu.vn
               </a>
             </p>

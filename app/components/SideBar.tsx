@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from 'next/navigation';
-import { FaHome, FaUser, FaChalkboardTeacher, FaChartBar, FaBars, FaCalendarAlt, FaCog } from "react-icons/fa";
+import { FaHome, FaUser, FaChalkboardTeacher, FaChartBar, FaBars, FaCalendarAlt, FaCog, FaChartLine } from "react-icons/fa";
 import Link from "next/link";
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
@@ -31,6 +31,7 @@ function Sidebar() {
         { name: "Trang chủ", icon: <FaHome />, link: "/" },
         { name: "Lịch giảng dạy", icon: <FaChalkboardTeacher />, link: "/timetable" },
         { name: "Lịch nghỉ lễ", icon: <FaCalendarAlt />, link: "/holidays" },
+        { name: "Thống kê", icon: <FaChartLine />, link: "/summary" },
         { name: "Tài khoản", icon: <FaUser />, link: "/users" },
         { name: "Sắp xếp lịch", icon: <FaCog />, link: "/scheduler", requireScheduler: true },
     ];

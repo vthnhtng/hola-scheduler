@@ -1,5 +1,5 @@
 'use client';
-import logo from '../assets/logo/VNU_GDQPAN_Logo.png';
+import logo from '../assets/logo/logo.png';
 import { FiLogOut } from 'react-icons/fi';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -23,8 +23,8 @@ function Header() {
 			style={{
 				width: '100%',
 				height: '150px',
-				backgroundColor: '#d3d3d3',
-				borderBottom: '25px solid #87BD66'
+				backgroundColor: 'white',
+				borderBottom: '1px solid '
 			}}
 		>
 			<div className="d-flex align-items-center gap-3"
@@ -32,14 +32,14 @@ function Header() {
 					minWidth: '80%'
 				}}
 			>
-				<div style={{ width: '100px' }}>
+				<div style={{ width: '242px' }}>
 					<img
 						src={logo.src}
 						alt="GDQPAN Logo"
 						style={{ width: '100%' }}
 					/>
 				</div>
-				<h1 className="mb-0 fw-bold fs-3">CỔNG SẮP XẾP LỊCH GIẢNG DẠY TỰ ĐỘNG</h1>
+				<h1 className="text-2xl font-[FontAwesome]  text-[#27703A]">CỔNG SẮP XẾP LỊCH GIẢNG DẠY TỰ ĐỘNG</h1>
 			</div>
 
 			<div className="d-flex align-items-center">
@@ -49,7 +49,7 @@ function Header() {
 					<>
 						<span className="me-2">{user.fullName}</span>
 						<span>|</span>
-						<button 
+						<button
 							className="btn btn-link text-dark d-flex align-items-center gap-2 text-decoration-none"
 							onClick={handleLogout}
 						>
@@ -60,7 +60,7 @@ function Header() {
 					<>
 						<span className="me-2">Chưa đăng nhập</span>
 						<span>|</span>
-						<button 
+						<button
 							className="btn btn-link text-dark d-flex align-items-center gap-2 text-decoration-none"
 							onClick={() => router.push('/login')}
 						>
